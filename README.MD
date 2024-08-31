@@ -4,42 +4,6 @@
 [![Docs.rs](https://docs.rs/sewer56-archives-nx/badge.svg)](https://docs.rs/sewer56-archives-nx)
 [![CI](https://github.com/Sewer56/sewer56-archives-nx/actions/workflows/rust.yml/badge.svg)](https://github.com/Sewer56/sewer56-archives-nx/actions)
 
------------------------
-
-## Additional Setup Required!!
-
-Additional setup might be required.  
-Once you do the stuff under this text, delete this section.  
-
-### Setup Documentation
-
-If you don't have a `docs/Reloaded` folder, an error occurred, and you might need to add it manually as submodule:
-
-```
-git submodule add https://github.com/Reloaded-Project/Reloaded.MkDocsMaterial.Themes.R2.git docs/Reloaded
-```
-
-Once you make your first commit to GitHub, you'll need to do the following:
-- Go to `Settings -> Pages` in your repo and select `gh-pages` branch to enable GitHub Pages.
-
-### Setup API Key (crates.io)
-
-You'll need to set up an API key to publish to `crates.io` on tag.
-
-- Go to `Settings -> Secrets -> Actions` in your repo and add environment secret named `CRATES_IO_TOKEN`.  
-- Paste your API key generated in [crates.io (Account Settings -> API Tokens)][crates-io-key].  
-
-
-### Setup API Key (NuGet)
-You'll need to set up an API key to publish to `NuGet` on tag.
-
-- Go to `Settings -> Secrets -> Actions` in your repo and add environment secret named `NUGET_KEY`.  
-- Paste your API key generated in [Api Keys][nuget-key].  
-
-
-
------------------------
-
 ## About
 
 High Performance Archive Format for Mod Assets
