@@ -1,0 +1,28 @@
+name: Auto Changelog
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  generate_and_upload_changelog:
+    runs-on: ubuntu-latest 
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          
+      - name: Generate changelog
+        uses: Reloaded-Project/devops-changelog@v1
+        with:
+          output: CHANGELOG.md
+          unreleased: true
+          commit-limit: 50
+          upload-artifact: true
+          upload-release: true
+          is-release: ${{ startsWith(github.ref, 'refs/tags/') }}
+          release-tag: ${{ github.ref_name }}
