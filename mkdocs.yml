@@ -1,4 +1,4 @@
-site_name: Reloaded MkDocs Theme
+site_name: Nx Archive Library (Rust)
 site_url: https://github.com/Sewer56/sewer56-archives-nx
 
 repo_name: Sewer56/sewer56-archives-nx
@@ -64,3 +64,10 @@ nav:
   - Contributing: contributing.md
   - License: Reloaded/Pages/license.md
   - How to Document: Reloaded/Pages/contributing.md
+  - Format Specification:
+      - Overview: Specification/Overview.md
+      - Header: Specification/File-Header.md
+      - Table of Contents (TOC): Specification/Table-Of-Contents.md
+      - Optional Sections:
+          - User Data: Specification/User-Data.md
+      - Algorithm Implementation: Specification/Implementation-Details.md

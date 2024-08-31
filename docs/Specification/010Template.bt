@@ -1,0 +1,118 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.2 Binary Template
+//
+//      File: Nexus .nx Archives
+//   Authors: Sewer56
+//   Version: 1.1.0
+//   Purpose: Inspect Nexus .nx files.
+//   History: 1.1.0: Updated for new Header and ToC structures
+//                   File Format Version 1.0.0
+//            1.0.0: Initial Version
+//------------------------------------------------
+
+const int PageSize = 4096;
+
+// Set format properties
+LittleEndian();
+
+// Structure Info
+BitfieldLeftToRight();
+
+// Helper Methods
+string HeaderSize(short r)
+{
+    return "Size of ToC + Header: " + Str("%d", r * 4096);
+}
+
+string ChunkSize(char r)
+{
+    return "Chunk Size: " + Str("%d", 512 << r);
+}
+
+string Version(char r)
+{
+    return "File Format Version: " + Str("%d", r);
+}
+
+string TocVersion(char r)
+{
+    if (r == 0)
+        return "20 byte FileEntry, u32 Sizes, 4GB Per File & 1 Million Max Files";
+    else if (r == 1)
+        return "24 byte FileEntry, u64 Sizes, 2^64 Bytes Per File & 1 Million Max Files";
+}
+
+string Compression(char r)
+{
+    if (r == 0)
+        return "Copy (Uncompressed)";
+    else if (r == 1)
+        return "ZStandard";
+    else if (r == 2)
+        return "LZ4";
+}
+
+string HasUserData(char r)
+{
+    return (r & 0x8) ? "Yes" : "No";
+}
+
+// Structs
+struct Header
+{
+    char Magic[4];
+    uint32 Version : 7 <comment=Version>;
+    uint32 ChunkSize : 5 <comment=ChunkSize>;
+    uint32 HeaderPageCount : 16 <comment=HeaderSize>;
+    uint32 FeatureFlags : 4 <comment=HasUserData>;
+};
+
+struct TableOfContentsHeader
+{
+    uint64 Version : 2 <comment=TocVersion>;
+    uint64 StringPoolSize : 24;
+    uint64 BlockCount : 18;
+    uint64 FileCount : 20;
+};
+
+struct FileEntryV0
+{
+    uint64 Hash <comment="xxHash64">;
+    uint32 DecompressedSize;
+    uint64 DecompressedBlockOffset : 26;
+    uint64 FilePathIndex : 20;
+    uint64 FirstBlockIndex : 18;
+};
+
+struct FileEntryV1
+{
+    uint64 Hash <comment="xxHash64">;
+    uint64 DecompressedSize;
+    uint64 DecompressedBlockOffset : 26;
+    uint64 FilePathIndex : 20;
+    uint64 FirstBlockIndex : 18;
+};
+
+struct Block
+{
+    uint32 CompressedSize: 29;
+    uint32 Compression: 3 <comment=Compression>;
+};
+
+// Template
+SetBackColor(cRed);
+Header header;
+
+SetBackColor(cLtBlue);
+TableOfContentsHeader toc;
+
+SetBackColor(cDkPurple);
+if (toc.Version == 0)
+    FileEntryV0 files[toc.FileCount];
+else if (toc.Version == 1)
+    FileEntryV1 files[toc.FileCount];
+
+SetBackColor(cDkGray);
+Block blocks[toc.BlockCount];
+
+byte stringPool[toc.StringPoolSize] <comment="ZStd Compressed StringPool; and padding.">;
