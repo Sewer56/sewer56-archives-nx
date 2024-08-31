@@ -56,11 +56,11 @@ jobs:
             use-cross: false
           - os: ubuntu-latest
             target: x86_64-pc-windows-gnu
-            use-pgo: true
+            use-pgo: false # test only, and has issues has issues
             use-cross: true
           - os: ubuntu-latest
             target: i686-pc-windows-gnu
-            use-pgo: true
+            use-pgo: false # test only, and has issues has issues
             use-cross: true
 
     runs-on: ${{ matrix.os }}
