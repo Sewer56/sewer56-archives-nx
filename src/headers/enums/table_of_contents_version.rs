@@ -1,0 +1,12 @@
+/// Dictates the version/variant of the archive.
+/// Range: 0-3
+#[repr(u8)]
+pub enum TableOfContentsVersion {
+    /// 20 byte FileEntry with u32 sizes.
+    /// 1 million file limit. Covers 99.9% of the cases.
+    V0 = 0,
+
+    /// 24 byte FileEntry with u64 sizes.
+    /// 1 million file limit. Covers 99.9% of the cases.
+    V1 = 1,
+}
