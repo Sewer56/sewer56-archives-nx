@@ -90,6 +90,27 @@ jobs:
           cargo install cargo-semver-checks
           cargo semver-checks --target ${{ matrix.target }} --features c-exports
 
+  test-on-wine:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64-pc-windows-gnu, i686-pc-windows-gnu]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Tests and Coverage on WINE
+        uses: Reloaded-Project/devops-rust-test-and-coverage@v1
+        with:
+          rust-toolchain: nightly
+          target: ${{ matrix.target }}
+          install-rust-toolchain: true
+          setup-rust-cache: true
+          upload-coverage: true
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
+          features: "c-exports"
+          use-cross: true
+
   build-c-headers:
     runs-on: ubuntu-latest
     steps:
@@ -125,7 +146,7 @@ jobs:
     permissions:
       contents: write
 
-    needs: [build-and-test,build-c-headers,build-dotnet-library]
+    needs: [build-and-test,build-c-headers,build-dotnet-library,test-on-wine]
     # Publish only on tags
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
