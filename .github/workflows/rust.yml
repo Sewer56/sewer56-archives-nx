@@ -98,13 +98,13 @@ jobs:
           submodules: recursive
 
       - name: Generate C++ bindings
-        uses: Reloaded-Project/cbindgen-action@v1
+        uses: Reloaded-Project/devops-rust-cbindgen@v1
         with:
           config-file: cbindgen_cpp.toml
           output-header-file: bindings_cpp.hpp
 
       - name: Generate C bindings
-        uses: Reloaded-Project/cbindgen-action@v1
+        uses: Reloaded-Project/devops-rust-cbindgen@v1
         with:
           config-file: cbindgen_c.toml
           output-header-file: bindings_c.h
