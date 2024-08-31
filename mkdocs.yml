@@ -33,8 +33,8 @@ markdown_extensions:
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 theme:
   name: material
@@ -45,6 +45,19 @@ theme:
 
 plugins:
   - search
+  - exclude-unused-files:
+      file_types_to_check: [ "psd", "7z", "kra" ]
+      file_types_override_mode: append
+      enabled: true
+  - exclude:
+      # Exclude the Theme's own files.
+      glob:
+        - Reloaded/Pages/testing-zone.md
+        - Reloaded/Pages/index.md
+        - Reloaded/docs/*
+        - Reloaded/Readme.md
+        - Reloaded/LICENSE
+        - Reloaded/mkdocs.yml
 
 nav:
   - Home: index.md

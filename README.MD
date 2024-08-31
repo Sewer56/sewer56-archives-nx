@@ -11,9 +11,6 @@
 Additional setup might be required.  
 Once you do the stuff under this text, delete this section.  
 
-### Code Coverage
-To setup code coverage for this project. Login into [Codecov][codecov] and add this repository from your list of tracked repos.
-
 ### Setup Documentation
 
 If you don't have a `docs/Reloaded` folder, an error occurred, and you might need to add it manually as submodule:
