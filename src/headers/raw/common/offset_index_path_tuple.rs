@@ -1,3 +1,4 @@
+use crate::headers::managed::file_entry::FileEntry;
 use bitfield::bitfield;
 
 bitfield! {
@@ -6,18 +7,18 @@ bitfield! {
     /// - `u20` FilePathIndex
     /// - `u18` FirstBlockIndex
     /// Used in INativeFileEntry and friends.
-    #[derive(Clone, Copy, PartialEq, Eq, Default)]
+    #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
     pub struct OffsetPathIndexTuple(u64);
     impl Debug;
 
-    /// [u26] Offset of the file inside the decompressed block.
-    u32, decompressed_block_offset, set_decompressed_block_offset: 63, 38;
+    /// `u26` Offset of the file inside the decompressed block.
+    pub u32, decompressed_block_offset, set_decompressed_block_offset: 63, 38;
 
-    /// [u20] Index of the file path associated with this file in the StringPool.
-    u32, file_path_index, set_file_path_index: 37, 18;
+    /// `u20` Index of the file path associated with this file in the StringPool.
+    pub u32, file_path_index, set_file_path_index: 37, 18;
 
-    /// [u18] Index of the first block associated with this file.
-    u32, first_block_index, set_first_block_index: 17, 0;
+    /// `u18` Index of the first block associated with this file.
+    pub u32, first_block_index, set_first_block_index: 17, 0;
 }
 
 impl OffsetPathIndexTuple {
@@ -25,9 +26,9 @@ impl OffsetPathIndexTuple {
     ///
     /// # Arguments
     ///
-    /// * `decompressed_block_offset` - [u26] Offset of decompressed block.
-    /// * `file_path_index` - [u20] Index of file path in string pool.
-    /// * `first_block_index` - [u18] Index of first block associated with this file.
+    /// * `decompressed_block_offset` - `u26` Offset of decompressed block.
+    /// * `file_path_index` - `u20` Index of file path in string pool.
+    /// * `first_block_index` - `u18` Index of first block associated with this file.
     pub fn new(
         decompressed_block_offset: u32,
         file_path_index: u32,
@@ -49,7 +50,12 @@ impl OffsetPathIndexTuple {
         OffsetPathIndexTuple(data)
     }
 
-    /// Copy the values of this tuple to a managed FileEntry.
+    /// Converts the tuple to its raw representation.
+    pub fn into_raw(&self) -> u64 {
+        self.0
+    }
+
+    /// Copy the values of this tuple to a managed [`FileEntry`].
     ///
     /// This was written to avoid a stack spill.
     pub fn copy_to(&self, entry: &mut FileEntry) {
@@ -59,18 +65,12 @@ impl OffsetPathIndexTuple {
     }
 }
 
-// Dummy tamporary implementation.
-pub struct FileEntry {
-    pub decompressed_block_offset: u32,
-    pub file_path_index: u32,
-    pub first_block_index: u32,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::utilities::tests::packing_test_helpers::*;
     use crate::utilities::tests::permutations::*;
+    use fake::*;
     use rstest::rstest;
 
     #[test]
@@ -150,5 +150,15 @@ mod tests {
             |t| t.first_block_index() as u64,
             18,
         );
+    }
+
+    impl Dummy<Faker> for OffsetPathIndexTuple {
+        fn dummy_with_rng<R: Rng + ?Sized>(_: &Faker, rng: &mut R) -> Self {
+            let mut tuple = OffsetPathIndexTuple::default();
+            tuple.set_decompressed_block_offset(rng.gen_range(0..0x3FFFFFF)); // 26 bits
+            tuple.set_file_path_index(rng.gen_range(0..0xFFFFF)); // 20 bits
+            tuple.set_first_block_index(rng.gen_range(0..0x3FFFF)); // 18 bits
+            tuple
+        }
     }
 }

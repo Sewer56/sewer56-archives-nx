@@ -1,6 +1,7 @@
 //! # Some Cool Reloaded Library
 //! Here's the crate documentation.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![feature(coverage_attribute)]
 #[cfg(feature = "c-exports")]
 pub mod exports;
 
@@ -19,6 +20,15 @@ pub mod headers {
         pub mod common {
             pub mod offset_index_path_tuple;
         }
+
+        pub mod native_file_entry;
+        pub mod native_file_entry_v0;
+        pub mod native_file_entry_v1;
+    }
+
+    /// This represents the unpacked 'managed' version of the headers.
+    pub mod managed {
+        pub mod file_entry;
     }
 }
 
@@ -29,5 +39,13 @@ pub mod utilities {
     pub mod tests {
         pub mod packing_test_helpers;
         pub mod permutations;
+    }
+
+    pub mod serialize {
+        /// This module contains utilities for reading unaligned data via pointer in little-endian format.
+        pub mod little_endian_reader;
+
+        /// This module contains utilities for writing unaligned data via pointer in little-endian format.
+        pub mod little_endian_writer;
     }
 }

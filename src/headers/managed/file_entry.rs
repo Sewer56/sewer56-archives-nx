@@ -1,0 +1,131 @@
+use crate::{
+    headers::raw::{
+        common::offset_index_path_tuple::OffsetPathIndexTuple,
+        native_file_entry_v0::NativeFileEntryV0, native_file_entry_v1::NativeFileEntryV1,
+    },
+    utilities::serialize::{
+        little_endian_reader::LittleEndianReader, little_endian_writer::LittleEndianWriter,
+    },
+};
+
+/// Entry for the individual file.
+#[derive(Default, Clone, Copy)]
+pub struct FileEntry {
+    /// [u64] Hash of the file described in this entry.
+    pub hash: u64,
+
+    /// [u32]/[u64] Size of the file after decompression.
+    pub decompressed_size: u64,
+
+    /// `u26` Offset of the file inside the decompressed block.
+    pub decompressed_block_offset: u32,
+
+    /// `u20`` Index of the file path associated with this file in the StringPool.
+    pub file_path_index: u32,
+
+    /// `u18` Index of the first block associated with this file.
+    pub first_block_index: u32,
+}
+
+impl FileEntry {
+    /// Returns true if the file has 1 or more chunks.
+    ///
+    /// # Arguments
+    ///
+    /// * `chunk_size_bytes` - Size of single chunk in archive.
+    pub fn is_chunked(&self, chunk_size_bytes: u32) -> bool {
+        (self.decompressed_size / chunk_size_bytes as u64) >= 1
+    }
+
+    /// Calculated via `decompressed_size` divided by Chunk Size.
+    ///
+    /// # Arguments
+    ///
+    /// * `chunk_size_bytes` - Size of single chunk in archive.
+    pub fn get_chunk_count(&self, chunk_size_bytes: u32) -> u32 {
+        // TODO: An optimized version of this with NativeFileHeader
+        let mut count = self.decompressed_size / chunk_size_bytes as u64;
+        if self.decompressed_size % chunk_size_bytes as u64 != 0 {
+            count += 1;
+        }
+        count as u32
+    }
+
+    /// Writes this managed file entry in the format of `NativeFileEntryV0`.
+    ///
+    /// # Arguments
+    ///
+    /// * `writer` - The writer to write to.
+    #[inline(always)]
+    pub fn write_as_v0(&self, writer: &mut LittleEndianWriter) {
+        unsafe {
+            writer.write_at_offset::<u64>(self.hash, 0);
+            writer.write_at_offset::<u32>(self.decompressed_size as u32, 8);
+            writer.write_at_offset::<u64>(
+                OffsetPathIndexTuple::new(
+                    self.decompressed_block_offset,
+                    self.file_path_index,
+                    self.first_block_index,
+                )
+                .into_raw(),
+                12,
+            );
+            writer.seek(NativeFileEntryV0::SIZE_BYTES as isize);
+        }
+    }
+
+    /// Writes this managed file entry in the format of `NativeFileEntryV1`.
+    ///
+    /// # Arguments
+    ///
+    /// * `writer` - The writer to write to.
+    #[inline(always)]
+    pub fn write_as_v1(&self, writer: &mut LittleEndianWriter) {
+        unsafe {
+            writer.write_at_offset::<u64>(self.hash, 0);
+            writer.write_at_offset::<u64>(self.decompressed_size, 8);
+            writer.write_at_offset::<u64>(
+                OffsetPathIndexTuple::new(
+                    self.decompressed_block_offset,
+                    self.file_path_index,
+                    self.first_block_index,
+                )
+                .into_raw(),
+                16,
+            );
+            writer.seek(NativeFileEntryV1::SIZE_BYTES as isize);
+        }
+    }
+
+    /// Reads this managed file entry from data serialized as `NativeFileEntryV0`.
+    ///
+    /// # Arguments
+    ///
+    /// * `reader` - The reader to read from.
+    #[inline(always)]
+    pub fn from_reader_v0(&mut self, reader: &mut LittleEndianReader) {
+        unsafe {
+            self.hash = reader.read_at_offset::<u64>(0);
+            self.decompressed_size = reader.read_at_offset::<u32>(8) as u64;
+            let packed = OffsetPathIndexTuple::from_raw(reader.read_at_offset::<u64>(12));
+            packed.copy_to(self);
+            reader.seek(NativeFileEntryV0::SIZE_BYTES as isize);
+        }
+    }
+
+    /// Reads this managed file entry from data serialized as `NativeFileEntryV1`.
+    ///
+    /// # Arguments
+    ///
+    /// * `reader` - The reader to read from.
+    #[inline(always)]
+    pub fn from_reader_v1(&mut self, reader: &mut LittleEndianReader) {
+        unsafe {
+            self.hash = reader.read_at_offset::<u64>(0);
+            self.decompressed_size = reader.read_at_offset::<u64>(8);
+            let packed = OffsetPathIndexTuple::from_raw(reader.read_at_offset::<u64>(16));
+            packed.copy_to(self);
+            reader.seek(NativeFileEntryV1::SIZE_BYTES as isize);
+        }
+    }
+}
