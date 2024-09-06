@@ -8,15 +8,31 @@ license-file = "LICENSE"
 include = ["src/**/*"]
 
 [features]
-default = ["std"]
+default = ["std", "lz4", "zstd"]
 std = []
 # See README.md for more information on using Profile-Guided Optimization.
 pgo = []
 # Feature for enabling C library exports.
 c-exports = []
+# Enables support for LZ4 compression/decompression
+lz4 = []
+# Enables support for ZStd compression/decompression
+zstd = []
+
+# Panics with full error text on unhandled ZStandard Errors.
+# Increases binary size in favour of better error messages.
+zstd_panic_on_unhandled_error = []
+
+# Avoids core::fmt to reduce binary size.
+# May reduce error message friendliness.
+no_format = []
 
 [dependencies]
 bitfield = "0.16.1"
+lz4-sys = "1.10.0"
+zstd-sys = {version = "2.0.13", features = ["experimental"]} # 1.5.6
+zstd-safe = "7.2.1"
+itoa = "1.0.11"
 
 # C# Bindings
 [build-dependencies]

@@ -5,6 +5,13 @@
 #[cfg(feature = "c-exports")]
 pub mod exports;
 
+/// Public High Level API
+pub mod api {
+    pub mod enums {
+        pub mod compression_preference;
+    }
+}
+
 /// This module contains all of the data structures that you'll
 /// find within the Nx headers.
 ///
@@ -28,6 +35,10 @@ pub mod headers {
 
     /// This represents the unpacked 'managed' version of the headers.
     pub mod managed {
+        /// Represents the size of a compressed block following the header.
+        pub mod block_size;
+
+        /// Represents a file entry that was decoded from the Table of Contents.
         pub mod file_entry;
     }
 }
@@ -40,6 +51,7 @@ pub mod utilities {
         pub mod packing_test_helpers;
         pub mod permutations;
     }
+    pub mod compression;
 
     pub mod serialize {
         /// This module contains utilities for reading unaligned data via pointer in little-endian format.
