@@ -67,6 +67,8 @@ pub fn compress(
     Err(NxCompressionError::ZStandard(errcode))
 }
 
+// TODO: Separate APIs for partial and full decompression
+
 /// Decompresses data with ZStandard
 ///
 /// # Parameters
@@ -74,23 +76,44 @@ pub fn compress(
 /// * `source`: Source data to decompress.
 /// * `destination`: Destination buffer for decompressed data.
 pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
-    let source_length = source.len();
-    let destination_length = destination.len();
+    unsafe {
+        let result = ZSTD_decompress(
+            destination.as_mut_ptr() as *mut c_void,
+            destination.len(),
+            source.as_ptr() as *const c_void,
+            source.len(),
+        );
 
+        if ZSTD_isError(result) != 0 {
+            let error_code = ZSTD_getErrorCode(result);
+            Err(NxDecompressionError::ZStandard(error_code))
+        } else {
+            Ok(result)
+        }
+    }
+}
+
+/// Partially decompresses data with ZStandard until the destination buffer is filled
+///
+/// # Parameters
+///
+/// * `source`: Source data to decompress.
+/// * `destination`: Destination buffer for decompressed data.
+pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
     unsafe {
         let d_stream = ZSTD_createDStream();
         let mut out_buf = ZSTD_outBuffer {
             dst: destination.as_mut_ptr() as *mut c_void,
             pos: 0,
-            size: destination_length,
+            size: destination.len(),
         };
         let mut in_buf = ZSTD_inBuffer {
             src: source.as_ptr() as *const c_void,
             pos: 0,
-            size: source_length,
+            size: source.len(),
         };
 
-        while out_buf.pos < destination_length {
+        while out_buf.pos < destination.len() {
             let result = ZSTD_decompressStream(d_stream, &mut out_buf, &mut in_buf);
 
             // We ran into an error, o no.
@@ -123,5 +146,54 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
 
         ZSTD_freeDStream(d_stream);
         Ok(out_buf.pos)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decompress_invalid_data() {
+        let invalid_compressed_data = vec![0u8; 100];
+        let mut destination = vec![0u8; 1000];
+
+        let result = decompress(&invalid_compressed_data, &mut destination);
+
+        assert!(
+            result.is_err(),
+            "Should return an error for invalid compressed data"
+        );
+        match result {
+            Err(NxDecompressionError::ZStandard(error_code)) => {
+                assert_eq!(
+                    error_code, ZSTD_error_prefix_unknown,
+                    "Not a zstandard file"
+                );
+            }
+            _ => panic!("Unexpected result"),
+        }
+    }
+
+    #[test]
+    fn test_decompress_partial_invalid_data() {
+        let invalid_compressed_data = vec![0u8; 100];
+        let mut destination = vec![0u8; 1000];
+
+        let result = decompress_partial(&invalid_compressed_data, &mut destination);
+
+        assert!(
+            result.is_err(),
+            "Should return an error for invalid compressed data"
+        );
+        match result {
+            Err(NxDecompressionError::ZStandard(error_code)) => {
+                assert_eq!(
+                    error_code, ZSTD_error_prefix_unknown,
+                    "Not a zstandard file"
+                );
+            }
+            _ => panic!("Unexpected result"),
+        }
     }
 }

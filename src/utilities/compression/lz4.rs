@@ -1,6 +1,5 @@
 use super::{CompressionResult, DecompressionResult, NxCompressionError, NxDecompressionError};
 use crate::api::enums::compression_preference::CompressionPreference;
-use lz4_sys::*;
 
 /// Represents an error specific to LZ4 compression operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,7 +35,7 @@ impl From<Lz4DecompressionError> for NxDecompressionError {
 ///
 /// * `source_length`: Number of bytes at source.
 pub fn max_alloc_for_compress_size(source_length: usize) -> usize {
-    unsafe { LZ4_compressBound(source_length as i32) as usize }
+    lzzzz::lz4::max_compressed_size(source_length)
 }
 
 /// Compresses data with LZ4.
@@ -59,19 +58,17 @@ pub fn compress(
 ) -> CompressionResult {
     *used_copy = false;
 
-    let bytes = unsafe {
-        LZ4_compress_default(
-            source.as_ptr() as *const i8,
-            destination.as_mut_ptr() as *mut i8,
-            source.len() as i32,
-            destination.len() as i32,
-        )
-    };
+    let bytes = lzzzz::lz4_hc::compress(source, destination, level);
 
-    if bytes <= 0 {
+    if bytes.is_err() {
+        // LZ4 only has 1 error
         return Err(Lz4CompressionError::CompressionFailed.into());
     }
-    if bytes as usize > source.len() {
+
+    // Note: This code assumes that the user has properly used max_alloc_for_compress_size
+    //       failure to do so will result in possible CompressionFailed error.
+    let num_bytes = unsafe { bytes.unwrap_unchecked() } as usize;
+    if unsafe { bytes.unwrap_unchecked() } > source.len() {
         return super::compress(
             CompressionPreference::Copy,
             level,
@@ -81,7 +78,7 @@ pub fn compress(
         );
     }
 
-    Ok(bytes as usize)
+    Ok(num_bytes)
 }
 
 /// Decompresses data with LZ4.
@@ -95,21 +92,31 @@ pub fn compress(
 ///
 /// The number of bytes written to the destination, or an error.
 pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
-    let source_length = source.len();
-    let destination_length = destination.len();
+    let result = lzzzz::lz4::decompress(source, destination);
 
-    let result = unsafe {
-        LZ4_decompress_safe(
-            source.as_ptr() as *const i8,
-            destination.as_mut_ptr() as *mut i8,
-            source_length as i32,
-            destination_length as i32,
-        )
+    match result {
+        Ok(num_bytes) => return Ok(num_bytes),
+        // LZ4 only has a single 'decompression failed', so we don't need to check error type.
+        Err(_) => return Err(Lz4DecompressionError::DecompressionFailed.into()),
     };
+}
 
-    if result < 0 {
-        Err(Lz4DecompressionError::DecompressionFailed.into())
-    } else {
-        Ok(result as usize)
-    }
+/// Partially decompresses data with LZ4 until the destination buffer is filled.
+///
+/// # Parameters
+///
+/// * `source`: Source data to decompress.
+/// * `destination`: Destination buffer for decompressed data.
+///
+/// # Returns
+///
+/// The number of bytes written to the destination, or an error.
+pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
+    let result = lzzzz::lz4::decompress_partial(source, destination, destination.len());
+
+    match result {
+        Ok(num_bytes) => return Ok(num_bytes),
+        // LZ4 only has a single 'decompression failed', so we don't need to check error type.
+        Err(_) => return Err(Lz4DecompressionError::DecompressionFailed.into()),
+    };
 }

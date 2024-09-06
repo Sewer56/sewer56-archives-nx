@@ -46,6 +46,19 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
     Ok(source.len())
 }
 
+/// Partially decompresses (copies) data until the destination buffer is filled
+///
+/// # Parameters
+///
+/// * `source`: Source data to decompress (copy).
+/// * `destination`: Destination buffer for decompressed data.
+pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
+    let copy_length = std::cmp::min(source.len(), destination.len());
+
+    unsafe { copy_nonoverlapping(source.as_ptr(), destination.as_mut_ptr(), copy_length) };
+    Ok(copy_length)
+}
+
 /// An error occurred during copy compression.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CopyCompressionError {

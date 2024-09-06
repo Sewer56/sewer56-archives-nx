@@ -120,3 +120,141 @@ pub fn decompress(
         _ => panic!("Unsupported decompression method"),
     }
 }
+
+/// Partially decompresses data with a specific method until the destination buffer is filled.
+///
+/// # Parameters
+///
+/// * `method`: Method we decompress with.
+/// * `source`: Source data to decompress.
+/// * `destination`: Destination buffer for decompressed data.
+pub fn decompress_partial(
+    method: CompressionPreference,
+    source: &[u8],
+    destination: &mut [u8],
+) -> DecompressionResult {
+    match method {
+        CompressionPreference::Copy => copy::decompress_partial(source, destination),
+        #[cfg(feature = "zstd")]
+        CompressionPreference::ZStandard => zstd::decompress_partial(source, destination),
+        #[cfg(feature = "lz4")]
+        CompressionPreference::Lz4 => lz4::decompress_partial(source, destination),
+        _ => panic!("Unsupported partial decompression method"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::enums::compression_preference::CompressionPreference;
+    use rstest::rstest;
+
+    const TEST_DATA: &[u8] =
+        b"This is compressible test data. testtesttesttesttesttesttesttesttesttesttesttest";
+    const INCOMPRESSIBLE_DATA: &[u8] = b"thisdoenatcmpres"; // does not compress
+
+    #[rstest]
+    #[case::copy(CompressionPreference::Copy)]
+    #[cfg_attr(feature = "zstd", case::zstd(CompressionPreference::ZStandard))]
+    #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
+    fn test_round_trip(#[case] method: CompressionPreference) {
+        let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
+        let mut decompressed = vec![0u8; TEST_DATA.len()];
+        let mut used_copy = false;
+
+        let compressed_size =
+            compress(method, 0, TEST_DATA, &mut compressed, &mut used_copy).unwrap();
+        compressed.truncate(compressed_size);
+
+        let decompressed_size = decompress(method, &compressed, &mut decompressed).unwrap();
+        decompressed.truncate(decompressed_size);
+
+        assert_eq!(TEST_DATA, decompressed.as_slice());
+    }
+
+    #[rstest]
+    #[case::copy(CompressionPreference::Copy)]
+    #[cfg_attr(feature = "zstd", case::zstd(CompressionPreference::ZStandard))]
+    #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
+    fn test_incompressible_data(#[case] method: CompressionPreference) {
+        let mut compressed = vec![0u8; max_alloc_for_compress_size(INCOMPRESSIBLE_DATA.len())];
+        let mut used_copy = false;
+
+        let compressed_size = compress(
+            method,
+            0,
+            INCOMPRESSIBLE_DATA,
+            &mut compressed,
+            &mut used_copy,
+        )
+        .unwrap();
+        assert!(used_copy, "Incompressible data should use copy method");
+        assert_eq!(compressed_size, INCOMPRESSIBLE_DATA.len());
+    }
+
+    #[rstest]
+    #[case::copy(
+        CompressionPreference::Copy,
+        NxCompressionError::Copy(CopyCompressionError::DestinationTooSmall)
+    )]
+    #[cfg_attr(
+        feature = "zstd",
+        case::zstd(
+            CompressionPreference::ZStandard,
+            NxCompressionError::Copy(CopyCompressionError::DestinationTooSmall) // ZStd delegates to copy, which then fails due to too small buffer.
+        )
+    )]
+    #[cfg_attr(
+        feature = "lz4",
+        case::lz4(
+            CompressionPreference::Lz4,
+            NxCompressionError::Lz4(Lz4CompressionError::CompressionFailed)
+        )
+    )]
+    fn test_destination_too_small(
+        #[case] method: CompressionPreference,
+        #[case] expected_compression_error: NxCompressionError,
+    ) {
+        let small_buffer = [0u8; 10];
+        let mut used_copy = false;
+
+        // Test compression error
+        let result = compress(
+            method,
+            0,
+            TEST_DATA,
+            &mut small_buffer.to_vec(),
+            &mut used_copy,
+        );
+
+        assert_eq!(result.unwrap_err(), expected_compression_error);
+    }
+
+    #[rstest]
+    #[case::copy(CompressionPreference::Copy)]
+    #[cfg_attr(feature = "zstd", case::zstd(CompressionPreference::ZStandard))]
+    #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
+    fn test_partial_decompression_larger_buffer(#[case] method: CompressionPreference) {
+        let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
+        let mut used_copy = false;
+
+        let compressed_size =
+            compress(method, 0, TEST_DATA, &mut compressed, &mut used_copy).unwrap();
+        compressed.truncate(compressed_size);
+
+        let mut half_decomp_data = vec![0u8; TEST_DATA.len() / 2];
+        let decompressed_size =
+            decompress_partial(method, &compressed, &mut half_decomp_data).unwrap();
+
+        assert_eq!(
+            decompressed_size,
+            TEST_DATA.len() / 2,
+            "Decompressed size should match the original data length"
+        );
+        assert_eq!(
+            &half_decomp_data[..decompressed_size],
+            &half_decomp_data[..TEST_DATA.len() / 2],
+            "Decompressed data should match the original data"
+        );
+    }
+}
