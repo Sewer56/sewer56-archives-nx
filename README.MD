@@ -57,6 +57,8 @@ To run Coverage, run task (`Ctrl+Shift+P -> Run Task`), you should see something
 
 The `tarpaulin-report.html` file can be opened in VSCode (`Show Preview`) for a live view.
 
+To show the coverage in the code editor, use [Coverage Gutters][coverage-gutters], with `Ctrl+Shift+P -> Coverage Gutters: Watch Coverage`.
+
 ## Debugging Benchmarks
 
 If you wish to debug benchmarks in VSCode, go to `Run and Debug` Menu and generate the launch 
