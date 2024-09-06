@@ -42,7 +42,13 @@ These configurations are in the `.vscode` folder; and the tasks can be ran via `
 
 #### Test Coverage
 
-To run Coverage, run task (`Ctrl+Shift+P -> Run Task`), you should see: 
+First install or update `tarpaulin`:
+
+```bash
+cargo install cargo-tarpaulin
+```
+
+To run Coverage, run task (`Ctrl+Shift+P -> Run Task`), you should see something similar to: 
 
 | Task                   | Description                                                                |
 | ---------------------- | -------------------------------------------------------------------------- |
@@ -50,8 +56,6 @@ To run Coverage, run task (`Ctrl+Shift+P -> Run Task`), you should see:
 | Generate Code Coverage | Manually generate code coverage (`cobertura.xml`, `tarpaulin-report.html`) |
 
 The `tarpaulin-report.html` file can be opened in VSCode (`Show Preview`) for a live view.
-
-For GUI integration, run action `Coverage Gutter: Watch` (in `Ctrl+Shift+P` actions menu).
 
 ## Debugging Benchmarks
 
