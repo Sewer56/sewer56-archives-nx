@@ -53,21 +53,6 @@ pub fn max_alloc_for_compress_size(source_length: usize) -> usize {
     max_size
 }
 
-/// Determines memory needed to alloc to compress data with a specified method.
-///
-/// # Parameters
-///
-/// * `method`: Method we compress with.
-/// * `source_length`: Number of bytes at source.
-pub fn alloc_for_compress_size(method: CompressionPreference, source_length: usize) -> usize {
-    match method {
-        CompressionPreference::Lz4 => lz4::max_alloc_for_compress_size(source_length),
-        CompressionPreference::ZStandard => zstd::max_alloc_for_compress_size(source_length),
-        CompressionPreference::Copy => copy::max_alloc_for_compress_size(source_length),
-        _ => unimplemented!(),
-    }
-}
-
 /// Compresses data with a specific method.
 ///
 /// # Parameters
@@ -234,7 +219,7 @@ mod tests {
     #[case::copy(CompressionPreference::Copy)]
     #[cfg_attr(feature = "zstd", case::zstd(CompressionPreference::ZStandard))]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
-    fn test_partial_decompression_larger_buffer(#[case] method: CompressionPreference) {
+    fn test_partial_decompression(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
         let mut used_copy = false;
 
@@ -256,5 +241,46 @@ mod tests {
             &half_decomp_data[..TEST_DATA.len() / 2],
             "Decompressed data should match the original data"
         );
+    }
+
+    #[rstest]
+    #[case::copy(
+        CompressionPreference::Copy,
+        NxDecompressionError::Copy(CopyDecompressionError::DestinationTooSmall)
+    )]
+    #[cfg_attr(
+        feature = "zstd",
+        case::zstd(
+            CompressionPreference::ZStandard,
+            NxDecompressionError::ZStandard(ZSTD_ErrorCode::ZSTD_error_dstSize_tooSmall)
+        )
+    )]
+    #[cfg_attr(
+        feature = "lz4",
+        case::lz4(
+            CompressionPreference::Lz4,
+            NxDecompressionError::Lz4(Lz4DecompressionError::DecompressionFailed)
+        )
+    )]
+    fn test_decompress_buffer_too_small(
+        #[case] method: CompressionPreference,
+        #[case] expected_decompression_error: NxDecompressionError,
+    ) {
+        // Compress the test data
+        let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
+        let mut used_copy = false;
+        let compressed_size =
+            compress(method, 0, TEST_DATA, &mut compressed, &mut used_copy).unwrap();
+        compressed.truncate(compressed_size);
+
+        // Try to decompress with a buffer that's too small (half the size of the original data)
+        let mut small_destination = vec![0u8; TEST_DATA.len() / 2];
+        let result = decompress(method, &compressed, &mut small_destination);
+
+        assert!(
+            result.is_err(),
+            "Should return an error when decompression buffer is too small"
+        );
+        assert_eq!(result.unwrap_err(), expected_decompression_error);
     }
 }
