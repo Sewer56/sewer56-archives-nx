@@ -31,6 +31,7 @@ pub mod headers {
         pub mod native_file_entry;
         pub mod native_file_entry_v0;
         pub mod native_file_entry_v1;
+        pub mod native_file_header;
     }
 
     /// This represents the unpacked 'managed' version of the headers.
@@ -40,6 +41,11 @@ pub mod headers {
 
         /// Represents a file entry that was decoded from the Table of Contents.
         pub mod file_entry;
+    }
+
+    /// This contains reused traits in the Nx source tree.
+    pub mod traits {
+        pub mod can_convert_to_little_endian;
     }
 }
 
