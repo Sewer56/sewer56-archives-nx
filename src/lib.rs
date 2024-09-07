@@ -10,6 +10,13 @@ pub mod api {
     pub mod enums {
         pub mod compression_preference;
     }
+
+    /// This contains traits that are implementable by outside entities
+    /// that wish to integrate with the library.
+    pub mod traits {
+        /// Indicates an item has a relative path. For data input into the packer.
+        pub mod has_relative_path;
+    }
 }
 
 /// This module contains all of the data structures that you'll
@@ -20,6 +27,12 @@ pub mod api {
 pub mod headers {
     pub mod enums {
         pub mod table_of_contents_version;
+    }
+
+    /// This contains the serialization/deserialization logic for various parts of Table of Contents
+    /// with variable sizes.
+    pub mod parser {
+        pub mod string_pool;
     }
 
     /// This module contains all of the raw data structures that match 1:1 what's in the file.
@@ -53,11 +66,13 @@ pub mod headers {
 pub mod structs {}
 
 pub mod utilities {
-    #[cfg(test)]
-    pub mod tests {
-        pub mod packing_test_helpers;
-        pub mod permutations;
+
+    /// Utilities for grouping, sorting and general arrangement of items.
+    pub mod arrange {
+        pub mod sort_lexicographically;
     }
+
+    /// This module contains APIs that abstract the supported compression algorithms.
     pub mod compression;
 
     pub mod serialize {
@@ -66,5 +81,11 @@ pub mod utilities {
 
         /// This module contains utilities for writing unaligned data via pointer in little-endian format.
         pub mod little_endian_writer;
+    }
+
+    #[cfg(test)]
+    pub mod tests {
+        pub mod packing_test_helpers;
+        pub mod permutations;
     }
 }
