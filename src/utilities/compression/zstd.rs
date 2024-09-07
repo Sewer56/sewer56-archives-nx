@@ -188,6 +188,45 @@ pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> Decompressio
     }
 }
 
+/// Determines the decompressed size of ZStandard compressed data
+///
+/// # Parameters
+///
+/// * `compressed_data`: Slice containing the compressed data
+///
+/// # Returns
+///
+/// * `Ok(usize)`: The decompressed size in bytes
+/// * `Err(GetDecompressedSizeError)`: If there was an error determining the size
+pub fn get_decompressed_size(compressed_data: &[u8]) -> Result<usize, GetDecompressedSizeError> {
+    let size = unsafe {
+        ZSTD_findDecompressedSize(
+            compressed_data.as_ptr() as *const c_void,
+            compressed_data.len(),
+        ) as i64
+    };
+
+    match size {
+        size if size == ZSTD_CONTENTSIZE_ERROR as i64 => {
+            Err(GetDecompressedSizeError::UnknownErrorOccurred)
+        }
+        size if size == ZSTD_CONTENTSIZE_UNKNOWN as i64 => {
+            Err(GetDecompressedSizeError::SizeCannotBeDetermined)
+        }
+        x => Ok(x as usize),
+    }
+}
+
+/// Represents an error returned from the Nx compression APIs.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum GetDecompressedSizeError {
+    /// The size of the compressed payload cannot be determined.
+    SizeCannotBeDetermined,
+
+    /// Unknown ZStandard error has occurred.
+    UnknownErrorOccurred,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -234,5 +273,39 @@ mod tests {
             }
             _ => panic!("Unexpected result"),
         }
+    }
+
+    #[test]
+    fn get_decompressed_size() {
+        // Create some sample data
+        let original_data = b"Hello, ZStandard!".repeat(100);
+
+        // Compress the data
+        let mut compressed_data = vec![0u8; max_alloc_for_compress_size(original_data.len())];
+        let mut used_copy = false;
+        let compressed_size =
+            compress(3, &original_data, &mut compressed_data, &mut used_copy).unwrap();
+        compressed_data.truncate(compressed_size);
+
+        // Get the decompressed size
+        let decompressed_size = super::get_decompressed_size(&compressed_data).unwrap();
+
+        assert_eq!(
+            decompressed_size,
+            original_data.len(),
+            "Decompressed size should match original data length"
+        );
+
+        // Test with invalid data
+        let invalid_data = vec![0u8; 100];
+        let result = super::get_decompressed_size(&invalid_data);
+        assert!(
+            result.is_err(),
+            "Should return an error for invalid compressed data"
+        );
+        assert_eq!(
+            result.unwrap_err(),
+            GetDecompressedSizeError::UnknownErrorOccurred
+        );
     }
 }

@@ -26,7 +26,7 @@ pub enum NxCompressionError {
 pub type DecompressionResult = Result<usize, NxDecompressionError>;
 
 /// Represents an error returned from the Nx compression APIs.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum NxDecompressionError {
     Copy(CopyDecompressionError),
     ZStandard(ZSTD_ErrorCode),
