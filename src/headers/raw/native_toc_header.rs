@@ -32,24 +32,26 @@ bitfield! {
 
 impl NativeTocHeader {
     /// Maximum possible size of the string pool.
-    /// This is not a format limit, this size is derived from the following approximation:
+    /// This is constrained by the [`NativeTocHeader::string_pool_size`] variable of the table of contents header.
+    ///
+    /// Realistically this pool size limit allows for a file count of approximately ~4.4 million.
+    ///
+    /// ## Deriveration
+    ///
+    /// This count is derived from the following approximation:
+    ///
+    /// An archive with Sewer's SteamApps (180k files and 150+ games) has the following sizes.
     ///
     /// - FileEntries = 4.3MiB
     /// - Blocks = 1MiB
-    /// - StringPool = 0.66MiB
+    /// - StringPool = 0.66MiB (~11% of total size)
     ///
-    /// StringPool is ~11% of the total size.
-    /// If we extrapolate this, and do [256MiB * 0.11 MiB] = 28.16MiB
-    /// Where 256MiB is max Nx header size.
+    /// By this account, we can surmise that an archive with 1M files would have a string pool size
+    /// of 0.66 / 180000 * 1000000 = 3.6MiB.
     ///
-    /// If the string pool is larger than this, the archive will most likely have an insufficient
-    /// space in the header. Hence the value is set to this arbitrary limit. On the good news,
-    /// to hit this limit you need over 7 million files, which the format doesn't even currently support.
-    ///
-    /// Data Source:
-    ///
-    /// Sewer's sample of SteamApps folder with 150+ games and 180k files.
-    pub const MAX_STRING_POOL_SIZE: usize = 29360127; // 2^24 - 1
+    /// 1M files is the limit of the archive format currently; so there's some leeway left over
+    /// in case of poor compression.
+    pub const MAX_STRING_POOL_SIZE: usize = 16777215; // 2^24 - 1
 
     /// Maximum possible size of the Native ToC header.
     pub const SIZE_BYTES: usize = 8;
