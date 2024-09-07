@@ -8,17 +8,18 @@ pub mod lz4;
 use crate::api::enums::compression_preference::CompressionPreference;
 use copy::*;
 use lz4::{Lz4CompressionError, Lz4DecompressionError};
+use thiserror_no_std::Error;
 
 /// A result type around compression functions..
 /// Either a success code (number of bytes written), or an error code.
 pub type CompressionResult = Result<usize, NxCompressionError>;
 
 /// Represents an error returned from the Nx compression APIs.
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
 pub enum NxCompressionError {
-    Copy(CopyCompressionError),
-    ZStandard(ZSTD_ErrorCode),
-    Lz4(Lz4CompressionError),
+    Copy(#[from] CopyCompressionError),
+    ZStandard(#[from] ZSTD_ErrorCode),
+    Lz4(#[from] Lz4CompressionError),
 }
 
 /// A result type around compression functions..
@@ -26,11 +27,11 @@ pub enum NxCompressionError {
 pub type DecompressionResult = Result<usize, NxDecompressionError>;
 
 /// Represents an error returned from the Nx compression APIs.
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
 pub enum NxDecompressionError {
-    Copy(CopyDecompressionError),
-    ZStandard(ZSTD_ErrorCode),
-    Lz4(Lz4DecompressionError),
+    Copy(#[from] CopyDecompressionError),
+    ZStandard(#[from] ZSTD_ErrorCode),
+    Lz4(#[from] Lz4DecompressionError),
 }
 
 /// Determines maximum memory needed to alloc to compress data with any method.

@@ -65,20 +65,8 @@ pub enum CopyCompressionError {
     DestinationTooSmall,
 }
 
-impl From<CopyCompressionError> for NxCompressionError {
-    fn from(err: CopyCompressionError) -> NxCompressionError {
-        NxCompressionError::Copy(err)
-    }
-}
-
 /// An error occurred during copy decompression.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum CopyDecompressionError {
     DestinationTooSmall,
-}
-
-impl From<CopyDecompressionError> for NxDecompressionError {
-    fn from(err: CopyDecompressionError) -> NxDecompressionError {
-        NxDecompressionError::Copy(err)
-    }
 }

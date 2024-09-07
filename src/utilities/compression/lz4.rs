@@ -17,18 +17,6 @@ pub enum Lz4DecompressionError {
     DecompressionFailed,
 }
 
-impl From<Lz4CompressionError> for NxCompressionError {
-    fn from(err: Lz4CompressionError) -> NxCompressionError {
-        NxCompressionError::Lz4(err)
-    }
-}
-
-impl From<Lz4DecompressionError> for NxDecompressionError {
-    fn from(err: Lz4DecompressionError) -> NxDecompressionError {
-        NxDecompressionError::Lz4(err)
-    }
-}
-
 /// Determines maximum memory needed to alloc to compress data with LZ4.
 ///
 /// # Parameters
