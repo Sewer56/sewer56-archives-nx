@@ -1,4 +1,4 @@
-﻿# File Header
+# File Header
 
 8 bytes:
 
@@ -24,7 +24,7 @@ Size: `7 bits` (0-127)
 
 The numbers correspond to the following file format versions:
 
-0: `1.0.0`
+0: `1.0.0` - `1.1.0`
 
 !!! tip "Libraries reading the `Nx` format should check this field to ensure compatibility."
 
@@ -40,11 +40,11 @@ The numbers correspond to the following file format versions:
 
     This is done to improve compression & decompression speeds at minimal compression ratio loss.
 
-Stored so the decompressor knows how many chunks a file is split into; and how much memory to allocate.  
-Also limits memory use on 4+GB archives.  
+Stored so the decompressor knows how many chunks a file is split into; and how much memory to allocate.
+Also limits memory use on 4+GB archives.
 
-Size: `5 bits`, (0-31).  
-Parsed as `512 << chunkSize`.  
+Size: `5 bits`, (0-31).
+Parsed as `512 << chunkSize`.
 
 i.e.
 
@@ -67,10 +67,10 @@ Currently, the size of SOLID blocks is limited to (`64MiB - 1`) as it is tied to
 ## Header Page Count
 
 Number of 4K memory pages required to store this header, the Table of Contents
-(incl. compressed StringPool) and any user data.  
+(incl. compressed StringPool) and any user data.
 
-Size: `16 bits`, (0-65535).  
-Max size of 256MiB.  
+Size: `16 bits`, (0-65535).
+Max size of 256MiB.
 
 ```csharp
 return 4096 * tocPageCount;

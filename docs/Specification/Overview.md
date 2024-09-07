@@ -1,4 +1,4 @@
-﻿# Format Specification
+# Format Specification
 
 !!! tip "File Format Version: `1.0.0`"
 
@@ -6,17 +6,17 @@
 
     This is a semi-SOLID archive format for storing game mod content; intended to double up as a packaging format for uploading mods.
 
-It has the following properties:  
+It has the following properties:
 
-- Files under Block Size are SOLID Compressed.  
-- Files above Block Size are non-SOLID Compressed.  
-- Variable Block Size.  
-- Stores File Hashes Within.  
-- Huge Files Split into Chunks for Faster (De)compression.  
-- TOC in-front.  
+- Files under Block Size are SOLID Compressed.
+- Files above Block Size are non-SOLID Compressed.
+- Variable Block Size.
+- Stores File Hashes Within.
+- Huge Files Split into Chunks for Faster (De)compression.
+- TOC in-front.
 
-We use SOLID compression to bundle up small files together, while keeping the large files as separate compressed blobs.  
-All files are entirely contained within a slice of a given block.  
+We use SOLID compression to bundle up small files together, while keeping the large files as separate compressed blobs.
+All files are entirely contained within a slice of a given block.
 
 ```mermaid
 flowchart TD
@@ -30,42 +30,42 @@ flowchart TD
 
     subgraph Block 0
         ModConfig.json -.-> Updates.json
-        Updates.json -.-> more["... more .json files"]        
+        Updates.json -.-> more["... more .json files"]
     end
 ```
 
 Offsets of each block is stored in header, therefore large files can be completely skipped during the extract operation
 if a small file is all that is needed.
 
-!!! note 
+!!! note
 
     This format is optimized for transferring and unpacking files; editing existing archives might lead to sub-optimal performance.
 
 ## Overall Format Layout
 
-The overall file is structured in this order:  
+The overall file is structured in this order:
 
 ```
 | Header + TOC | Block 1 | Block 2 | ... | Block N |
 ```
 
-All sections (indicated by `|`) are 4096 aligned to match physical sector size of modern drives and page granularity.  
+All sections (indicated by `|`) are 4096 aligned to match physical sector size of modern drives and page granularity.
 
-Field sizes used below are similar to Rust notation; with some custom types e.g. 
+Field sizes used below are similar to Rust notation; with some custom types e.g.
 
-- `u8`: Unsigned 8 bits.  
-- `i8`: Signed 8 bits.  
-- `u4`: 4 bits.  
-- `u32/u64`: 4 Bytes or 8 Bytes (depending on variant).  
+- `u8`: Unsigned 8 bits.
+- `i8`: Signed 8 bits.
+- `u4`: 4 bits.
+- `u32/u64`: 4 Bytes or 8 Bytes (depending on variant).
 
-Assume any bit packed values are sequential, i.e. if `u4` then `u4` is specified, first `u4` is the upper 4 bits.  
+Assume any bit packed values are sequential, i.e. if `u4` then `u4` is specified, first `u4` is the upper 4 bits.
 
-All packed fields are `little-endian`; and written out when total number of bits aligns with a power of 2.  
+All packed fields are `little-endian`; and written out when total number of bits aligns with a power of 2.
 
-- `u6` + `u12` is 2 bytes `little-endian`  
-- `u15` + `u17` is 4 bytes `little-endian`  
-- `u26` + `u22` + `u16` is 8 bytes `little-endian`  
-- `u6` + `u11` + `u17` ***is 4 bytes*** `little-endian`, ***not 2+2***  
+- `u6` + `u12` is 2 bytes `little-endian`
+- `u15` + `u17` is 4 bytes `little-endian`
+- `u26` + `u22` + `u16` is 8 bytes `little-endian`
+- `u6` + `u11` + `u17` ***is 4 bytes*** `little-endian`, ***not 2+2***
 
 ### Terminology
 
@@ -80,22 +80,22 @@ All packed fields are `little-endian`; and written out when total number of bits
 
     Inclusion of hash for each file has some nice benefits.
 
-- Can do partial download to upgrade from older version of mod.  
-    - We can download header (incl. [Table of Contents](./Table-Of-Contents.md)) only, compare hashes.  
-    - Then only download the chunks we need to decompress our needed data.  
-    - Inspired by MSIX and certain Linux package formats.  
+- Can do partial download to upgrade from older version of mod.
+    - We can download header (incl. [Table of Contents](./Table-Of-Contents.md)) only, compare hashes.
+    - Then only download the chunks we need to decompress our needed data.
+    - Inspired by MSIX and certain Linux package formats.
 
-- Certain applications like [Nexus Mods App](https://github.com/Nexus-Mods/NexusMods.App) can avoid re-hashing files.  
+- Certain applications like [Nexus Mods App](https://github.com/Nexus-Mods/NexusMods.App) can avoid re-hashing files.
 
 ## Previewing the Format
 
-!!! info 
+!!! info
 
-    For people wishing to study the format, or debug it, a [010-Editor](https://www.sweetscape.com/010editor/) template 
-    is available for usage [010 Template](./010Template.bt).  
+    For people wishing to study the format, or debug it, a [010-Editor](https://www.sweetscape.com/010editor/) template
+    is available for usage [010 Template](./010Template.bt).
 
-Hit `Templates -> Open Template` and then the big play button.  
-Then you'll be able to browse the format in 'Variables' window.  
+Hit `Templates -> Open Template` and then the big play button.
+Then you'll be able to browse the format in 'Variables' window.
 
 Alternatively, contributions are welcome if anyone wants to make a [Kaitai Struct](https://kaitai.io) variation 💜.
 

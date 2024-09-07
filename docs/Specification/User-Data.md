@@ -132,7 +132,7 @@ MOD-ing the hash by the number of buckets.
 - `u32` NumEntries
 - Entries[NumEntries]
 
-#### Entry 
+#### Entry
 
 - `u64` Hash
 - `u32` FileIndex

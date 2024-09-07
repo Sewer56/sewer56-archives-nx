@@ -35,10 +35,10 @@ Variable Size:
     - 24 byte FileEntry w/ `u64` Size
     - 2^64 bytes per file and 1 million files.
 
-- `3`: 
+- `3`:
     - RESERVED.
 
-Remaining bits reserved for possible future revisions.  
+Remaining bits reserved for possible future revisions.
 Limitation of 1 million files is inferred from [FileEntry -> FilePathIndex](./Table-Of-Contents.md).
 
 ## File Count
@@ -57,8 +57,8 @@ Use known fixed size and are 4 byte aligned to improve parsing speed; size 20-24
 
     Files exceeding [Chunk Size](./File-Header.md#chunk-size) span multiple blocks.
 
-Number of blocks used to store the file is calculated as: `DecompressedSize` / [Chunk Size](./File-Header.md#chunk-size), 
-and +1 if there is any remainder, i.e. 
+Number of blocks used to store the file is calculated as: `DecompressedSize` / [Chunk Size](./File-Header.md#chunk-size),
+and +1 if there is any remainder, i.e.
 
 ```csharp
 public int GetChunkCount(int chunkSizeBytes)
@@ -71,7 +71,7 @@ public int GetChunkCount(int chunkSizeBytes)
 }
 ```
 
-All chunk blocks are stored sequentially.  
+All chunk blocks are stored sequentially.
 
 ## Blocks
 
@@ -96,7 +96,7 @@ Raw buffer of UTF-8 deduplicated strings of file paths. Each string is null term
 The strings in this pool are first lexicographically sorted (to group similar paths together); and then compressed using ZStd.
 As for decompression, size of this pool is unknown until after decompression is done; file header should specify sufficient buffer size.
 
-For example a valid (decompressed) pool might look like this:  
+For example a valid (decompressed) pool might look like this:
 `data/textures/cat.png\0data/textures/dog.png`
 
 String length is determined by searching null terminators. We will determine lengths of all strings ahead of time by scanning
@@ -115,9 +115,9 @@ When parsing the archive; we decode the StringPool into an array of strings.
 
 !!! note
 
-    It is possible to make ZSTD dictionaries for individual game directories that would further improve StringPool compression ratios.  
+    It is possible to make ZSTD dictionaries for individual game directories that would further improve StringPool compression ratios.
 
-    This might be added in the future but is currently not planned until additional testing and a backwards compatibility 
+    This might be added in the future but is currently not planned until additional testing and a backwards compatibility
     plan for decompressors missing the relevant dictionaries is decided.
 
 ## Performance Considerations
