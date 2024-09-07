@@ -24,8 +24,8 @@ pub trait ReadAsLittleEndian: Sized {
     /// # Parameters
     ///
     /// * `reader`: The [LittleEndianReader] to read from.
-    /// * `offset`: The offset in number of elements of this type from the current position.
-    unsafe fn read_at_offset_le(reader: &mut LittleEndianReader, offset: isize) -> Self;
+    /// * `offset`: The offset in number of bytes from the current position.
+    unsafe fn read_at_offset_le(reader: &mut LittleEndianReader, offset_in_bytes: isize) -> Self;
 }
 
 /// A utility for reading data in little-endian format from a raw pointer.
@@ -86,14 +86,14 @@ impl LittleEndianReader {
     ///
     /// # Parameters
     ///
-    /// * `offset`: The offset in number of elements of type T from the current position.
+    /// * `offset`: The offset in number of bytes from the current position.
     ///
     /// # Returns
     ///
     /// The value read from memory at the specified offset, interpreted in little-endian format.
     #[inline(always)]
-    pub unsafe fn read_at_offset<T: ReadAsLittleEndian>(&mut self, offset: isize) -> T {
-        T::read_at_offset_le(self, offset)
+    pub unsafe fn read_at_offset<T: ReadAsLittleEndian>(&mut self, offset_in_bytes: isize) -> T {
+        T::read_at_offset_le(self, offset_in_bytes)
     }
 
     /// Reads a byte slice from the current position and advances the pointer.
@@ -142,8 +142,8 @@ macro_rules! impl_read_little_endian {
                 }
 
                 #[inline(always)]
-                unsafe fn read_at_offset_le(reader: &mut LittleEndianReader, offset: isize) -> Self {
-                    let value = read_unaligned((reader.ptr as *const $t).offset(offset));
+                unsafe fn read_at_offset_le(reader: &mut LittleEndianReader, offset_in_bytes: isize) -> Self {
+                    let value = read_unaligned(reader.ptr.offset(offset_in_bytes) as *const $t);
                     <$t>::from_le(value)
                 }
             }
@@ -167,10 +167,10 @@ macro_rules! impl_read_little_endian_float {
                 }
 
                 #[inline(always)]
-                unsafe fn read_at_offset_le(reader: &mut LittleEndianReader, offset: isize) -> Self {
+                unsafe fn read_at_offset_le(reader: &mut LittleEndianReader, offset_in_bytes: isize) -> Self {
                     let mut bytes = [0u8; size_of::<$t>()];
                     copy_nonoverlapping(
-                        reader.ptr.offset(offset * size_of::<$t>() as isize),
+                        reader.ptr.offset(offset_in_bytes),
                         bytes.as_mut_ptr(),
                         size_of::<$t>()
                     );

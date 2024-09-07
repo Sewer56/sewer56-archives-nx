@@ -24,8 +24,8 @@ pub trait WriteAsLittleEndian {
     /// # Parameters
     ///
     /// * `writer`: The [LittleEndianWriter] to write to.
-    /// * `offset`: The offset in number of elements of this type from the current position.
-    unsafe fn write_at_offset_le(self, writer: &mut LittleEndianWriter, offset: isize);
+    /// * `offset`: The offset in number of bytes from the current position.
+    unsafe fn write_at_offset_le(self, writer: &mut LittleEndianWriter, offset_in_bytes: isize);
 }
 
 /// A utility for writing data in little-endian format to a raw pointer.
@@ -79,10 +79,14 @@ impl LittleEndianWriter {
     /// # Parameters
     ///
     /// * `value`: The value to be written in little-endian format.
-    /// * `offset`: The offset in number of elements of type T from the current position.
+    /// * `offset`: The offset in number of bytes from the current position.
     #[inline(always)]
-    pub unsafe fn write_at_offset<T: WriteAsLittleEndian>(&mut self, value: T, offset: isize) {
-        value.write_at_offset_le(self, offset);
+    pub unsafe fn write_at_offset<T: WriteAsLittleEndian>(
+        &mut self,
+        value: T,
+        offset_in_bytes: isize,
+    ) {
+        value.write_at_offset_le(self, offset_in_bytes);
     }
 
     /// Writes a byte slice to the current position and advances the pointer.
@@ -130,8 +134,8 @@ macro_rules! impl_write_little_endian {
                 }
 
                 #[inline(always)]
-                unsafe fn write_at_offset_le(self, writer: &mut LittleEndianWriter, offset: isize) {
-                    write_unaligned((writer.ptr as *mut $t).offset(offset), self.to_le());
+                unsafe fn write_at_offset_le(self, writer: &mut LittleEndianWriter, offset_in_bytes: isize) {
+                    write_unaligned((writer.ptr.offset(offset_in_bytes) as *mut $t), self.to_le());
                 }
             }
         )*
@@ -152,10 +156,10 @@ macro_rules! impl_write_little_endian_float {
                 }
 
                 #[inline(always)]
-                unsafe fn write_at_offset_le(self, writer: &mut LittleEndianWriter, offset: isize) {
+                unsafe fn write_at_offset_le(self, writer: &mut LittleEndianWriter, offset_in_bytes: isize) {
                     copy_nonoverlapping(
                         self.to_le_bytes().as_ptr(),
-                        writer.ptr.offset(offset * size_of::<$t>() as isize),
+                        writer.ptr.offset(offset_in_bytes),
                         size_of::<$t>()
                     );
                 }
