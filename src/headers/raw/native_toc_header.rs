@@ -32,9 +32,26 @@ bitfield! {
 
 impl NativeTocHeader {
     /// Maximum possible size of the string pool.
-    pub const MAX_STRING_POOL_SIZE: u32 = 16777215; // 2^24 - 1
+    /// This is not a format limit, this size is derived from the following approximation:
+    ///
+    /// - FileEntries = 4.3MiB
+    /// - Blocks = 1MiB
+    /// - StringPool = 0.66MiB
+    ///
+    /// StringPool is ~11% of the total size.
+    /// If we extrapolate this, and do [256MiB * 0.11 MiB] = 28.16MiB
+    /// Where 256MiB is max Nx header size.
+    ///
+    /// If the string pool is larger than this, the archive will most likely have an insufficient
+    /// space in the header. Hence the value is set to this arbitrary limit. On the good news,
+    /// to hit this limit you need over 7 million files, which the format doesn't even currently support.
+    ///
+    /// Data Source:
+    ///
+    /// Sewer's sample of SteamApps folder with 150+ games and 180k files.
+    pub const MAX_STRING_POOL_SIZE: usize = 29360127; // 2^24 - 1
 
-    /// Maximum possible size of the string pool.
+    /// Maximum possible size of the Native ToC header.
     pub const SIZE_BYTES: usize = 8;
 
     /// Initializes the header with given data.
