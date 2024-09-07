@@ -67,7 +67,46 @@ pub fn compress(
     Err(NxCompressionError::ZStandard(errcode))
 }
 
-// TODO: Separate APIs for partial and full decompression
+/// Compresses data with ZStandard, without fallback to Copy
+/// if the data is not compressible.
+///
+/// # Parameters
+///
+/// * `level`: Level at which we are compressing.
+/// * `source`: Length of the source in bytes.
+/// * `destination`: Pointer to destination.
+pub fn compress_no_copy_fallback(
+    level: i32,
+    source: &[u8],
+    destination: &mut [u8],
+) -> CompressionResult {
+    let result = unsafe {
+        ZSTD_compress(
+            destination.as_mut_ptr() as *mut c_void,
+            destination.len(),
+            source.as_ptr() as *const c_void,
+            source.len(),
+            level,
+        )
+    };
+
+    let errcode = unsafe { ZSTD_getErrorCode(result) };
+    if unsafe { ZSTD_isError(result) } == 0 {
+        return Ok(result);
+    }
+
+    #[cfg(feature = "zstd_panic_on_unhandled_error")]
+    {
+        let error_name = ZSTD_getErrorName(error_code);
+        panic!(
+            "ZStd Compression error: {}",
+            CStr::from_ptr(error_name).to_string_lossy()
+        );
+    }
+
+    #[cfg(not(feature = "zstd_panic_on_unhandled_error"))]
+    Err(NxCompressionError::ZStandard(errcode))
+}
 
 /// Decompresses data with ZStandard
 ///

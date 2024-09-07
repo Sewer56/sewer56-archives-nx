@@ -8,7 +8,7 @@ license-file = "LICENSE"
 include = ["src/**/*"]
 
 [features]
-default = ["std", "lz4", "zstd"]
+default = ["std", "lz4"]
 std = []
 # See README.md for more information on using Profile-Guided Optimization.
 pgo = []
@@ -16,8 +16,6 @@ pgo = []
 c-exports = []
 # Enables support for LZ4 compression/decompression
 lz4 = []
-# Enables support for ZStd compression/decompression
-zstd = []
 
 # Panics with full error text on unhandled ZStandard Errors.
 # Increases binary size in favour of better error messages.

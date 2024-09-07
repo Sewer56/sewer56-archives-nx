@@ -60,7 +60,7 @@ pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> Decompressio
 }
 
 /// An error occurred during copy compression.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum CopyCompressionError {
     DestinationTooSmall,
 }
@@ -72,7 +72,7 @@ impl From<CopyCompressionError> for NxCompressionError {
 }
 
 /// An error occurred during copy decompression.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum CopyDecompressionError {
     DestinationTooSmall,
 }

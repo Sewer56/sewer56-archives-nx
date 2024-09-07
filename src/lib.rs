@@ -2,6 +2,7 @@
 //! Here's the crate documentation.
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(coverage_attribute)]
+#![feature(allocator_api)]
 #[cfg(feature = "c-exports")]
 pub mod exports;
 

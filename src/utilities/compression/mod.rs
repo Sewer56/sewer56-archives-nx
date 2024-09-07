@@ -1,7 +1,5 @@
 // Compression modules
 pub mod copy;
-
-#[cfg(feature = "zstd")]
 pub mod zstd;
 
 #[cfg(feature = "lz4")]
@@ -16,7 +14,7 @@ use lz4::{Lz4CompressionError, Lz4DecompressionError};
 pub type CompressionResult = Result<usize, NxCompressionError>;
 
 /// Represents an error returned from the Nx compression APIs.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum NxCompressionError {
     Copy(CopyCompressionError),
     ZStandard(ZSTD_ErrorCode),
@@ -44,12 +42,9 @@ pub fn max_alloc_for_compress_size(source_length: usize) -> usize {
     let mut max_size = copy::max_alloc_for_compress_size(source_length);
     #[cfg(feature = "lz4")]
     {
-        max_size = lz4::max_alloc_for_compress_size(source_length).max(max_size)
+        max_size = lz4::max_alloc_for_compress_size(source_length).max(max_size);
     }
-    #[cfg(feature = "zstd")]
-    {
-        max_size = zstd::max_alloc_for_compress_size(source_length).max(max_size)
-    }
+    max_size = zstd::max_alloc_for_compress_size(source_length).max(max_size);
     max_size
 }
 
@@ -76,7 +71,6 @@ pub fn compress(
     *used_copy = false;
     match method {
         CompressionPreference::Copy => copy::compress(source, destination, used_copy),
-        #[cfg(feature = "zstd")]
         CompressionPreference::ZStandard => zstd::compress(level, source, destination, used_copy),
         #[cfg(feature = "lz4")]
         CompressionPreference::Lz4 => lz4::compress(level, source, destination, used_copy),
@@ -98,7 +92,6 @@ pub fn decompress(
 ) -> DecompressionResult {
     match method {
         CompressionPreference::Copy => copy::decompress(source, destination),
-        #[cfg(feature = "zstd")]
         CompressionPreference::ZStandard => zstd::decompress(source, destination),
         #[cfg(feature = "lz4")]
         CompressionPreference::Lz4 => lz4::decompress(source, destination),
@@ -120,7 +113,6 @@ pub fn decompress_partial(
 ) -> DecompressionResult {
     match method {
         CompressionPreference::Copy => copy::decompress_partial(source, destination),
-        #[cfg(feature = "zstd")]
         CompressionPreference::ZStandard => zstd::decompress_partial(source, destination),
         #[cfg(feature = "lz4")]
         CompressionPreference::Lz4 => lz4::decompress_partial(source, destination),
@@ -140,7 +132,7 @@ mod tests {
 
     #[rstest]
     #[case::copy(CompressionPreference::Copy)]
-    #[cfg_attr(feature = "zstd", case::zstd(CompressionPreference::ZStandard))]
+    #[case::zstd(CompressionPreference::ZStandard)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
     fn can_round_trip(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
@@ -159,7 +151,7 @@ mod tests {
 
     #[rstest]
     #[case::copy(CompressionPreference::Copy)]
-    #[cfg_attr(feature = "zstd", case::zstd(CompressionPreference::ZStandard))]
+    #[case::zstd(CompressionPreference::ZStandard)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
     fn incompressible_data_defaults_to_copy(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(INCOMPRESSIBLE_DATA.len())];
@@ -182,12 +174,9 @@ mod tests {
         CompressionPreference::Copy,
         NxCompressionError::Copy(CopyCompressionError::DestinationTooSmall)
     )]
-    #[cfg_attr(
-        feature = "zstd",
-        case::zstd(
-            CompressionPreference::ZStandard,
-            NxCompressionError::Copy(CopyCompressionError::DestinationTooSmall) // ZStd delegates to copy, which then fails due to too small buffer.
-        )
+    #[case::zstd(
+        CompressionPreference::ZStandard,
+        NxCompressionError::Copy(CopyCompressionError::DestinationTooSmall) // ZStd delegates to copy, which then fails due to too small buffer.
     )]
     #[cfg_attr(
         feature = "lz4",
@@ -217,7 +206,7 @@ mod tests {
 
     #[rstest]
     #[case::copy(CompressionPreference::Copy)]
-    #[cfg_attr(feature = "zstd", case::zstd(CompressionPreference::ZStandard))]
+    #[case::zstd(CompressionPreference::ZStandard)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
     fn partial_decompression_succeeds(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
@@ -248,12 +237,9 @@ mod tests {
         CompressionPreference::Copy,
         NxDecompressionError::Copy(CopyDecompressionError::DestinationTooSmall)
     )]
-    #[cfg_attr(
-        feature = "zstd",
-        case::zstd(
-            CompressionPreference::ZStandard,
-            NxDecompressionError::ZStandard(ZSTD_ErrorCode::ZSTD_error_dstSize_tooSmall)
-        )
+    #[case::zstd(
+        CompressionPreference::ZStandard,
+        NxDecompressionError::ZStandard(ZSTD_ErrorCode::ZSTD_error_dstSize_tooSmall)
     )]
     #[cfg_attr(
         feature = "lz4",

@@ -2,7 +2,7 @@ use super::{CompressionResult, DecompressionResult, NxCompressionError, NxDecomp
 use crate::api::enums::compression_preference::CompressionPreference;
 
 /// Represents an error specific to LZ4 compression operations.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Lz4CompressionError {
     /// Compression has failed.
     /// LZ4 doesn't provide an error code here, just returns 0
@@ -10,7 +10,7 @@ pub enum Lz4CompressionError {
 }
 
 /// Represents an error specific to LZ4 compression operations.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Lz4DecompressionError {
     /// Decompression has failed.
     /// LZ4 doesn't provide an error code here, just returns 0
@@ -95,10 +95,10 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
     let result = lzzzz::lz4::decompress(source, destination);
 
     match result {
-        Ok(num_bytes) => return Ok(num_bytes),
+        Ok(num_bytes) => Ok(num_bytes),
         // LZ4 only has a single 'decompression failed', so we don't need to check error type.
-        Err(_) => return Err(Lz4DecompressionError::DecompressionFailed.into()),
-    };
+        Err(_) => Err(Lz4DecompressionError::DecompressionFailed.into()),
+    }
 }
 
 /// Partially decompresses data with LZ4 until the destination buffer is filled.
@@ -115,8 +115,8 @@ pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> Decompressio
     let result = lzzzz::lz4::decompress_partial(source, destination, destination.len());
 
     match result {
-        Ok(num_bytes) => return Ok(num_bytes),
+        Ok(num_bytes) => Ok(num_bytes),
         // LZ4 only has a single 'decompression failed', so we don't need to check error type.
-        Err(_) => return Err(Lz4DecompressionError::DecompressionFailed.into()),
-    };
+        Err(_) => Err(Lz4DecompressionError::DecompressionFailed.into()),
+    }
 }
