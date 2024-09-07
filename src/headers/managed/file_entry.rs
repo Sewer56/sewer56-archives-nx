@@ -136,7 +136,7 @@ mod tests {
 
     /// Default values should be zeroed.
     #[test]
-    fn test_file_entry_default() {
+    fn file_entry_default() {
         let entry = FileEntry::default();
         assert_eq!(entry.hash, 0);
         assert_eq!(entry.decompressed_size, 0);
@@ -147,7 +147,7 @@ mod tests {
 
     /// Chunked size should be calculated correctly.
     #[test]
-    fn test_is_chunked() {
+    fn is_chunked() {
         let entry = FileEntry {
             decompressed_size: 1000,
             ..Default::default()
@@ -160,7 +160,7 @@ mod tests {
 
     // Chunk count should be calculated correctly.
     #[test]
-    fn test_get_chunk_count() {
+    fn chunk_count() {
         let entry = FileEntry {
             decompressed_size: 1000,
             ..Default::default()
@@ -175,7 +175,7 @@ mod tests {
 
     /// Tests writing of the V0 format at its natural size.
     #[test]
-    fn test_write_and_read_v0() {
+    fn can_write_and_read_v0() {
         let entry = FileEntry {
             hash: u64::MAX,
             decompressed_size: u32::MAX as u64, // Max value for v0
@@ -204,7 +204,7 @@ mod tests {
 
     /// Tests writing of the V1 format at its natural size.
     #[test]
-    fn test_write_and_read_v1() {
+    fn can_write_and_read_v1() {
         let entry = FileEntry {
             hash: u64::MAX,
             decompressed_size: u64::MAX,              // Max value for v1
@@ -233,7 +233,7 @@ mod tests {
 
     /// Tests that the decompressed size is correctly read and written for the V1 format.
     #[test]
-    fn test_v0_decompressed_size_limit() {
+    fn v0_decompressed_size_limit_correctly_overflows() {
         let entry = FileEntry {
             decompressed_size: u32::MAX as u64 + 1, // Exceeds v0 limit
             ..Default::default()
@@ -252,7 +252,7 @@ mod tests {
 
     /// Tests that the decompressed size is correctly read and written for the V1 format.
     #[test]
-    fn test_v1_decompressed_size_limit() {
+    fn v1_decompressed_size_limit_correctly_overflows() {
         let entry = FileEntry {
             decompressed_size: u64::MAX,
             ..Default::default()
@@ -270,7 +270,7 @@ mod tests {
     }
 
     #[test]
-    fn test_offset_path_index_tuple_limits() {
+    fn offset_path_index_tuple_limits() {
         let entry = FileEntry {
             decompressed_block_offset: (1 << 26) - 1, // Max value for u26
             file_path_index: (1 << 20) - 1,           // Max value for u20

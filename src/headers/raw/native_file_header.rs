@@ -152,12 +152,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_native_file_header_size() {
+    fn header_size_is_correct() {
         assert_eq!(size_of::<NativeFileHeader>(), NativeFileHeader::SIZE_BYTES);
     }
 
     #[test]
-    fn test_native_file_header_init() {
+    fn init_sets_correct_values() {
         let header = NativeFileHeader::init(1024, 8192);
         assert!(header.is_valid_magic_header());
         assert_eq!(
@@ -169,14 +169,14 @@ mod tests {
     }
 
     #[test]
-    fn test_feature_flags() {
+    fn feature_flags() {
         let header = NativeFileHeader::init(1024, 8192);
         // Note: We can't modify feature_flags directly at the moment, so this test is just checking the initial value
         assert_eq!(header.header_data.feature_flags(), 0);
     }
 
     #[test]
-    fn test_endianness() {
+    fn is_little_endian() {
         let header = NativeFileHeader::init(1024, 8192);
         let le_header = header.to_le();
         assert_eq!(header.magic, le_header.magic);
@@ -184,7 +184,7 @@ mod tests {
     }
 
     #[test]
-    fn test_header_page_count() {
+    fn header_page_count_is_valid() {
         let header = NativeFileHeader::init(1024, 8192);
         assert_eq!(header.header_data.header_page_count(), 2);
 
@@ -196,7 +196,7 @@ mod tests {
     }
 
     #[test]
-    fn test_chunk_size() {
+    fn chunk_size_is_valid() {
         // Test with exact powers of 2 multiples of BASE_CHUNK_SIZE
         let header = NativeFileHeader::init(512, 8192);
         assert_eq!(header.header_data.chunk_size(), 0);

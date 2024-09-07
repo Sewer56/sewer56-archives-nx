@@ -154,7 +154,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_decompress_invalid_data() {
+    fn decompress_invalid_data_returns_error() {
         let invalid_compressed_data = vec![0u8; 100];
         let mut destination = vec![0u8; 1000];
 
@@ -176,7 +176,7 @@ mod tests {
     }
 
     #[test]
-    fn test_decompress_partial_invalid_data() {
+    fn decompress_partial_invalid_data_returns_error() {
         let invalid_compressed_data = vec![0u8; 100];
         let mut destination = vec![0u8; 1000];
 
