@@ -32,6 +32,7 @@ pub mod headers {
         pub mod native_file_entry_v0;
         pub mod native_file_entry_v1;
         pub mod native_file_header;
+        pub mod native_toc_header;
     }
 
     /// This represents the unpacked 'managed' version of the headers.
