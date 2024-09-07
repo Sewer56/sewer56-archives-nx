@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// Entry for the individual file.
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct FileEntry {
     /// [u64] Hash of the file described in this entry.
     pub hash: u64,
@@ -192,14 +192,7 @@ mod tests {
         let mut reader = unsafe { LittleEndianReader::new(buffer.as_ptr()) };
         read_entry.from_reader_v0(&mut reader);
 
-        assert_eq!(entry.hash, read_entry.hash);
-        assert_eq!(entry.decompressed_size, read_entry.decompressed_size);
-        assert_eq!(
-            entry.decompressed_block_offset,
-            read_entry.decompressed_block_offset
-        );
-        assert_eq!(entry.file_path_index, read_entry.file_path_index);
-        assert_eq!(entry.first_block_index, read_entry.first_block_index);
+        assert_eq!(entry, read_entry);
     }
 
     /// Tests writing of the V1 format at its natural size.
@@ -221,14 +214,7 @@ mod tests {
         let mut reader = unsafe { LittleEndianReader::new(buffer.as_ptr()) };
         read_entry.from_reader_v1(&mut reader);
 
-        assert_eq!(entry.hash, read_entry.hash);
-        assert_eq!(entry.decompressed_size, read_entry.decompressed_size);
-        assert_eq!(
-            entry.decompressed_block_offset,
-            read_entry.decompressed_block_offset
-        );
-        assert_eq!(entry.file_path_index, read_entry.file_path_index);
-        assert_eq!(entry.first_block_index, read_entry.first_block_index);
+        assert_eq!(entry, read_entry);
     }
 
     /// Tests that the decompressed size is correctly read and written for the V1 format.
@@ -286,11 +272,6 @@ mod tests {
         let mut reader = unsafe { LittleEndianReader::new(buffer.as_ptr()) };
         read_entry.from_reader_v1(&mut reader);
 
-        assert_eq!(
-            entry.decompressed_block_offset,
-            read_entry.decompressed_block_offset
-        );
-        assert_eq!(entry.file_path_index, read_entry.file_path_index);
-        assert_eq!(entry.first_block_index, read_entry.first_block_index);
+        assert_eq!(entry, read_entry);
     }
 }

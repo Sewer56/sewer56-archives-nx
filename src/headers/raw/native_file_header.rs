@@ -179,8 +179,7 @@ mod tests {
     fn is_little_endian() {
         let header = NativeFileHeader::init(1024, 8192);
         let le_header = header.to_le();
-        assert_eq!(header.magic, le_header.magic);
-        assert_eq!(header.header_data.0, le_header.header_data.0);
+        assert_eq!(header, le_header);
     }
 
     #[test]
