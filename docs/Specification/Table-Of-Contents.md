@@ -113,6 +113,10 @@ See UTF-8 encoding table:
 
 When parsing the archive; we decode the StringPool into an array of strings.
 
+!!! tip "The number of items in the pool is equivalent to the number of files in the Table of Contents"
+
+    If an archive has 1000 items, the pool has 1000 strings.
+
 !!! note
 
     It is possible to make ZSTD dictionaries for individual game directories that would further improve StringPool compression ratios.

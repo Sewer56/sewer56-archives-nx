@@ -1,4 +1,4 @@
-# Format Specification
+﻿# Format Specification
 
 !!! tip "File Format Version: `1.0.0`"
 
@@ -85,7 +85,7 @@ All packed fields are `little-endian`; and written out when total number of bits
     - Then only download the chunks we need to decompress our needed data.
     - Inspired by MSIX and certain Linux package formats.
 
-- Certain applications like [Nexus Mods App](https://github.com/Nexus-Mods/NexusMods.App) can avoid re-hashing files.
+- Certain applications like [Nexus Mods App] can avoid re-hashing files.
 
 ## Previewing the Format
 
@@ -103,11 +103,82 @@ Alternatively, contributions are welcome if anyone wants to make a [Kaitai Struc
 
 !!! info "This is the version history for the file format, not the reference implementation/library."
 
+To view the file format specification for a given version, navigate to the linked commit
+for each version and read this specification.
+
+### 2.0.0
+
+!!! info "Initial Release, in Rust"
+
+    Version in header is updated to 1.
+
+***THIS IS A WIP. REST OF SPEC IS NOT YET UPDATED TO ACCOUNT FOR THIS***
+
+- Hashing algorithm replaced with [XXH3] (from [XXH64][XXH3]).
+- Added support for new 'String Pool' format.
+- [Unconfirmed] Support for per-extension dictionaries.
+- Implementation of User Data Segment in reference implementation.
+
+#### Implementation of User Data Segment
+
+!!! info "The `User Data Segment`, proposed in 1.X docs is finalized and implemented."
+
+Example use cases:
+
+- Storing a binary baked-in hashtable to quickly find files by name.
+- Storing update information for a mod package if Nx is used to power a package manager.
+- Storing file metadata (read/write timestamps, file permissions, etc.)
+
+#### Implementation of Per-Extension Dictionaries
+
+See: [Per-Group Dictionary Experiment](https://github.com/Sewer56/sewer56-archives-nx/issues/1)
+
+#### Hashing Algorithm Change
+
+The hashing algorithm has been changed to [XXH3] from [XXH64][XXH3].
+
+This is a hard change because [XXH3] is superior in just about all use cases.
+The format originally intended to use [XXH3], however the [Nexus Mods App] opted
+to go with [XXH64][XXH3] instead.
+
+The original intent was that you'd take the hash of each file from the archive and get hashes
+'for free' (no I/O bottleneck). However the design changed.
+
+Since the [Nexus Mods App] does not make use of the hashes in the archives, the archive
+format is migrating to [XXH3] as standard.
+
+#### String Pool
+
+The format of the [String Pool] was slightly modified in order to speed up parsing the archive headers.
+The string pool now starts with an array of `u8` with the path lengths. The strings follow after this.
+
+This speeds up parsing the string pool.
+
+### 1.1.0
+
+!!! info "Revisions of the Spec"
+
+    This is a minor revision of the spec which tightens some assumptions about the format.
+
+This does not increment the version in the header. There are no changes in the actual format itself,
+just that certain behaviours of the reference implementation are being standardised into the spec.
+
+Version in header remains 0.
+
+#### Tightened String Pool Assumptions
+
+The [String Pool] is now assumed to have a number of items equivalent to the amount
+of files which are stored in the Table of Contents. In other words, [FileCount] == `NumOfItemsInPool`.
+
+This was already the case previously, but now this is part of the spec.
+
+!!! tip "This allows for faster parsing of pool"
+
 ### 1.0.0
 
 !!! info "Initial Release"
 
-    Last commit with previous version: `196d116d09cd436818dfd596e069eaef2b7a616d`
+    Last commit with previous version: [196d116d09cd436818dfd596e069eaef2b7a616d](https://github.com/Nexus-Mods/NexusMods.Archives.Nx/commit/196d116d09cd436818dfd596e069eaef2b7a616d)
 
 Dated 21st of July 2024, this marks the 'initial release' as `1.0.0`.
 
@@ -127,10 +198,16 @@ of contents itself. The version field is now used to indicate incompatible chang
 in the format itself. This field is `u7`. The previous field, was moved to the actual
 [Table of Contents](./Table-Of-Contents.md#version) itself.
 
-The `Header Page Count` field is extended to 16 bits, allowing for a max size of 
+The `Header Page Count` field is extended to 16 bits, allowing for a max size of
 256MiB. This allows for storage of [arbitrary user data](./User-Data.md)
 as part of the Nx header. A reserved, but not yet implemented section for
 [User Data](./User-Data.md) was also added to the header.
 
 The [Table of Contents](./Table-Of-Contents.md) has also received its own proper
 'size' field. Which led to some fields being slightly re-organised.
+
+
+[String Pool]: ./Table-Of-Contents.md#string-pool
+[FileCount]: ./Table-Of-Contents.md#file-count
+[XXH3]: https://xxhash.com/
+[Nexus Mods App]: https://github.com/Nexus-Mods/NexusMods.App

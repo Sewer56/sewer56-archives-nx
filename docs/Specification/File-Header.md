@@ -1,4 +1,4 @@
-# File Header
+﻿# File Header
 
 8 bytes:
 
@@ -25,6 +25,7 @@ Size: `7 bits` (0-127)
 The numbers correspond to the following file format versions:
 
 0: `1.0.0` - `1.1.0`
+1: `2.0.0`
 
 !!! tip "Libraries reading the `Nx` format should check this field to ensure compatibility."
 
