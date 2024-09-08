@@ -57,6 +57,7 @@ Field sizes used below are similar to Rust notation; with some custom types e.g.
 - `i8`: Signed 8 bits.
 - `u4`: 4 bits.
 - `u32/u64`: 4 Bytes or 8 Bytes (depending on variant).
+- `align8`: Add 0-7 padding bytes to align the current address to multiple of 8.
 
 Assume any bit packed values are sequential, i.e. if `u4` then `u4` is specified, first `u4` is the upper 4 bits.
 
@@ -81,7 +82,7 @@ All packed fields are `little-endian`; and written out when total number of bits
     Inclusion of hash for each file has some nice benefits.
 
 - Can do partial download to upgrade from older version of mod.
-    - We can download header (incl. [Table of Contents](./Table-Of-Contents.md)) only, compare hashes.
+    - We can download header (incl. [Table of Contents][ToC Header]) only, compare hashes.
     - Then only download the chunks we need to decompress our needed data.
     - Inspired by MSIX and certain Linux package formats.
 
@@ -98,6 +99,28 @@ Hit `Templates -> Open Template` and then the big play button.
 Then you'll be able to browse the format in 'Variables' window.
 
 Alternatively, contributions are welcome if anyone wants to make a [Kaitai Struct](https://kaitai.io) variation 💜.
+
+## Section Alignment
+
+!!! info "Each section is aligned to the following values in bytes"
+
+    For arrays, this lists alignment for each entry.
+
+- [File Header][File Header]: 8
+
+Table of Contents:
+
+- [ToC Header][ToC Header]: 8
+- [FileEntry[FileCount]][FileEntry]: 4 (V0) / 8 (V1)
+- [Blocks[BlockCount]][Blocks]: 4
+- [StringPool][StringPool]: 4
+
+User Data:
+
+- `align8`: 0-7
+- [User Data Header][User Data Header]: 8
+
+File entries are aligned to 8 bytes when [Version] is V0,
 
 ## Version History
 
@@ -118,6 +141,7 @@ for each version and read this specification.
 - Added support for new 'String Pool' format.
 - [Unconfirmed] Support for per-extension dictionaries.
 - Implementation of User Data Segment in reference implementation.
+- Added `Section Alignment` section to docs.
 
 #### Implementation of User Data Segment
 
@@ -199,11 +223,11 @@ in the format itself. This field is `u7`. The previous field, was moved to the a
 [Table of Contents](./Table-Of-Contents.md#version) itself.
 
 The `Header Page Count` field is extended to 16 bits, allowing for a max size of
-256MiB. This allows for storage of [arbitrary user data](./User-Data.md)
+256MiB. This allows for storage of [arbitrary user data][User Data Header]
 as part of the Nx header. A reserved, but not yet implemented section for
-[User Data](./User-Data.md) was also added to the header.
+[User Data][User Data Header] was also added to the header.
 
-The [Table of Contents](./Table-Of-Contents.md) has also received its own proper
+The [Table of Contents][ToC Header] has also received its own proper
 'size' field. Which led to some fields being slightly re-organised.
 
 
@@ -211,3 +235,9 @@ The [Table of Contents](./Table-Of-Contents.md) has also received its own proper
 [FileCount]: ./Table-Of-Contents.md#file-count
 [XXH3]: https://xxhash.com/
 [Nexus Mods App]: https://github.com/Nexus-Mods/NexusMods.App
+[FileEntry]: ./Table-Of-Contents.md#file-entries
+[ToC Header]: ./Table-Of-Contents.md
+[Blocks]: ./Table-Of-Contents.md
+[StringPool]: ./Table-Of-Contents.md#string-pool
+[File Header]: ./File-Header.md
+[User Data Header]: ./User-Data.md

@@ -2,10 +2,10 @@
 
 Header (8 bytes):
 
-- `u2`: [Version](#version)
+- `u2`: [Version]
 - `u24`: StringPoolSize
 - `u18`: BlockCount
-- `u20`: [FileCount](#file-count)
+- `u20`: [FileCount]
 
 Variable Size:
 
@@ -13,17 +13,17 @@ Variable Size:
     - `u64`: FileHash (xxHash64)
     - `u32/u64`: DecompressedSize
     - `u26`: DecompressedBlockOffset [[limits max block size](./File-Header.md#block-size)]
-    - `u20`: FilePathIndex (in [StringPool](#string-pool)) [[limits max file count](./File-Header.md#versionvariant)]
+    - `u20`: FilePathIndex (in [StringPool]) [[limits max file count](./File-Header.md#versionvariant)]
     - `u18`: FirstBlockIndex
 - [Blocks[BlockCount]](#blocks)
     - `u29` CompressedBlockSize
-    - `u3` [Compression](#compression)
-- [StringPool](#string-pool)
+    - `u3` [Compression]
+- [StringPool]
     - `RawCompressedData...`
 
 ## Version
 
-!!! info "This describes the format of the [FileEntry](#file-entries) structure"
+!!! info "This describes the format of the [FileEntry] structure"
 
 - `0`:
     - Most common variant covering 99.99% of cases.
@@ -45,7 +45,7 @@ Limitation of 1 million files is inferred from [FileEntry -> FilePathIndex](./Ta
 
 !!! info "Marks the number of file entries in the TOC."
 
-This number is [[limited to 1 million due to FilePathIndex](#version)].
+This number is [[limited to 1 million due to FilePathIndex][Version]].
 
 ## File Entries
 
@@ -143,6 +143,14 @@ fsutil fsinfo ntfsinfo c:
 # Bytes Per Physical Sector: 4096
 ```
 
-a.k.a. ['Advanced Format'](https://learn.microsoft.com/en-us/windows/win32/fileio/file-buffering#alignment-and-file-access-requirements).
+a.k.a. ['Advanced Format'][Advanced-Format].
 This is very convenient (especially since it matches page granularity); as when we open a mapped file (or even just read unbuffered),
 we can read the exact amount of bytes to get header.
+
+
+[Version]: #version
+[FileCount]: #file-count
+[StringPool]: #string-pool
+[Compression]: #compression
+[FileEntry]: #file-entries
+[Advanced-Format]: https://learn.microsoft.com/en-us/windows/win32/fileio/file-buffering#alignment-and-file-access-requirements
