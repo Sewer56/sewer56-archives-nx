@@ -20,7 +20,7 @@ pub struct FileEntry {
     /// `u26` Offset of the file inside the decompressed block.
     pub decompressed_block_offset: u32,
 
-    /// `u20`` Index of the file path associated with this file in the StringPool.
+    /// `u20` Index of the file path associated with this file in the StringPool.
     pub file_path_index: u32,
 
     /// `u18` Index of the first block associated with this file.
