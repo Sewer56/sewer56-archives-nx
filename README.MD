@@ -305,7 +305,7 @@ Licensed under [GPL v3 (with Reloaded FAQ)](./LICENSE).
 [crates-io-key]: https://crates.io/settings/tokens
 [nuget-key]: https://www.nuget.org/account/apikeys
 [target-triple]: https://doc.rust-lang.org/nightly/rustc/platform-support.html
-[docs]: https://sewer56-archives-nx.github.io/sewer56-archives-nx
+[docs]: https://sewer56.dev/sewer56-archives-nx/
 [mkdocs-material]: https://squidfunk.github.io/mkdocs-material/
 [reloaded-license]: https://reloaded-project.github.io/Reloaded.MkDocsMaterial.Themes.R2/Pages/license/
 [rust-analyzer]: https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer
