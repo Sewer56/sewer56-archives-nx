@@ -1,4 +1,4 @@
-use super::{CompressionResult, DecompressionResult, NxCompressionError, NxDecompressionError};
+use super::{CompressionResult, DecompressionResult};
 use core::ptr::copy_nonoverlapping;
 pub use zstd_sys::ZSTD_ErrorCode;
 

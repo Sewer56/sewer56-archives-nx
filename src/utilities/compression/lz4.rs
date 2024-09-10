@@ -1,4 +1,4 @@
-use super::{CompressionResult, DecompressionResult, NxCompressionError, NxDecompressionError};
+use super::{CompressionResult, DecompressionResult};
 use crate::api::enums::compression_preference::CompressionPreference;
 
 /// Represents an error specific to LZ4 compression operations.
