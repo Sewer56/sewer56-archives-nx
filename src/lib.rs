@@ -34,7 +34,7 @@ pub mod headers {
     /// with variable sizes.
     pub mod parser {
         /// Contains the implementation of the original (v0) NX string pool.
-        pub mod string_pool;
+        pub mod string_pool_v0;
 
         /// Logic belonging to multiple versions of the string pool.
         pub mod string_pool_common;

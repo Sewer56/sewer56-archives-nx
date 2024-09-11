@@ -62,8 +62,10 @@ const DEFAULT_COMPRESSION_LEVEL: i32 = 16;
 /// The data is then compressed using non-streaming API, such that the
 /// ZStd frames contain the length info and the length can be determined with
 /// `ZSTD_findDecompressedSize`.
-pub struct StringPool<ShortAlloc: Allocator + Clone = Global, LongAlloc: Allocator + Clone = Global>
-{
+pub struct StringPoolV0<
+    ShortAlloc: Allocator + Clone = Global,
+    LongAlloc: Allocator + Clone = Global,
+> {
     /// The raw data of the string pool.
     /// This contains the null terminated strings.
     _raw_data: Box<[u8], LongAlloc>,
@@ -76,7 +78,7 @@ pub struct StringPool<ShortAlloc: Allocator + Clone = Global, LongAlloc: Allocat
     _comp_allocator: PhantomData<LongAlloc>,
 }
 
-impl StringPool {
+impl StringPoolV0 {
     /// Packs a list of items into a string pool in its native binary format.
     /// For more details, read [`StringPool`].
     ///
@@ -98,7 +100,7 @@ impl StringPool {
 }
 
 impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
-    StringPool<ShortAlloc, LongAlloc>
+    StringPoolV0<ShortAlloc, LongAlloc>
 {
     /// Checks if a given path is present in the string pool.
     ///
@@ -260,7 +262,7 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
         source: &[u8],
         file_count: usize,
         long_alloc: LongAlloc,
-    ) -> Result<StringPool<ShortAlloc, LongAlloc>, StringPoolUnpackError> {
+    ) -> Result<StringPoolV0<ShortAlloc, LongAlloc>, StringPoolUnpackError> {
         // Determine size of decompressed data
         // Note: This is very fast `O(1)` because the zstd frame header will contain the necessary info.
         let decompressed_size = zstd::get_decompressed_size(source)?;
@@ -292,7 +294,7 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
             }
         }
 
-        Ok(StringPool {
+        Ok(StringPoolV0 {
             _offsets: str_offsets,
             _raw_data: decompressed,
             _temp_allocator: PhantomData,
@@ -307,7 +309,7 @@ mod tests {
 
     use crate::{
         api::traits::has_relative_path::HasRelativePath,
-        headers::parser::string_pool::{StringPool, StringPoolUnpackError},
+        headers::parser::string_pool_v0::{StringPoolUnpackError, StringPoolV0},
     };
 
     #[derive(Debug, PartialEq, Eq)]
@@ -335,8 +337,8 @@ mod tests {
             },
         ];
 
-        let packed = StringPool::pack(&mut items).unwrap();
-        let unpacked = StringPool::unpack(&packed, items.len()).unwrap();
+        let packed = StringPoolV0::pack(&mut items).unwrap();
+        let unpacked = StringPoolV0::unpack(&packed, items.len()).unwrap();
 
         // Check if the unpacked string pool contains all original items
         for item in &items {
@@ -358,10 +360,10 @@ mod tests {
     #[test]
     fn can_pack_empty_list() {
         let mut items: Vec<TestItem> = Vec::new();
-        let packed = StringPool::pack(&mut items).unwrap();
+        let packed = StringPoolV0::pack(&mut items).unwrap();
         assert!(!packed.is_empty()); // Even an empty pool should have some metadata
 
-        let unpacked = StringPool::unpack(&packed, 0).unwrap();
+        let unpacked = StringPoolV0::unpack(&packed, 0).unwrap();
         assert_eq!(unpacked.len(), 0);
     }
 
@@ -373,8 +375,8 @@ mod tests {
             })
             .collect();
 
-        let packed = StringPool::pack(&mut items).unwrap();
-        let unpacked = StringPool::unpack(&packed, items.len()).unwrap();
+        let packed = StringPoolV0::pack(&mut items).unwrap();
+        let unpacked = StringPoolV0::unpack(&packed, items.len()).unwrap();
 
         assert_eq!(unpacked.len(), items.len());
         (0..unpacked.len())
@@ -384,7 +386,7 @@ mod tests {
     #[test]
     fn unpack_invalid_data() {
         let invalid_data = vec![0, 1, 2, 3, 4]; // Invalid compressed data
-        let result = StringPool::unpack(&invalid_data, 1);
+        let result = StringPoolV0::unpack(&invalid_data, 1);
         assert!(matches!(
             result,
             Err(StringPoolUnpackError::FailedToGetDecompressedSize(_)
@@ -403,9 +405,9 @@ mod tests {
             },
         ];
 
-        let packed = StringPool::pack_with_allocators(&mut items, System, System).unwrap();
+        let packed = StringPoolV0::pack_with_allocators(&mut items, System, System).unwrap();
         let unpacked =
-            StringPool::<System, System>::unpack_with_allocators(&packed, items.len(), System)
+            StringPoolV0::<System, System>::unpack_with_allocators(&packed, items.len(), System)
                 .unwrap();
 
         assert_eq!(unpacked.len(), items.len());
@@ -426,8 +428,8 @@ mod tests {
             },
         ];
 
-        let packed = StringPool::pack(&mut items).unwrap();
-        let unpacked = StringPool::unpack(&packed, items.len()).unwrap();
+        let packed = StringPoolV0::pack(&mut items).unwrap();
+        let unpacked = StringPoolV0::unpack(&packed, items.len()).unwrap();
 
         assert_eq!(unpacked.len(), items.len());
         for item in &items {
@@ -449,8 +451,8 @@ mod tests {
             },
         ];
 
-        let packed = StringPool::pack(&mut items).unwrap();
-        let unpacked = StringPool::unpack(&packed, items.len()).unwrap();
+        let packed = StringPoolV0::pack(&mut items).unwrap();
+        let unpacked = StringPoolV0::unpack(&packed, items.len()).unwrap();
 
         assert_eq!(unpacked.len(), items.len());
         for item in &items {

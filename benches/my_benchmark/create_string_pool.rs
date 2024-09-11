@@ -1,6 +1,6 @@
 use criterion::{black_box, Criterion};
 use sewer56_archives_nx::api::traits::has_relative_path::HasRelativePath;
-use sewer56_archives_nx::headers::parser::string_pool::StringPool;
+use sewer56_archives_nx::headers::parser::string_pool_v0::StringPoolV0;
 
 use crate::assets;
 
@@ -15,11 +15,11 @@ impl HasRelativePath for StringWrapper {
 }
 
 fn create_string_pool(strings: &mut [StringWrapper]) -> Vec<u8> {
-    StringPool::pack(strings).unwrap()
+    StringPoolV0::pack(strings).unwrap()
 }
 
-fn unpack_string_pool(packed_data: &[u8], file_count: usize) -> StringPool {
-    StringPool::unpack(packed_data, file_count).unwrap()
+fn unpack_string_pool(packed_data: &[u8], file_count: usize) -> StringPoolV0 {
+    StringPoolV0::unpack(packed_data, file_count).unwrap()
 }
 
 pub fn benchmark_string_pool(c: &mut Criterion) {
