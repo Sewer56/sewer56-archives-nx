@@ -1,29 +1,20 @@
+use criterion::{criterion_group, criterion_main, Criterion};
 
-// Example of how to include a 2nd file.
-mod util;
+mod assets;
+mod string_pool;
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use string_pool::benchmark_string_pool;
 
 #[cfg(not(target_os = "windows"))]
 use pprof::criterion::{Output, PProfProfiler};
 
-fn fibonacci(n: u64) -> u64 {
-    match n {
-        0 => 1,
-        1 => 1,
-        n => fibonacci(n-1) + fibonacci(n-2),
-    }
-}
-
 fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
-
+    benchmark_string_pool(c);
 
     #[cfg(not(feature = "pgo"))]
     {
         // Benchmarks excluded from PGO run.
     }
-
 }
 
 #[cfg(not(target_os = "windows"))]

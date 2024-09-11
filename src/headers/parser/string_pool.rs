@@ -62,7 +62,8 @@ const DEFAULT_COMPRESSION_LEVEL: i32 = 16;
 /// The data is then compressed using non-streaming API, such that the
 /// ZStd frames contain the length info and the length can be determined with
 /// `ZSTD_findDecompressedSize`.
-struct StringPool<ShortAlloc: Allocator + Clone = Global, LongAlloc: Allocator + Clone = Global> {
+pub struct StringPool<ShortAlloc: Allocator + Clone = Global, LongAlloc: Allocator + Clone = Global>
+{
     /// The raw data of the string pool.
     /// This contains the null terminated strings.
     _raw_data: Box<[u8], LongAlloc>,
