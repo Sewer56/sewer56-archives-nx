@@ -16,7 +16,7 @@ use std::alloc::{Allocator, Global};
 /// however I found higher levels to not bring any space
 /// savings in practice due to the nature of the data.
 ///
-/// Very very rarely a higher level would save a byte or two.
+/// Levels beyond this point don't save much space.
 const DEFAULT_COMPRESSION_LEVEL: i32 = 16;
 
 /// Structure for serializing and deserializing the string pool within the Nx Archive format.

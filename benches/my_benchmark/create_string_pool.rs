@@ -18,6 +18,10 @@ fn create_string_pool(strings: &mut [StringWrapper]) -> Vec<u8> {
     StringPool::pack(strings).unwrap()
 }
 
+fn unpack_string_pool(packed_data: &[u8], file_count: usize) -> StringPool {
+    StringPool::unpack(packed_data, file_count).unwrap()
+}
+
 pub fn benchmark_string_pool(c: &mut Criterion) {
     let yakuza_file_list = assets::get_yakuza_file_list();
     let string_counts = [1000, 2000, 4000];
@@ -31,12 +35,24 @@ pub fn benchmark_string_pool(c: &mut Criterion) {
             })
             .collect();
 
-        let id = &format!("create_string_pool_{}", count);
-        c.bench_function(id, |b| {
+        let pack_id = &format!("create_string_pool_{}", count);
+        c.bench_function(pack_id, |b| {
             b.iter(|| create_string_pool(black_box(&mut strings)))
         });
 
-        let file_size = create_string_pool(black_box(&mut strings));
-        println!("[{}] File size: {} bytes", id, file_size.len());
+        let packed_data = create_string_pool(&mut strings);
+        println!("[{}] Packed size: {} bytes", pack_id, packed_data.len());
+
+        let unpack_id = &format!("unpack_string_pool_{}", count);
+        c.bench_function(unpack_id, |b| {
+            b.iter(|| unpack_string_pool(black_box(&packed_data), black_box(strings.len())))
+        });
+
+        let unpacked_data = unpack_string_pool(&packed_data, strings.len());
+        println!(
+            "[{}] Unpacked size: {} bytes",
+            unpack_id,
+            unpacked_data.iter().map(|s| s.len() + 1).sum::<usize>()
+        );
     }
 }

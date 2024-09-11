@@ -1,9 +1,9 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
 mod assets;
-mod string_pool;
+mod create_string_pool;
 
-use string_pool::benchmark_string_pool;
+use create_string_pool::benchmark_string_pool;
 
 #[cfg(not(target_os = "windows"))]
 use pprof::criterion::{Output, PProfProfiler};
