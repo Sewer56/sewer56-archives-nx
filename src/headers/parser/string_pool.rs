@@ -111,7 +111,7 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     ///
     /// # Returns
     /// `true` if the path is present in the string pool, `false` otherwise.
-    pub(crate) fn contains(&self, path: &str) -> bool {
+    pub fn contains(&self, path: &str) -> bool {
         string_pool_common::contains(&self._raw_data, path)
     }
 
@@ -126,6 +126,11 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     /// offset array, which corresponds to the number of items stored in the pool.
     pub fn len(&self) -> usize {
         string_pool_common::len(&self._offsets)
+    }
+
+    /// Returns whether the pool is empty.
+    pub fn is_empty(&self) -> bool {
+        string_pool_common::len(&self._offsets) == 0
     }
 
     /// Returns an iterator over the strings in the string pool.
