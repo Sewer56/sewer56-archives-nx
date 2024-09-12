@@ -1,4 +1,6 @@
-use super::string_pool_common::{self, StringPoolPackError, StringPoolUnpackError};
+use super::string_pool_common::{
+    self, StringPoolFormat, StringPoolPackError, StringPoolUnpackError,
+};
 use crate::utilities::compression::zstd::{
     self, compress_no_copy_fallback, max_alloc_for_compress_size,
 };
@@ -26,46 +28,9 @@ const DEFAULT_COMPRESSION_LEVEL: i32 = 16;
 /// * `ShortAlloc` - Allocator for short lived memory. Think pooled memory and rentals.
 /// * `LongAlloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive.
 ///
-/// # String Pool Format
-///
-/// The string pool is a flat buffer deduplicated strings UTF-8 of file paths.
-///
-/// Each string is:
-/// - Null terminated
-/// - Uses '/' as separator on all platforms
-///
-/// ***This is also the in-memory representation of this structure***
-///
-/// # An Example
-///
-///  A valid (decompressed) pool might look like this:  
-/// `data/textures/cat.png\0data/textures/dog.png`
-///
-/// String length is determined by searching null terminators. We will determine lengths of all strings
-/// ahead of time by scanning for (`0x00`) using SIMD. No edge cases; `0x00` is guaranteed null
-/// terminator due to nature of UTF-8 encoding.
-///
-/// See UTF-8 encoding table:
-///
-/// |  Code point range  |  Byte 1  |  Byte 2  |  Byte 3  |  Byte 4  | Code points |
-/// |:------------------:|:--------:|:--------:|:--------:|:--------:|:-----------:|
-/// |  U+0000 - U+007F   | 0xxxxxxx |          |          |          |     128     |
-/// |  U+0080 - U+07FF   | 110xxxxx | 10xxxxxx |          |          |    1920     |
-/// |  U+0800 - U+FFFF   | 1110xxxx | 10xxxxxx | 10xxxxxx |          |    61440    |
-/// | U+10000 - U+10FFFF | 11110xxx | 10xxxxxx | 10xxxxxx | 10xxxxxx |   1048576   |
-///
-/// # Optimization
-///
-/// The strings in this pool are first lexicographically sorted (to group similar paths together);
-/// and then compressed using ZStd. This improves compression ratio.
-///
-/// The data is then compressed using non-streaming API, such that the
-/// ZStd frames contain the length info and the length can be determined with
-/// `ZSTD_findDecompressedSize`.
-pub struct StringPoolV0<
-    ShortAlloc: Allocator + Clone = Global,
-    LongAlloc: Allocator + Clone = Global,
-> {
+
+pub struct StringPool<ShortAlloc: Allocator + Clone = Global, LongAlloc: Allocator + Clone = Global>
+{
     /// The raw data of the string pool.
     /// This contains the null terminated strings.
     _raw_data: Box<[u8], LongAlloc>,
@@ -78,14 +43,21 @@ pub struct StringPoolV0<
     _comp_allocator: PhantomData<LongAlloc>,
 }
 
-impl StringPoolV0 {
+impl StringPool {
     /// Packs a list of items into a string pool in its native binary format.
     /// For more details, read [`StringPool`].
     ///
     /// # Arguments
     /// * `items` - The list of items to pack
-    pub fn pack<T: HasRelativePath>(items: &mut [T]) -> Result<Vec<u8>, StringPoolPackError> {
-        Self::pack_with_allocators(items, Global, Global)
+    /// * `format` - The format of the string pool
+    pub fn pack<T: HasRelativePath>(
+        items: &mut [T],
+        format: StringPoolFormat,
+    ) -> Result<Vec<u8>, StringPoolPackError> {
+        match format {
+            StringPoolFormat::V0 => Self::pack_v0_with_allocators(items, Global, Global),
+            StringPoolFormat::V1 => Self::pack_v1_with_allocators(items, Global, Global),
+        }
     }
 
     /// Unpacks a list of items into a string pool in its native binary format.
@@ -94,13 +66,25 @@ impl StringPoolV0 {
     /// # Arguments
     /// * `source` - The compressed data to unpack.
     /// * `file_count` - Number of files in the archive. This is equal to number of entries.
-    pub fn unpack(source: &[u8], file_count: usize) -> Result<Self, StringPoolUnpackError> {
-        Self::unpack_with_allocators(source, file_count, Global)
+    /// * `format` - The (file) format of the string pool
+    pub fn unpack(
+        source: &[u8],
+        file_count: usize,
+        format: StringPoolFormat,
+    ) -> Result<Self, StringPoolUnpackError> {
+        match format {
+            StringPoolFormat::V0 => {
+                Self::unpack_v0_with_allocators(source, file_count, Global, Global)
+            }
+            StringPoolFormat::V1 => {
+                Self::unpack_v1_with_allocators(source, file_count, Global, Global)
+            }
+        }
     }
 }
 
 impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
-    StringPoolV0<ShortAlloc, LongAlloc>
+    StringPool<ShortAlloc, LongAlloc>
 {
     /// Checks if a given path is present in the string pool.
     ///
@@ -187,7 +171,11 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     /// * `items` - The list of items to pack
     /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
     /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
-    pub fn pack_with_allocators<T: HasRelativePath>(
+    ///
+    /// # Remarks
+    ///
+    /// For the file format details, see the [StringPoolFormat::V0] documentation.
+    pub fn pack_v0_with_allocators<T: HasRelativePath>(
         items: &mut [T],
         short_alloc: ShortAlloc,
         long_alloc: LongAlloc,
@@ -195,14 +183,11 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
         items.sort_by(|a, b| a.relative_path().cmp(b.relative_path()));
 
         // Sum up all string lengths (incl. null terminators)
-        let total_path_size: usize = items
-            .iter()
-            .map(|item| item.relative_path().len() + 1)
-            .sum();
+        let total_size = calc_pool_size(items);
 
         // Allocate uninitialized memory
         let mut decompressed_pool: Box<[MaybeUninit<u8>], ShortAlloc> =
-            Box::new_uninit_slice_in(total_path_size, short_alloc);
+            Box::new_uninit_slice_in(total_size, short_alloc);
 
         let mut offset = 0;
         for item in items.iter() {
@@ -225,30 +210,7 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
         }
 
         let decompressed_pool = unsafe { decompressed_pool.assume_init() };
-
-        // Compress into destination
-        let destination: Box<[MaybeUninit<u8>], LongAlloc> =
-            Box::new_uninit_slice_in(max_alloc_for_compress_size(total_path_size), long_alloc);
-        let mut destination = unsafe { destination.assume_init() };
-        let comp_result = compress_no_copy_fallback(
-            DEFAULT_COMPRESSION_LEVEL,
-            &decompressed_pool[..],
-            &mut destination[..],
-        );
-
-        match comp_result {
-            Ok(num_bytes) => {
-                if destination.len() <= NativeTocHeader::MAX_STRING_POOL_SIZE {
-                    let mut vec = destination.into_vec();
-                    // SAFETY: We know exact length of pool after compression, if it did not fit, we would have matched the error branch.
-                    unsafe { vec.set_len(num_bytes) };
-                    Ok(vec)
-                } else {
-                    Err(StringPoolPackError::PoolTooLarge)
-                }
-            }
-            Err(x) => Err(StringPoolPackError::FailedToCompress(x)),
-        }
+        Self::compress_pool(&decompressed_pool, long_alloc)
     }
 
     /// Unpacks a list of items into a string pool in its native binary format.
@@ -257,12 +219,18 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     /// # Arguments
     /// * `source` - The compressed data to unpack.
     /// * `file_count` - Number of files in the archive. This is equal to number of entries.
+    /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
     /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
-    pub fn unpack_with_allocators(
+    ///
+    /// # Remarks
+    ///
+    /// For the file format details, see the [StringPoolFormat::V0] documentation.
+    pub fn unpack_v0_with_allocators(
         source: &[u8],
         file_count: usize,
+        _short_alloc: ShortAlloc,
         long_alloc: LongAlloc,
-    ) -> Result<StringPoolV0<ShortAlloc, LongAlloc>, StringPoolUnpackError> {
+    ) -> Result<StringPool<ShortAlloc, LongAlloc>, StringPoolUnpackError> {
         // Determine size of decompressed data
         // Note: This is very fast `O(1)` because the zstd frame header will contain the necessary info.
         let decompressed_size = zstd::get_decompressed_size(source)?;
@@ -294,13 +262,182 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
             }
         }
 
-        Ok(StringPoolV0 {
+        Ok(StringPool {
             _offsets: str_offsets,
             _raw_data: decompressed,
             _temp_allocator: PhantomData,
             _comp_allocator: PhantomData,
         })
     }
+
+    /// Packs a list of items into a string pool in its native binary format.
+    /// For more details, read [`StringPool`].
+    ///
+    /// # Arguments
+    /// * `items` - The list of items to pack
+    /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
+    /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
+    ///
+    /// # Remarks
+    ///
+    /// For the file format details, see the [StringPoolFormat::V1] documentation.
+    pub fn pack_v1_with_allocators<T: HasRelativePath>(
+        items: &mut [T],
+        short_alloc: ShortAlloc,
+        long_alloc: LongAlloc,
+    ) -> Result<Vec<u8, LongAlloc>, StringPoolPackError> {
+        items.sort_by(|a, b| a.relative_path().cmp(b.relative_path()));
+
+        // Calculate total size: lengths + string data
+        let pool_size = calc_pool_size(items);
+
+        // Allocate uninitialized memory
+        let mut decompressed_pool: Box<[MaybeUninit<u8>], ShortAlloc> =
+            Box::new_uninit_slice_in(pool_size, short_alloc);
+
+        // Write lengths to the start of the buffer.
+        for idx in 0..items.len() {
+            let length = items[idx].relative_path().len();
+            if length > 255 {
+                return Err(StringPoolPackError::FilePathTooLong);
+            }
+            decompressed_pool[idx].write(length as u8);
+        }
+
+        // Write string data
+        let mut offset = items.len();
+        for item in items.iter() {
+            let path = item.relative_path().as_bytes();
+            let path_len = path.len();
+
+            // Safety: We know exact length of pool before compression.
+            // Manually copy the path bytes
+            unsafe {
+                copy_nonoverlapping(
+                    path.as_ptr(),
+                    decompressed_pool.as_mut_ptr().add(offset) as *mut u8,
+                    path_len,
+                );
+            }
+
+            // Add null terminator
+            offset += path_len;
+        }
+
+        let decompressed_pool = unsafe { decompressed_pool.assume_init() };
+        Self::compress_pool(&decompressed_pool, long_alloc)
+    }
+
+    /// Unpacks a list of items into a string pool in its native binary format.
+    /// For more details, read [`StringPool`].
+    ///
+    /// # Arguments
+    /// * `source` - The compressed data to unpack.
+    /// * `file_count` - Number of files in the archive. This is equal to number of entries.
+    /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
+    /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
+    ///
+    /// # Remarks
+    ///
+    /// For the file format details, see the [StringPoolFormat::V1] documentation.
+    pub fn unpack_v1_with_allocators(
+        source: &[u8],
+        file_count: usize,
+        short_alloc: ShortAlloc,
+        long_alloc: LongAlloc,
+    ) -> Result<StringPool<ShortAlloc, LongAlloc>, StringPoolUnpackError> {
+        todo!("unimplemented");
+        /*
+        // Determine size of decompressed data
+        let decompressed_size = zstd::get_decompressed_size(&source)?;
+
+        // Allocate space for decompressed data using long_alloc
+        let mut decompressed_data: Box<[MaybeUninit<u8>], LongAlloc> =
+            Box::new_uninit_slice_in(decompressed_size, long_alloc.clone());
+        let decompressed_slice = unsafe {
+            std::slice::from_raw_parts_mut(
+                decompressed_data.as_mut_ptr() as *mut u8,
+                decompressed_size,
+            )
+        };
+
+        // Decompress the data
+        zstd::decompress(&source[..source.len() - file_count * 4], decompressed_slice)?;
+
+        // Calculate offsets
+        let mut offsets: Box<[MaybeUninit<u32>], LongAlloc> =
+            Box::new_uninit_slice_in(file_count, long_alloc.clone());
+        let offsets_ptr = offsets.as_mut_ptr() as *mut u32;
+        let mut current_offset = file_count as u32;
+
+        for i in 0..file_count {
+            unsafe {
+                *offsets_ptr.add(i) = current_offset;
+                current_offset += decompressed_slice[i] as u32;
+            }
+        }
+
+        // Extract string data (everything after the lengths)
+        let string_data_size = decompressed_size - file_count;
+        let mut string_data: Box<[u8], LongAlloc> =
+            Box::new_uninit_slice_in(string_data_size, long_alloc);
+        unsafe {
+            copy_nonoverlapping(
+                decompressed_slice.as_ptr().add(file_count),
+                string_data.as_mut_ptr() as *mut u8,
+                string_data_size,
+            );
+        }
+
+        Ok(StringPool {
+            _raw_data: unsafe { string_data.assume_init() },
+            _offsets: unsafe { offsets.assume_init() },
+            _temp_allocator: PhantomData,
+            _comp_allocator: PhantomData,
+        })
+        */
+    }
+
+    fn compress_pool(
+        decompressed_pool: &[u8],
+        long_alloc: LongAlloc,
+    ) -> Result<Vec<u8, LongAlloc>, StringPoolPackError> {
+        let destination: Box<[MaybeUninit<u8>], LongAlloc> = Box::new_uninit_slice_in(
+            max_alloc_for_compress_size(decompressed_pool.len()),
+            long_alloc,
+        );
+        let mut destination = unsafe { destination.assume_init() };
+        let comp_result = compress_no_copy_fallback(
+            DEFAULT_COMPRESSION_LEVEL,
+            decompressed_pool,
+            &mut destination[..],
+        );
+
+        match comp_result {
+            Ok(num_bytes) => {
+                if destination.len() <= NativeTocHeader::MAX_STRING_POOL_SIZE {
+                    let mut vec = destination.into_vec();
+                    // SAFETY: We know exact length of pool after compression, if it did not fit, we would have matched the error branch.
+                    unsafe { vec.set_len(num_bytes) };
+                    Ok(vec)
+                } else {
+                    Err(StringPoolPackError::PoolTooLarge)
+                }
+            }
+            Err(x) => Err(StringPoolPackError::FailedToCompress(x)),
+        }
+    }
+}
+
+/// Calculates the total size of the pool for both the
+/// [`StringPoolFormat::V0`] and [`StringPoolFormat::V1`] formats.
+fn calc_pool_size<T: HasRelativePath>(items: &mut [T]) -> usize {
+    let total_path_size: usize = items
+        .iter()
+        .map(|item| item.relative_path().len())
+        .sum::<usize>()
+        + items.len();
+    total_path_size
 }
 
 #[cfg(test)]
@@ -309,7 +446,10 @@ mod tests {
 
     use crate::{
         api::traits::has_relative_path::HasRelativePath,
-        headers::parser::string_pool_v0::{StringPoolUnpackError, StringPoolV0},
+        headers::parser::{
+            string_pool::{StringPool, StringPoolUnpackError},
+            string_pool_common::{StringPoolFormat::*, StringPoolPackError},
+        },
     };
 
     #[derive(Debug, PartialEq, Eq)]
@@ -337,8 +477,8 @@ mod tests {
             },
         ];
 
-        let packed = StringPoolV0::pack(&mut items).unwrap();
-        let unpacked = StringPoolV0::unpack(&packed, items.len()).unwrap();
+        let packed = StringPool::pack(&mut items, V0).unwrap();
+        let unpacked = StringPool::unpack(&packed, items.len(), V0).unwrap();
 
         // Check if the unpacked string pool contains all original items
         for item in &items {
@@ -360,10 +500,10 @@ mod tests {
     #[test]
     fn can_pack_empty_list() {
         let mut items: Vec<TestItem> = Vec::new();
-        let packed = StringPoolV0::pack(&mut items).unwrap();
+        let packed = StringPool::pack(&mut items, V0).unwrap();
         assert!(!packed.is_empty()); // Even an empty pool should have some metadata
 
-        let unpacked = StringPoolV0::unpack(&packed, 0).unwrap();
+        let unpacked = StringPool::unpack(&packed, 0, V0).unwrap();
         assert_eq!(unpacked.len(), 0);
     }
 
@@ -375,8 +515,8 @@ mod tests {
             })
             .collect();
 
-        let packed = StringPoolV0::pack(&mut items).unwrap();
-        let unpacked = StringPoolV0::unpack(&packed, items.len()).unwrap();
+        let packed = StringPool::pack(&mut items, V0).unwrap();
+        let unpacked = StringPool::unpack(&packed, items.len(), V0).unwrap();
 
         assert_eq!(unpacked.len(), items.len());
         (0..unpacked.len())
@@ -386,7 +526,7 @@ mod tests {
     #[test]
     fn unpack_invalid_data() {
         let invalid_data = vec![0, 1, 2, 3, 4]; // Invalid compressed data
-        let result = StringPoolV0::unpack(&invalid_data, 1);
+        let result = StringPool::unpack(&invalid_data, 1, V0);
         assert!(matches!(
             result,
             Err(StringPoolUnpackError::FailedToGetDecompressedSize(_)
@@ -405,10 +545,9 @@ mod tests {
             },
         ];
 
-        let packed = StringPoolV0::pack_with_allocators(&mut items, System, System).unwrap();
+        let packed = StringPool::pack_v0_with_allocators(&mut items, System, System).unwrap();
         let unpacked =
-            StringPoolV0::<System, System>::unpack_with_allocators(&packed, items.len(), System)
-                .unwrap();
+            StringPool::unpack_v0_with_allocators(&packed, items.len(), System, System).unwrap();
 
         assert_eq!(unpacked.len(), items.len());
         for item in &items {
@@ -417,7 +556,7 @@ mod tests {
     }
 
     #[test]
-    fn can_use_paths_over_256chars() {
+    fn v0_can_use_paths_over_256chars() {
         let mut items = vec![
             TestItem {
                 // Exceeds 256 chars
@@ -428,14 +567,53 @@ mod tests {
             },
         ];
 
-        let packed = StringPoolV0::pack(&mut items).unwrap();
-        let unpacked = StringPoolV0::unpack(&packed, items.len()).unwrap();
+        let packed = StringPool::pack(&mut items, V0).unwrap();
+        let unpacked = StringPool::unpack(&packed, items.len(), V0).unwrap();
 
         assert_eq!(unpacked.len(), items.len());
         for item in &items {
             assert!(unpacked.contains(&item.path));
         }
     }
+
+    /*
+    #[test]
+    fn v1_can_use_paths_up_to_255chars() {
+        let mut items = vec![
+            TestItem {
+                // 255 chars
+                path: "/".to_owned() + &"a".repeat(254),
+            },
+            TestItem {
+                path: "data/textures/cat.png".to_string(),
+            },
+        ];
+
+        let packed = StringPool::pack(&mut items, V1).unwrap();
+        let unpacked = StringPool::unpack(&packed, items.len(), V1).unwrap();
+
+        assert_eq!(unpacked.len(), items.len());
+        for item in &items {
+            assert!(unpacked.contains(&item.path));
+        }
+    }
+
+    #[test]
+    fn v1_cannot_use_paths_over_255chars() {
+        let mut items = vec![
+            TestItem {
+                // 256 chars
+                path: "/".to_owned() + &"a".repeat(255),
+            },
+            TestItem {
+                path: "data/textures/cat.png".to_string(),
+            },
+        ];
+
+        let result = StringPool::pack(&mut items, V1);
+        assert!(matches!(result, Err(StringPoolPackError::FilePathTooLong)));
+    }
+    */
 
     #[test]
     fn can_use_non_ascii_paths() {
@@ -451,8 +629,8 @@ mod tests {
             },
         ];
 
-        let packed = StringPoolV0::pack(&mut items).unwrap();
-        let unpacked = StringPoolV0::unpack(&packed, items.len()).unwrap();
+        let packed = StringPool::pack(&mut items, V0).unwrap();
+        let unpacked = StringPool::unpack(&packed, items.len(), V0).unwrap();
 
         assert_eq!(unpacked.len(), items.len());
         for item in &items {
