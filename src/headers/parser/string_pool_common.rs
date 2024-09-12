@@ -146,7 +146,9 @@ pub enum StringPoolFormat {
     /// `ZSTD_findDecompressedSize`.
     V0,
 
-    /// # String Pool (V1) Format
+    /// # String Pool (VPrefix) Format
+    ///
+    /// [This is a variation of V0 with length prefixed string buffer]
     ///
     /// The string pool is a flat buffer of deduplicated UTF-8 file paths.
     ///
@@ -170,7 +172,7 @@ pub enum StringPoolFormat {
     /// The data is then compressed using non-streaming API, such that the
     /// ZStd frames contain the length info and the length can be determined with
     /// `ZSTD_findDecompressedSize`.
-    V1,
+    VPrefix,
 }
 
 /// Represents an error obtained when trying to pack the string pool.

@@ -57,7 +57,7 @@ impl StringPool {
     ) -> Result<Vec<u8>, StringPoolPackError> {
         match format {
             StringPoolFormat::V0 => Self::pack_v0_with_allocators(items, Global, Global),
-            StringPoolFormat::V1 => Self::pack_v1_with_allocators(items, Global, Global),
+            StringPoolFormat::VPrefix => Self::pack_v1_with_allocators(items, Global, Global),
         }
     }
 
@@ -77,7 +77,7 @@ impl StringPool {
             StringPoolFormat::V0 => {
                 Self::unpack_v0_with_allocators(source, file_count, Global, Global)
             }
-            StringPoolFormat::V1 => {
+            StringPoolFormat::VPrefix => {
                 Self::unpack_v1_with_allocators(source, file_count, Global, Global)
             }
         }
@@ -181,7 +181,9 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     ) -> Result<Vec<u8, LongAlloc>, StringPoolPackError> {
         match format {
             StringPoolFormat::V0 => Self::pack_v0_with_allocators(items, short_alloc, long_alloc),
-            StringPoolFormat::V1 => Self::pack_v1_with_allocators(items, short_alloc, long_alloc),
+            StringPoolFormat::VPrefix => {
+                Self::pack_v1_with_allocators(items, short_alloc, long_alloc)
+            }
         }
     }
 
@@ -205,7 +207,7 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
             StringPoolFormat::V0 => {
                 Self::unpack_v0_with_allocators(source, file_count, short_alloc, long_alloc)
             }
-            StringPoolFormat::V1 => {
+            StringPoolFormat::VPrefix => {
                 Self::unpack_v1_with_allocators(source, file_count, short_alloc, long_alloc)
             }
         }
@@ -531,7 +533,7 @@ mod tests {
 
     #[rstest]
     #[case(V0)]
-    #[case(V1)]
+    #[case(VPrefix)]
     fn can_pack_and_unpack(#[case] format: StringPoolFormat) {
         let mut items: Vec<TestItem> = vec![
             TestItem {
@@ -567,7 +569,7 @@ mod tests {
 
     #[rstest]
     #[case(V0)]
-    #[case(V1)]
+    #[case(VPrefix)]
     fn can_pack_empty_list(#[case] format: StringPoolFormat) {
         let mut items: Vec<TestItem> = Vec::new();
         let packed = StringPool::pack(&mut items, format).unwrap();
@@ -579,7 +581,7 @@ mod tests {
 
     #[rstest]
     #[case(V0)]
-    #[case(V1)]
+    #[case(VPrefix)]
     fn can_pack_large_list(#[case] format: StringPoolFormat) {
         let mut items: Vec<TestItem> = (0..10000)
             .map(|i| TestItem {
@@ -597,7 +599,7 @@ mod tests {
 
     #[rstest]
     #[case(V0)]
-    #[case(V1)]
+    #[case(VPrefix)]
     fn unpack_invalid_data(#[case] format: StringPoolFormat) {
         let invalid_data = vec![0, 1, 2, 3, 4]; // Invalid compressed data
         let result = StringPool::unpack(&invalid_data, 1, format);
@@ -610,7 +612,7 @@ mod tests {
 
     #[rstest]
     #[case(V0)]
-    #[case(V1)]
+    #[case(VPrefix)]
     fn pack_with_custom_allocators(#[case] format: StringPoolFormat) {
         let mut items = vec![
             TestItem {
@@ -665,8 +667,8 @@ mod tests {
             },
         ];
 
-        let packed = StringPool::pack(&mut items, V1).unwrap();
-        let unpacked = StringPool::unpack(&packed, items.len(), V1).unwrap();
+        let packed = StringPool::pack(&mut items, VPrefix).unwrap();
+        let unpacked = StringPool::unpack(&packed, items.len(), VPrefix).unwrap();
 
         assert_eq!(unpacked.len(), items.len());
         for item in &items {
@@ -686,13 +688,13 @@ mod tests {
             },
         ];
 
-        let result = StringPool::pack(&mut items, V1);
+        let result = StringPool::pack(&mut items, VPrefix);
         assert!(matches!(result, Err(StringPoolPackError::FilePathTooLong)));
     }
 
     #[rstest]
     #[case(V0)]
-    #[case(V1)]
+    #[case(VPrefix)]
     fn can_use_non_ascii_paths(#[case] format: StringPoolFormat) {
         let mut items = vec![
             TestItem {
