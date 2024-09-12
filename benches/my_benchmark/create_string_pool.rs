@@ -1,6 +1,7 @@
 use criterion::{black_box, Criterion};
 use sewer56_archives_nx::api::traits::has_relative_path::HasRelativePath;
-use sewer56_archives_nx::headers::parser::string_pool_v0::StringPoolV0;
+use sewer56_archives_nx::headers::parser::string_pool::StringPool;
+use sewer56_archives_nx::headers::parser::string_pool_common::StringPoolFormat;
 
 use crate::assets;
 
@@ -14,17 +15,22 @@ impl HasRelativePath for StringWrapper {
     }
 }
 
-fn create_string_pool(strings: &mut [StringWrapper]) -> Vec<u8> {
-    StringPoolV0::pack(strings).unwrap()
+fn create_string_pool(strings: &mut [StringWrapper], format: StringPoolFormat) -> Vec<u8> {
+    StringPool::pack(strings, format).unwrap()
 }
 
-fn unpack_string_pool(packed_data: &[u8], file_count: usize) -> StringPoolV0 {
-    StringPoolV0::unpack(packed_data, file_count).unwrap()
+fn unpack_string_pool(
+    packed_data: &[u8],
+    file_count: usize,
+    format: StringPoolFormat,
+) -> StringPool {
+    StringPool::unpack(packed_data, file_count, format).unwrap()
 }
 
 pub fn benchmark_string_pool(c: &mut Criterion) {
     let yakuza_file_list = assets::get_yakuza_file_list();
     let string_counts = [1000, 2000, 4000];
+    let formats = [StringPoolFormat::V0, StringPoolFormat::VPrefix];
 
     for &count in &string_counts {
         let mut strings: Vec<StringWrapper> = yakuza_file_list
@@ -35,24 +41,28 @@ pub fn benchmark_string_pool(c: &mut Criterion) {
             })
             .collect();
 
-        let pack_id = &format!("create_string_pool_{}", count);
-        c.bench_function(pack_id, |b| {
-            b.iter(|| create_string_pool(black_box(&mut strings)))
-        });
+        for format in formats {
+            let format_str = format!("{:?}", format);
 
-        let packed_data = create_string_pool(&mut strings);
-        println!("[{}] Packed size: {} bytes", pack_id, packed_data.len());
+            let pack_id = &format!("create_string_pool_{}_{}", count, format_str);
+            c.bench_function(pack_id, |b| {
+                b.iter(|| create_string_pool(black_box(&mut strings), format))
+            });
 
-        let unpack_id = &format!("unpack_string_pool_{}", count);
-        c.bench_function(unpack_id, |b| {
-            b.iter(|| unpack_string_pool(black_box(&packed_data), black_box(strings.len())))
-        });
+            let packed_data = create_string_pool(&mut strings, format);
+            println!("[{}] Packed size: {} bytes", pack_id, packed_data.len());
 
-        let unpacked_data = unpack_string_pool(&packed_data, strings.len());
-        println!(
-            "[{}] Unpacked size: {} bytes",
-            unpack_id,
-            unpacked_data.iter().map(|s| s.len() + 1).sum::<usize>()
-        );
+            let unpack_id = &format!("unpack_string_pool_{}_{}", count, format_str);
+            c.bench_function(unpack_id, |b| {
+                b.iter(|| unpack_string_pool(black_box(&packed_data), count, format))
+            });
+
+            let unpacked_data = unpack_string_pool(&packed_data, strings.len(), format);
+            println!(
+                "[{}] Unpacked size: {} bytes",
+                unpack_id,
+                unpacked_data.iter().map(|s| s.len() + 1).sum::<usize>()
+            );
+        }
     }
 }

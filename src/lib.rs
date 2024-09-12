@@ -33,8 +33,8 @@ pub mod headers {
     /// This contains the serialization/deserialization logic for various parts of Table of Contents
     /// with variable sizes.
     pub mod parser {
-        /// Contains the implementation of the original (v0) NX string pool.
-        pub mod string_pool_v0;
+        /// Contains the implementation of the NX string pool.
+        pub mod string_pool;
 
         /// Logic belonging to multiple versions of the string pool.
         pub mod string_pool_common;

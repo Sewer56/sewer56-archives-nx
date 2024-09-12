@@ -1,6 +1,7 @@
 // Compression modules
 pub mod copy;
 pub mod zstd;
+pub mod zstd_stream;
 
 #[cfg(feature = "lz4")]
 pub mod lz4;
