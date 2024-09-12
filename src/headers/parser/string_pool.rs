@@ -228,7 +228,7 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     pub fn unpack_v0_with_allocators(
         source: &[u8],
         file_count: usize,
-        _short_alloc: ShortAlloc,
+        short_alloc: ShortAlloc,
         long_alloc: LongAlloc,
     ) -> Result<StringPool<ShortAlloc, LongAlloc>, StringPoolUnpackError> {
         // Determine size of decompressed data
@@ -236,35 +236,64 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
         let decompressed_size = zstd::get_decompressed_size(source)?;
 
         // Decompress the data
-        let decompressed = Box::new_uninit_slice_in(decompressed_size, long_alloc.clone());
-        let mut decompressed = unsafe { decompressed.assume_init() };
+        let mut decompressed =
+            unsafe { Box::new_uninit_slice_in(decompressed_size, short_alloc).assume_init() };
         zstd::decompress(source, &mut decompressed[..])?;
+
         // Populate all offsets
-        let str_offsets: Box<[MaybeUninit<u32>], LongAlloc> =
-            Box::new_uninit_slice_in(file_count, long_alloc.clone());
-        let mut str_offsets = unsafe { str_offsets.assume_init() };
+        let mut str_offsets: Box<[u32], LongAlloc> =
+            unsafe { Box::new_uninit_slice_in(file_count, long_alloc.clone()).assume_init() };
+
+        // Allocate space for paths without null terminators
+        let mut raw_data: Box<[u8], LongAlloc> = unsafe {
+            Box::new_uninit_slice_in(decompressed_size - file_count, long_alloc.clone())
+                .assume_init()
+        };
 
         // TODO: https://github.com/BurntSushi/memchr/issues/160
         // Add compile-time substitution.
         let mut memchr_iter = Memchr::new(0, &decompressed);
-        let mut current_offset = 0;
+        let mut last_start_offset = 0; // Offset into the decompressed data
+        let mut dest_copy_offset = 0; // Offset where we copy into the raw data
         let mut offset_index = 0;
 
         while offset_index < file_count {
-            str_offsets[offset_index] = current_offset;
+            str_offsets[offset_index] = dest_copy_offset;
             offset_index += 1;
 
             if let Some(null_pos) = memchr_iter.next() {
-                current_offset = (null_pos as u32) + 1; // +1 to skip the null terminator
+                let len = null_pos - last_start_offset;
+                unsafe {
+                    // Copy the path bytes to the raw data
+                    // SAFETY: memchr_iter ensures we don't overrun here.
+                    copy_nonoverlapping(
+                        decompressed.as_ptr().add(last_start_offset),
+                        raw_data.as_mut_ptr().add(dest_copy_offset as usize),
+                        len,
+                    )
+                };
+
+                dest_copy_offset += len as u32;
+                last_start_offset = null_pos + 1; // +1 to skip the null terminator
             } else {
                 // If we've reached the end of the data, break the loop
+
+                unsafe {
+                    // SAFETY: count cannot exceed decompressed_size since source_offset is positive
+                    copy_nonoverlapping(
+                        decompressed.as_ptr().add(last_start_offset),
+                        raw_data.as_mut_ptr().add(dest_copy_offset as usize),
+                        decompressed_size - last_start_offset - 1, // -1 for null terminator
+                    )
+                };
+
                 break;
             }
         }
 
         Ok(StringPool {
             _offsets: str_offsets,
-            _raw_data: decompressed,
+            _raw_data: raw_data,
             _temp_allocator: PhantomData,
             _comp_allocator: PhantomData,
         })
@@ -448,7 +477,7 @@ mod tests {
         api::traits::has_relative_path::HasRelativePath,
         headers::parser::{
             string_pool::{StringPool, StringPoolUnpackError},
-            string_pool_common::{StringPoolFormat::*, StringPoolPackError},
+            string_pool_common::StringPoolFormat::*,
         },
     };
 

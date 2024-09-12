@@ -47,14 +47,14 @@ pub fn iter<'a>(raw_data: &'a [u8], offsets: &'a [u32]) -> impl Iterator<Item = 
         .windows(2)
         .map(move |window| {
             let start = window[0] as usize;
-            let end = window[1] as usize - 1; // -1 to exclude null terminator
+            let end = window[1] as usize;
 
             // SAFETY: The string pool is guaranteed to be valid UTF-8
             unsafe { from_utf8_unchecked(&raw_data[start..end]) }
         })
         .chain(std::iter::once({
             let start = *offsets.last().unwrap() as usize;
-            let end = raw_data.len() - 1; // -1 to exclude final null terminator
+            let end = raw_data.len();
 
             // SAFETY: The string pool is guaranteed to be valid UTF-8
             unsafe { from_utf8_unchecked(&raw_data[start..end]) }
@@ -95,9 +95,9 @@ pub fn get<'a>(raw_data: &'a [u8], offsets: &'a [u32], index: usize) -> Option<&
 pub unsafe fn get_unchecked<'a>(raw_data: &'a [u8], offsets: &'a [u32], index: usize) -> &'a str {
     let start = *offsets.get_unchecked(index) as usize;
     let end = if index + 1 < offsets.len() {
-        *offsets.get_unchecked(index + 1) as usize - 1 // -1 to exclude null terminator
+        *offsets.get_unchecked(index + 1) as usize
     } else {
-        raw_data.len() - 1 // -1 to exclude final null terminator
+        raw_data.len()
     };
 
     from_utf8_unchecked(&raw_data[start..end])

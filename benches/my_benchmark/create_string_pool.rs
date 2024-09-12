@@ -1,6 +1,7 @@
 use criterion::{black_box, Criterion};
 use sewer56_archives_nx::api::traits::has_relative_path::HasRelativePath;
-use sewer56_archives_nx::headers::parser::string_pool_v0::StringPoolV0;
+use sewer56_archives_nx::headers::parser::string_pool::StringPool;
+use sewer56_archives_nx::headers::parser::string_pool_common::StringPoolFormat;
 
 use crate::assets;
 
@@ -14,12 +15,12 @@ impl HasRelativePath for StringWrapper {
     }
 }
 
-fn create_string_pool(strings: &mut [StringWrapper]) -> Vec<u8> {
-    StringPoolV0::pack(strings).unwrap()
+fn create_string_pool_v0(strings: &mut [StringWrapper]) -> Vec<u8> {
+    StringPool::pack(strings, StringPoolFormat::V0).unwrap()
 }
 
-fn unpack_string_pool(packed_data: &[u8], file_count: usize) -> StringPoolV0 {
-    StringPoolV0::unpack(packed_data, file_count).unwrap()
+fn unpack_string_pool_v0(packed_data: &[u8], file_count: usize) -> StringPool {
+    StringPool::unpack(packed_data, file_count, StringPoolFormat::V0).unwrap()
 }
 
 pub fn benchmark_string_pool(c: &mut Criterion) {
@@ -37,18 +38,18 @@ pub fn benchmark_string_pool(c: &mut Criterion) {
 
         let pack_id = &format!("create_string_pool_{}", count);
         c.bench_function(pack_id, |b| {
-            b.iter(|| create_string_pool(black_box(&mut strings)))
+            b.iter(|| create_string_pool_v0(black_box(&mut strings)))
         });
 
-        let packed_data = create_string_pool(&mut strings);
+        let packed_data = create_string_pool_v0(&mut strings);
         println!("[{}] Packed size: {} bytes", pack_id, packed_data.len());
 
         let unpack_id = &format!("unpack_string_pool_{}", count);
         c.bench_function(unpack_id, |b| {
-            b.iter(|| unpack_string_pool(black_box(&packed_data), black_box(strings.len())))
+            b.iter(|| unpack_string_pool_v0(black_box(&packed_data), black_box(strings.len())))
         });
 
-        let unpacked_data = unpack_string_pool(&packed_data, strings.len());
+        let unpacked_data = unpack_string_pool_v0(&packed_data, strings.len());
         println!(
             "[{}] Unpacked size: {} bytes",
             unpack_id,
