@@ -86,6 +86,11 @@ pub mod utilities {
     /// Utilities for grouping, sorting and general arrangement of items.
     pub mod arrange {
         pub mod sort_lexicographically;
+        /// Packing related arrangement steps.
+        pub mod pack {
+            /// Groups the files by extension.
+            pub mod group_by_extension;
+        }
     }
 
     /// This module contains APIs that abstract the supported compression algorithms.
