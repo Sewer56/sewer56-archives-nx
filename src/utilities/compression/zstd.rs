@@ -230,6 +230,7 @@ pub enum GetDecompressedSizeError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec;
 
     #[test]
     fn decompress_invalid_data_returns_error() {

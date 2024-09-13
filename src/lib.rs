@@ -1,15 +1,18 @@
 //! # Some Cool Reloaded Library
 //! Here's the crate documentation.
-#![cfg_attr(not(feature = "std"), no_std)]
 #![feature(coverage_attribute)]
 #![feature(allocator_api)]
 #[cfg(feature = "c-exports")]
 pub mod exports;
+extern crate alloc;
 
 /// Public High Level API
 pub mod api {
     pub mod enums {
+        /// Allows you to specify how the data should be compressed.
         pub mod compression_preference;
+        /// Allows you to specify whether a given file should be SOLID or not.
+        pub mod solid_preference;
     }
 
     /// Public APIs related to packing.
@@ -20,8 +23,16 @@ pub mod api {
     /// This contains traits that are implementable by outside entities
     /// that wish to integrate with the library.
     pub mod traits {
+        /// Trait for items which can provide bytes corresponding to a file.
+        pub mod can_provide_file_data;
+        /// Used for items to with which format they would like to be compressed.
+        pub mod has_compression_preference;
+        /// Indicates the item has a file size. For data input into the packer.
+        pub mod has_file_size;
         /// Indicates an item has a relative path. For data input into the packer.
         pub mod has_relative_path;
+        /// Used for items to specify a preference on whether they'd prefer to be SOLIDly packed or not.
+        pub mod has_solid_type;
     }
 }
 
@@ -76,7 +87,12 @@ pub mod headers {
 /// This contains the implementation of the low level APIs.
 pub mod implementation {
     /// Implementation of the NX packing logic.
-    pub mod pack {}
+    pub mod pack {
+
+        pub mod blocks {
+            pub mod polyfills;
+        }
+    }
 }
 
 pub mod structs {}
@@ -90,6 +106,8 @@ pub mod utilities {
         pub mod pack {
             /// Groups the files by extension.
             pub mod group_by_extension;
+            /// Creates the blocks from a set of input files.
+            pub mod make_blocks;
         }
     }
 

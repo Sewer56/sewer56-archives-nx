@@ -108,8 +108,11 @@ impl Drop for ZstdDecompressor<'_> {
 
 #[cfg(test)]
 mod tests {
+    extern crate alloc;
     use super::*;
     use crate::utilities::compression::zstd::*;
+    use alloc::*;
+    use vec::Vec;
 
     fn create_compressed_data(data: &[u8], level: i32) -> Vec<u8> {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(data.len())];

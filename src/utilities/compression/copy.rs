@@ -1,5 +1,5 @@
 use super::{CompressionResult, DecompressionResult};
-use core::ptr::copy_nonoverlapping;
+use core::{cmp::min, ptr::copy_nonoverlapping};
 pub use zstd_sys::ZSTD_ErrorCode;
 
 /// Determines maximum memory needed to alloc to compress data with copying.
@@ -53,7 +53,7 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
 /// * `source`: Source data to decompress (copy).
 /// * `destination`: Destination buffer for decompressed data.
 pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
-    let copy_length = std::cmp::min(source.len(), destination.len());
+    let copy_length = min(source.len(), destination.len());
 
     unsafe { copy_nonoverlapping(source.as_ptr(), destination.as_mut_ptr(), copy_length) };
     Ok(copy_length)

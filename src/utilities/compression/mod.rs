@@ -126,6 +126,7 @@ pub fn decompress_partial(
 mod tests {
     use super::*;
     use crate::api::enums::compression_preference::CompressionPreference;
+    use alloc::vec;
     use rstest::rstest;
 
     const TEST_DATA: &[u8] =

@@ -9,6 +9,8 @@ use crate::{
     api::traits::has_relative_path::HasRelativePath,
     headers::raw::native_toc_header::NativeTocHeader,
 };
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 use core::{mem::MaybeUninit, ptr::copy_nonoverlapping};
 use memchr::Memchr;
@@ -504,9 +506,11 @@ fn calc_pool_size<T: HasRelativePath>(items: &mut [T]) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use std::alloc::System;
-
+    use alloc::format;
+    use alloc::vec;
+    use alloc::{string::String, vec::Vec};
     use rstest::rstest;
+    use std::alloc::System;
 
     use crate::{
         api::traits::has_relative_path::HasRelativePath,

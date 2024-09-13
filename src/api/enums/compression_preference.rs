@@ -1,5 +1,6 @@
 /// Preferred option for compression.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(u8)]
 pub enum CompressionPreference {
     /// No preference is specified.
     NoPreference = 255,

@@ -1,6 +1,7 @@
 use crate::api::traits::has_relative_path::HasRelativePath;
+use alloc::rc::Rc;
+use alloc::vec::Vec;
 use hashbrown::HashMap;
-use std::rc::Rc; // Safe in esoterics
 
 /// Groups the given files by extension.
 ///
@@ -46,6 +47,8 @@ fn extract_extension(path: &str) -> &str {
 pub mod tests {
     use super::*;
     use crate::api::traits::has_relative_path::HasRelativePath;
+    use alloc::vec;
+    use alloc::{string::String, vec::Vec};
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     struct SortTestItem {

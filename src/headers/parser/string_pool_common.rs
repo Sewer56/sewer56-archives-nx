@@ -1,7 +1,7 @@
 use crate::utilities::compression::{
     zstd::GetDecompressedSizeError, NxCompressionError, NxDecompressionError,
 };
-use core::str::from_utf8_unchecked;
+use core::{iter::once, str::from_utf8_unchecked};
 use thiserror_no_std::Error;
 
 /// Checks if a given path is present in the raw string pool data.
@@ -52,7 +52,7 @@ pub fn iter<'a>(raw_data: &'a [u8], offsets: &'a [u32]) -> impl Iterator<Item = 
             // SAFETY: The string pool is guaranteed to be valid UTF-8
             unsafe { from_utf8_unchecked(&raw_data[start..end]) }
         })
-        .chain(std::iter::once({
+        .chain(once({
             let start = *offsets.last().unwrap() as usize;
             let end = raw_data.len();
 

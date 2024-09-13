@@ -8,8 +8,7 @@ license-file = "LICENSE"
 include = ["src/**/*"]
 
 [features]
-default = ["std", "lz4", "detect_num_cores"]
-std = []
+default = ["lz4", "detect_num_cores"]
 # See README.md for more information on using Profile-Guided Optimization.
 pgo = []
 # Feature for enabling C library exports.
