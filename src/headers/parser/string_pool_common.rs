@@ -144,6 +144,9 @@ pub enum StringPoolFormat {
     /// The data is then compressed using non-streaming API, such that the
     /// ZStd frames contain the length info and the length can be determined with
     /// `ZSTD_findDecompressedSize`.
+    ///
+    /// The null terminators in this structure also help aid compression ratio; as they follow
+    /// file extensions and therefore very often match multiple bytes back.
     V0,
 
     /// # String Pool (VPrefix) Format

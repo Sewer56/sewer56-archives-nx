@@ -29,7 +29,6 @@ const DEFAULT_COMPRESSION_LEVEL: i32 = 16;
 /// * `ShortAlloc` - Allocator for short lived memory. Think pooled memory and rentals.
 /// * `LongAlloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive.
 ///
-
 pub struct StringPool<ShortAlloc: Allocator + Clone = Global, LongAlloc: Allocator + Clone = Global>
 {
     /// The raw data of the string pool.

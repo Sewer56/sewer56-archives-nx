@@ -138,7 +138,6 @@ for each version and read this specification.
 ***THIS IS A WIP. REST OF SPEC IS NOT YET UPDATED TO ACCOUNT FOR THIS***
 
 - Hashing algorithm replaced with [XXH3] (from [XXH64][XXH3]).
-- Added support for new 'String Pool' format.
 - [Unconfirmed] Support for per-extension dictionaries.
 - Implementation of User Data Segment in reference implementation.
 - Added `Section Alignment` section to docs.
@@ -171,12 +170,15 @@ The original intent was that you'd take the hash of each file from the archive a
 Since the [Nexus Mods App] does not make use of the hashes in the archives, the archive
 format is migrating to [XXH3] as standard.
 
-#### String Pool
+#### String Pool Experiment
 
-The format of the [String Pool] was slightly modified in order to speed up parsing the archive headers.
-The string pool now starts with an array of `u8` with the path lengths. The strings follow after this.
+!!! info "An alternative implementation of the [String Pool] was experimented with."
 
-This speeds up parsing the string pool.
+It speeds up from around 89us to 67us, however the format will not use it, as it increases binary size
+considerably. The format was a variation of the pool where the buffer starts with an array of `u8`
+containing the path lengths. The strings following naturally.
+
+[VPrefix Pool Benchmark Numbers]
 
 ### 1.1.0
 
@@ -241,3 +243,4 @@ The [Table of Contents][ToC Header] has also received its own proper
 [StringPool]: ./Table-Of-Contents.md#string-pool
 [File Header]: ./File-Header.md
 [User Data Header]: ./User-Data.md
+[VPrefix Pool Benchmark Numbers]: https://github.com/Sewer56/sewer56-archives-nx/issues/3#issuecomment-2347143581
