@@ -12,6 +12,11 @@ pub mod api {
         pub mod compression_preference;
     }
 
+    /// Public APIs related to packing.
+    pub mod packing {
+        pub mod packing_settings;
+    }
+
     /// This contains traits that are implementable by outside entities
     /// that wish to integrate with the library.
     pub mod traits {
@@ -66,6 +71,12 @@ pub mod headers {
     pub mod traits {
         pub mod can_convert_to_little_endian;
     }
+}
+
+/// This contains the implementation of the low level APIs.
+pub mod implementation {
+    /// Implementation of the NX packing logic.
+    pub mod pack {}
 }
 
 pub mod structs {}
