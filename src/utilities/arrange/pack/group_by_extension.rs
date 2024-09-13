@@ -16,20 +16,20 @@ use crate::api::traits::has_relative_path::HasRelativePath;
 /// - Group files by extension (👈 This function ‼️)
 ///
 /// [`sort_lexicographically`]: crate::utilities::arrange::sort_lexicographically
-pub fn group_files<T>(files: Vec<T>) -> HashMap<String, Vec<T>>
+pub fn group_files<'a, T>(files: &'a Vec<T>) -> HashMap<&'a str, Vec<T>>
 where
-    T: HasRelativePath,
+    T: HasRelativePath + Clone + 'a,
 {
     // Initialize the results HashMap with an estimated capacity.
     let capacity = (files.len() as f64).sqrt() as usize;
-    let mut results: HashMap<String, Vec<T>> = HashMap::with_capacity(capacity);
+    let mut results: HashMap<&'a str, Vec<T>> = HashMap::with_capacity(capacity);
 
     for file in files {
         // Extract the file extension from the relative path.
-        let extension = extract_extension(file.relative_path()).to_string();
+        let extension = extract_extension(file.relative_path());
 
         // Insert the file into the appropriate group.
-        results.entry(extension).or_default().push(file);
+        results.entry(extension).or_default().push(file.clone());
     }
 
     results
@@ -71,10 +71,10 @@ pub mod tests {
     #[test]
     pub fn can_group_by_extension_preserving_size_ascending() {
         // Create the expected data
-        let mut expected: HashMap<String, Vec<SortTestItem>> = HashMap::new();
+        let mut expected: HashMap<&str, Vec<SortTestItem>> = HashMap::new();
 
         expected.insert(
-            "txt".to_string(),
+            "txt",
             vec![
                 SortTestItem::new("fluffy.txt", 100),
                 SortTestItem::new("whiskers.txt", 200),
@@ -90,7 +90,7 @@ pub mod tests {
         );
 
         expected.insert(
-            "bin".to_string(),
+            "bin",
             vec![
                 SortTestItem::new("banana.bin", 450),
                 SortTestItem::new("orange.bin", 666),
@@ -100,7 +100,7 @@ pub mod tests {
         );
 
         expected.insert(
-            "pak".to_string(),
+            "pak",
             vec![
                 SortTestItem::new("data01.pak", 111),
                 SortTestItem::new("data02.pak", 222),
@@ -117,13 +117,13 @@ pub mod tests {
         items.sort_by(|a, b| a.size.cmp(&b.size));
 
         // Now group the files using group_files function
-        let groups = group_files(items.clone());
+        let groups = group_files(&items);
 
         // Now check that groups match expected
         // Each group should have its files sorted in order.
         for (ext, group_items) in groups {
-            assert!(expected.contains_key(&ext));
-            let expected_values = &expected[&ext];
+            assert!(expected.contains_key(ext));
+            let expected_values = &expected[ext];
             assert_eq!(expected_values, &group_items);
         }
     }
