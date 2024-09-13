@@ -99,6 +99,9 @@ pub mod utilities {
         pub mod little_endian_writer;
     }
 
+    /// Exposes the system information.
+    pub mod system_info;
+
     #[cfg(test)]
     pub mod tests {
         pub mod packing_test_helpers;

@@ -1,6 +1,10 @@
+// STD ALERT!! However it's portable traits only.
+use crate::{
+    api::enums::compression_preference::CompressionPreference,
+    utilities::system_info::get_num_cores,
+};
+use core::num::NonZeroU32;
 use std::io::{Seek, Write};
-
-use crate::api::enums::compression_preference::CompressionPreference;
 
 /// Controls the configuration settings of the packer.
 ///
@@ -19,7 +23,7 @@ pub struct PackingSettings<W: Write + Seek> {
     pub output: W,
 
     /// Maximum number of threads allowed.
-    pub max_num_threads: usize,
+    pub max_num_threads: NonZeroU32,
 
     /// Size of SOLID blocks.\
     /// Range is 4095 to 67108863 (64 MiB).\
@@ -72,7 +76,7 @@ impl<W: Write + Seek> PackingSettings<W> {
     pub fn new(output: W) -> Self {
         PackingSettings {
             output,
-            max_num_threads: num_cpus::get_physical(),
+            max_num_threads: get_num_cores(),
             block_size: 1_048_575,
             chunk_size: 1_048_576,
             solid_compression_level: 16,
@@ -102,7 +106,9 @@ impl<W: Write + Seek> PackingSettings<W> {
             self.clamp_compression(self.solid_compression_level, &self.solid_block_algorithm);
         self.chunked_compression_level =
             self.clamp_compression(self.chunked_compression_level, &self.chunked_file_algorithm);
-        self.max_num_threads = self.max_num_threads.clamp(1, usize::MAX);
+        self.max_num_threads = self
+            .max_num_threads
+            .clamp(unsafe { NonZeroU32::new_unchecked(1) }, NonZeroU32::MAX);
     }
 
     /// Retrieves the compression level for the specified algorithm.
@@ -203,11 +209,12 @@ mod tests {
     }
 
     #[rstest(value, expected,
-        case(usize::MAX, usize::MAX), // Max number of threads, remains unchanged
-        case(0, 1)                    // Zero threads, adjusted to minimum of 1
+        case(NonZeroU32::MAX, NonZeroU32::MAX), // Max number of threads, remains unchanged
+        // Stays at min value
+        case(unsafe { NonZeroU32::new_unchecked(1) } , unsafe { NonZeroU32::new_unchecked(1) })
         // Negative values are not possible for usize
     )]
-    fn max_num_threads_is_clamped(value: usize, expected: usize) {
+    fn max_num_threads_is_clamped(value: NonZeroU32, expected: NonZeroU32) {
         let output = Cursor::new(Vec::new());
         let mut settings = PackingSettings::new(output);
         settings.max_num_threads = value;

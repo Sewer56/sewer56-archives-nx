@@ -8,7 +8,7 @@ license-file = "LICENSE"
 include = ["src/**/*"]
 
 [features]
-default = ["std", "lz4"]
+default = ["std", "lz4", "detect_num_cores"]
 std = []
 # See README.md for more information on using Profile-Guided Optimization.
 pgo = []
@@ -25,6 +25,10 @@ zstd_panic_on_unhandled_error = []
 # May reduce error message friendliness.
 no_format = []
 
+# Auto detects the number of cores on the system.
+# Disable this when targeting esoteric platforms; in which case defaults to 1.
+detect_num_cores = ["num_cpus"]
+
 [dependencies]
 bitfield = "0.17.0"
 lzzzz = "1.1.0"
@@ -33,7 +37,7 @@ no-panic = "0.1"
 int-enum = "1.1.2"
 thiserror-no-std = "2.0.2"
 memchr = "2.7.4"
-num_cpus = "1.16.0"
+num_cpus = { version = "1.16.0", optional = true }
 
 # C# Bindings
 [build-dependencies]
