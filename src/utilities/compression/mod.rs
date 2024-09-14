@@ -76,7 +76,9 @@ pub fn compress(
         CompressionPreference::ZStandard => zstd::compress(level, source, destination, used_copy),
         #[cfg(feature = "lz4")]
         CompressionPreference::Lz4 => lz4::compress(level, source, destination, used_copy),
-        _ => panic!("Unsupported compression method"),
+        CompressionPreference::NoPreference => {
+            zstd::compress(level, source, destination, used_copy)
+        }
     }
 }
 
