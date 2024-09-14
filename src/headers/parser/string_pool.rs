@@ -57,9 +57,18 @@ impl StringPool {
         format: StringPoolFormat,
     ) -> Result<Vec<u8>, StringPoolPackError> {
         match format {
-            StringPoolFormat::V0 => Self::pack_v0_with_allocators(items, Global, Global),
-            StringPoolFormat::VPrefix => Self::pack_v1_with_allocators(items, Global, Global),
+            StringPoolFormat::V0 => Self::pack_v0(items),
+            StringPoolFormat::VPrefix => Self::pack_vprefix_with_allocators(items, Global, Global),
         }
+    }
+
+    /// Packs a list of items into a string pool in its native binary format.
+    /// For more details, read [`StringPool`].
+    ///
+    /// # Arguments
+    /// * `items` - The list of items to pack
+    pub fn pack_v0<T: HasRelativePath>(items: &mut [T]) -> Result<Vec<u8>, StringPoolPackError> {
+        Self::pack_v0_with_allocators(items, Global, Global)
     }
 
     /// Unpacks a list of items into a string pool in its native binary format.
@@ -75,13 +84,21 @@ impl StringPool {
         format: StringPoolFormat,
     ) -> Result<Self, StringPoolUnpackError> {
         match format {
-            StringPoolFormat::V0 => {
-                Self::unpack_v0_with_allocators(source, file_count, Global, Global)
-            }
+            StringPoolFormat::V0 => Self::unpack_v0(source, file_count),
             StringPoolFormat::VPrefix => {
-                Self::unpack_v1_with_allocators(source, file_count, Global, Global)
+                Self::unpack_vprefix_with_allocators(source, file_count, Global, Global)
             }
         }
+    }
+
+    /// Unpacks a list of items into a string pool in its native binary format.
+    /// For more details, read [`StringPool`].
+    ///
+    /// # Arguments
+    /// * `source` - The compressed data to unpack.
+    /// * `file_count` - Number of files in the archive. This is equal to number of entries.
+    pub fn unpack_v0(source: &[u8], file_count: usize) -> Result<Self, StringPoolUnpackError> {
+        Self::unpack_v0_with_allocators(source, file_count, Global, Global)
     }
 }
 
@@ -183,7 +200,7 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
         match format {
             StringPoolFormat::V0 => Self::pack_v0_with_allocators(items, short_alloc, long_alloc),
             StringPoolFormat::VPrefix => {
-                Self::pack_v1_with_allocators(items, short_alloc, long_alloc)
+                Self::pack_vprefix_with_allocators(items, short_alloc, long_alloc)
             }
         }
     }
@@ -209,7 +226,7 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
                 Self::unpack_v0_with_allocators(source, file_count, short_alloc, long_alloc)
             }
             StringPoolFormat::VPrefix => {
-                Self::unpack_v1_with_allocators(source, file_count, short_alloc, long_alloc)
+                Self::unpack_vprefix_with_allocators(source, file_count, short_alloc, long_alloc)
             }
         }
     }
@@ -360,7 +377,7 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     /// # Remarks
     ///
     /// For the file format details, see the [StringPoolFormat::V1] documentation.
-    pub fn pack_v1_with_allocators<T: HasRelativePath>(
+    pub fn pack_vprefix_with_allocators<T: HasRelativePath>(
         items: &mut [T],
         short_alloc: ShortAlloc,
         long_alloc: LongAlloc,
@@ -419,7 +436,7 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     /// # Remarks
     ///
     /// For the file format details, see the [StringPoolFormat::V1] documentation.
-    pub fn unpack_v1_with_allocators(
+    pub fn unpack_vprefix_with_allocators(
         source: &[u8],
         file_count: usize,
         short_alloc: ShortAlloc,
