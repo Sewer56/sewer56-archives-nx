@@ -31,7 +31,7 @@ pub trait WriteAsLittleEndian {
 /// A utility for writing data in little-endian format to a raw pointer.
 #[derive(Debug)]
 pub struct LittleEndianWriter {
-    ptr: *mut u8,
+    pub(crate) ptr: *mut u8,
 }
 
 #[coverage(off)]

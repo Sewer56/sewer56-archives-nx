@@ -81,6 +81,22 @@ impl NativeTocHeader {
         header.to_le()
     }
 
+    /// Creates a NativeTocHeader from a raw u64 value.
+    ///
+    /// This method assumes that the input value is in the correct format
+    /// and does not perform any validation.
+    ///
+    /// # Arguments
+    ///
+    /// * `raw` - The raw u64 value representing the header.
+    ///
+    /// # Returns
+    ///
+    /// A new NativeTocHeader instance.
+    pub fn from_raw(raw: u64) -> Self {
+        Self(raw.to_le())
+    }
+
     /// Gets the Version as TableOfContentsVersion enum.
     pub fn get_version(&self) -> TableOfContentsVersion {
         unsafe { TableOfContentsVersion::try_from(self.version()).unwrap_unchecked() }

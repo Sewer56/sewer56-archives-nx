@@ -66,6 +66,7 @@ pub mod headers {
         pub mod native_file_entry_v0;
         pub mod native_file_entry_v1;
         pub mod native_file_header;
+        pub mod native_toc_block_entry;
         pub mod native_toc_header;
     }
 
@@ -73,9 +74,10 @@ pub mod headers {
     pub mod managed {
         /// Represents the size of a compressed block following the header.
         pub mod block_size;
-
         /// Represents a file entry that was decoded from the Table of Contents.
         pub mod file_entry;
+        /// Allows for serialization and deserialization of the Table of Contents.
+        pub mod table_of_contents;
     }
 
     /// This contains reused traits in the Nx source tree.
