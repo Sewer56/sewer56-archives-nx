@@ -98,8 +98,13 @@ impl NativeTocHeader {
     }
 
     /// Gets the Version as TableOfContentsVersion enum.
-    pub fn get_version(&self) -> TableOfContentsVersion {
-        unsafe { TableOfContentsVersion::try_from(self.version()).unwrap_unchecked() }
+    pub fn get_version(&self) -> Result<TableOfContentsVersion, u8> {
+        TableOfContentsVersion::try_from(self.version())
+    }
+
+    /// Gets the Version as TableOfContentsVersion enum.
+    pub fn get_version_unchecked(&self) -> TableOfContentsVersion {
+        unsafe { Self::get_version(self).unwrap_unchecked() }
     }
 }
 
@@ -130,7 +135,7 @@ mod tests {
         assert_eq!(header.file_count(), 0xFFFFF);
         assert_eq!(header.block_count(), 0x3FFFF);
         assert_eq!(header.string_pool_size(), 0xFFFFFF);
-        assert_eq!(header.get_version(), TableOfContentsVersion::V1);
+        assert_eq!(header.get_version_unchecked(), TableOfContentsVersion::V1);
     }
 
     #[test]
@@ -155,6 +160,6 @@ mod tests {
         assert_eq!(header.file_count(), 0);
         assert_eq!(header.block_count(), 0);
         assert_eq!(header.string_pool_size(), 0);
-        assert_eq!(header.get_version(), TableOfContentsVersion::V0);
+        assert_eq!(header.get_version_unchecked(), TableOfContentsVersion::V0);
     }
 }
