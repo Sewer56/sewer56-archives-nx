@@ -1,3 +1,5 @@
+use core::hint::unreachable_unchecked;
+
 use bitfield::bitfield;
 
 use crate::api::enums::compression_preference::CompressionPreference;
@@ -34,14 +36,15 @@ impl NativeTocBlockEntry {
             0 => CompressionPreference::Copy,
             1 => CompressionPreference::ZStandard,
             2 => CompressionPreference::Lz4,
-            _ => CompressionPreference::NoPreference,
+            _ => unsafe { unreachable_unchecked() },
         }
     }
 
     /// Set the compression preference
     fn set_compression(&mut self, pref: CompressionPreference) {
         self.set_compression_raw(match pref {
-            CompressionPreference::NoPreference => 7, // Using 7 as it's the max value for u3
+            // All cases of 'no preference' should be overwritten with zstd by default.
+            CompressionPreference::NoPreference => unsafe { unreachable_unchecked() },
             CompressionPreference::Copy => 0,
             CompressionPreference::ZStandard => 1,
             CompressionPreference::Lz4 => 2,
