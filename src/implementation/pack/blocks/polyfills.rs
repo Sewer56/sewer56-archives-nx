@@ -4,6 +4,7 @@ use crate::api::traits::has_file_size::HasFileSize;
 use crate::api::traits::has_relative_path::HasRelativePath;
 use alloc::vec::Vec;
 use alloc::{rc::Rc, sync::Arc};
+use core::any::Any;
 
 // Define the Block trait
 pub trait Block<T>
@@ -11,6 +12,7 @@ where
     T: HasFileSize + CanProvideFileData + HasRelativePath,
 {
     // Define necessary methods
+    fn as_any(&self) -> &dyn Any;
 }
 
 /// Represents an individual SOLID block packed by the Nx library.
@@ -42,9 +44,12 @@ where
 
 impl<T> Block<T> for SolidBlock<T>
 where
-    T: HasFileSize + CanProvideFileData + HasRelativePath,
+    T: HasFileSize + CanProvideFileData + HasRelativePath + 'static,
 {
     // Implement necessary methods
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 // Implement ChunkedBlockState
@@ -94,9 +99,9 @@ where
     /// Starting offset of this block within the file.
     pub(crate) start_offset: u64,
     /// Size of the block starting at [`Self::start_offset`].
-    pub(crate) size: u32,
+    pub(crate) chunk_size: u32,
     /// Zero based index of this chunk.
-    pub(crate) index: u32,
+    pub(crate) chunk_index: u32,
     /// Stores the shared state of all chunks.
     pub(crate) state: Arc<ChunkedBlockState<T>>,
 }
@@ -110,14 +115,19 @@ where
     /// # Arguments
     ///
     /// * `start_offset` - The starting offset of the block
-    /// * `size` - The size of the block at [`Self::start_offset`].
-    /// * `index` - The index of the block
+    /// * `chunk_size` - The size of the block at [`Self::start_offset`].
+    /// * `chunk_index` - The index of the block
     /// * `state` - The shared state of all chunks
-    pub fn new(start_offset: u64, size: u32, index: u32, state: Arc<ChunkedBlockState<T>>) -> Self {
+    pub fn new(
+        start_offset: u64,
+        chunk_size: u32,
+        chunk_index: u32,
+        state: Arc<ChunkedBlockState<T>>,
+    ) -> Self {
         ChunkedFileBlock {
             start_offset,
-            size,
-            index,
+            chunk_size,
+            chunk_index,
             state,
         }
     }
@@ -125,7 +135,9 @@ where
 
 impl<T> Block<T> for ChunkedFileBlock<T>
 where
-    T: HasFileSize + CanProvideFileData + HasRelativePath,
+    T: HasFileSize + CanProvideFileData + HasRelativePath + 'static,
 {
-    // Implement necessary methods
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }

@@ -246,3 +246,392 @@ fn chunk_item<T>(
         )));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::enums::compression_preference::CompressionPreference;
+    use crate::api::enums::solid_preference::SolidPreference;
+    use hashbrown::HashMap;
+    use std::rc::Rc;
+
+    #[derive(Clone)]
+    struct PackerFileForTesting {
+        file_size: u64,
+        relative_path: String,
+        solid_type: SolidPreference,
+        compression_preference: CompressionPreference,
+    }
+
+    // Implement the required traits for PackerFileForTesting
+    impl HasFileSize for PackerFileForTesting {
+        fn file_size(&self) -> u64 {
+            self.file_size
+        }
+    }
+
+    impl HasRelativePath for PackerFileForTesting {
+        fn relative_path(&self) -> &str {
+            &self.relative_path
+        }
+    }
+
+    impl HasSolidType for PackerFileForTesting {
+        fn solid_type(&self) -> SolidPreference {
+            self.solid_type
+        }
+    }
+
+    impl HasCompressionPreference for PackerFileForTesting {
+        fn compression_preference(&self) -> CompressionPreference {
+            self.compression_preference
+        }
+    }
+
+    impl CanProvideFileData for PackerFileForTesting {
+        // Implement necessary methods if required
+    }
+
+    /// Test that `make_blocks` correctly splits files into solid blocks when they fit within the block size.
+    ///
+    /// **Scenario:** We have a group of files where the total size of the first three files
+    /// fits within the solid block size, but adding the fourth file would exceed it.
+    /// The function should pack the first three files into one solid block and the fourth file into another.
+    #[test]
+    fn make_blocks_splits_files_correctly() {
+        // Setup
+        let solid_block_size = 10u32;
+        let items = {
+            let mut map = HashMap::new();
+            map.insert(
+                "",
+                vec![
+                    Rc::new(PackerFileForTesting {
+                        file_size: 1,
+                        relative_path: "Block0File0".to_string(),
+                        solid_type: SolidPreference::Default,
+                        compression_preference: CompressionPreference::NoPreference,
+                    }),
+                    Rc::new(PackerFileForTesting {
+                        file_size: 8,
+                        relative_path: "Block0File1".to_string(),
+                        solid_type: SolidPreference::Default,
+                        compression_preference: CompressionPreference::NoPreference,
+                    }),
+                    Rc::new(PackerFileForTesting {
+                        file_size: 1,
+                        relative_path: "Block0File2".to_string(),
+                        solid_type: SolidPreference::Default,
+                        compression_preference: CompressionPreference::NoPreference,
+                    }),
+                    Rc::new(PackerFileForTesting {
+                        file_size: 1,
+                        relative_path: "Block1File0".to_string(),
+                        solid_type: SolidPreference::Default,
+                        compression_preference: CompressionPreference::NoPreference,
+                    }),
+                ],
+            );
+            map
+        };
+
+        // Act
+        let result = make_blocks(
+            items,
+            solid_block_size,
+            u32::MAX,
+            CompressionPreference::Lz4,
+            CompressionPreference::NoPreference,
+        );
+
+        // Assert
+        assert_eq!(result.blocks.len(), 2);
+
+        let block0 = &result.blocks[0];
+        let block1 = &result.blocks[1];
+
+        // Downcast to SolidBlock
+        let solid_block0 = block0
+            .as_any()
+            .downcast_ref::<SolidBlock<PackerFileForTesting>>()
+            .expect("Expected SolidBlock");
+
+        let solid_block1 = block1
+            .as_any()
+            .downcast_ref::<SolidBlock<PackerFileForTesting>>()
+            .expect("Expected SolidBlock");
+
+        // Check first block
+        assert_eq!(solid_block0.items.len(), 3);
+        assert_eq!(solid_block0.items[0].relative_path, "Block0File0");
+        assert_eq!(solid_block0.items[1].relative_path, "Block0File1");
+        assert_eq!(solid_block0.items[2].relative_path, "Block0File2");
+        assert_eq!(
+            solid_block0.compression_preference,
+            CompressionPreference::Lz4
+        );
+
+        // Check second block
+        assert_eq!(solid_block1.items.len(), 1);
+        assert_eq!(solid_block1.items[0].relative_path, "Block1File0");
+        assert_eq!(
+            solid_block1.compression_preference,
+            CompressionPreference::Lz4
+        );
+    }
+
+    /// Test that `make_blocks` handles block size overlaps correctly by splitting files into appropriate blocks.
+    ///
+    /// **Scenario:** The cumulative size of the files causes the block to exceed the maximum block size.
+    /// The function should create a new block when the current block size would be exceeded.
+    #[test]
+    fn make_blocks_with_block_overlap_splits_files_correctly() {
+        // Setup
+        let solid_block_size = 10u32;
+        let items = {
+            let mut map = HashMap::new();
+            map.insert(
+                "",
+                vec![
+                    Rc::new(PackerFileForTesting {
+                        file_size: 1,
+                        relative_path: "Block0File0".to_string(),
+                        solid_type: SolidPreference::Default,
+                        compression_preference: CompressionPreference::NoPreference,
+                    }),
+                    Rc::new(PackerFileForTesting {
+                        file_size: 8,
+                        relative_path: "Block0File1".to_string(),
+                        solid_type: SolidPreference::Default,
+                        compression_preference: CompressionPreference::NoPreference,
+                    }),
+                    Rc::new(PackerFileForTesting {
+                        file_size: 5,
+                        relative_path: "Block1File0".to_string(),
+                        solid_type: SolidPreference::Default,
+                        compression_preference: CompressionPreference::NoPreference,
+                    }),
+                    Rc::new(PackerFileForTesting {
+                        file_size: 1,
+                        relative_path: "Block1File1".to_string(),
+                        solid_type: SolidPreference::Default,
+                        compression_preference: CompressionPreference::NoPreference,
+                    }),
+                ],
+            );
+            map
+        };
+
+        // Act
+        let result = make_blocks(
+            items,
+            solid_block_size,
+            u32::MAX,
+            CompressionPreference::Lz4,
+            CompressionPreference::NoPreference,
+        );
+
+        // Assert
+        assert_eq!(result.blocks.len(), 2);
+
+        let block0 = &result.blocks[0];
+        let block1 = &result.blocks[1];
+
+        let solid_block0 = block0
+            .as_any()
+            .downcast_ref::<SolidBlock<PackerFileForTesting>>()
+            .expect("Expected SolidBlock");
+
+        let solid_block1 = block1
+            .as_any()
+            .downcast_ref::<SolidBlock<PackerFileForTesting>>()
+            .expect("Expected SolidBlock");
+
+        // Check first block
+        assert_eq!(solid_block0.items.len(), 2);
+        assert_eq!(solid_block0.items[0].relative_path, "Block0File0");
+        assert_eq!(solid_block0.items[1].relative_path, "Block0File1");
+        assert_eq!(
+            solid_block0.compression_preference,
+            CompressionPreference::Lz4
+        );
+
+        // Check second block
+        assert_eq!(solid_block1.items.len(), 2);
+        assert_eq!(solid_block1.items[0].relative_path, "Block1File0");
+        assert_eq!(solid_block1.items[1].relative_path, "Block1File1");
+        assert_eq!(
+            solid_block1.compression_preference,
+            CompressionPreference::Lz4
+        );
+    }
+
+    /// Test that `make_blocks` respects files with `NoSolid` preference and their individual compression preferences.
+    ///
+    /// **Scenario:** One file specifies `NoSolid` and a specific compression preference.
+    /// The function should place this file in its own block with the specified compression.
+    #[test]
+    fn make_blocks_respects_no_solid_flag_and_compression_preference() {
+        // Setup
+        let solid_block_size = 10u32;
+        let items = {
+            let mut map = HashMap::new();
+            map.insert(
+                "",
+                vec![
+                    Rc::new(PackerFileForTesting {
+                        file_size: 1,
+                        relative_path: "Block1File0".to_string(),
+                        solid_type: SolidPreference::Default,
+                        compression_preference: CompressionPreference::NoPreference,
+                    }),
+                    Rc::new(PackerFileForTesting {
+                        file_size: 8,
+                        relative_path: "Block0File0".to_string(),
+                        solid_type: SolidPreference::NoSolid,
+                        compression_preference: CompressionPreference::Lz4,
+                    }),
+                    Rc::new(PackerFileForTesting {
+                        file_size: 1,
+                        relative_path: "Block1File1".to_string(),
+                        solid_type: SolidPreference::Default,
+                        compression_preference: CompressionPreference::NoPreference,
+                    }),
+                    Rc::new(PackerFileForTesting {
+                        file_size: 1,
+                        relative_path: "Block1File2".to_string(),
+                        solid_type: SolidPreference::Default,
+                        compression_preference: CompressionPreference::NoPreference,
+                    }),
+                ],
+            );
+            map
+        };
+
+        // Act
+        // We specified NoSOLID and LZ4 on Block0File0. Block chunker should respect this decision.
+        let result = make_blocks(
+            items,
+            solid_block_size,
+            u32::MAX,
+            CompressionPreference::ZStandard,
+            CompressionPreference::NoPreference,
+        );
+
+        // Assert
+        assert_eq!(result.blocks.len(), 2);
+
+        let block0 = &result.blocks[0];
+        let block1 = &result.blocks[1];
+
+        let solid_block0 = block0
+            .as_any()
+            .downcast_ref::<SolidBlock<PackerFileForTesting>>()
+            .expect("Expected SolidBlock");
+
+        let solid_block1 = block1
+            .as_any()
+            .downcast_ref::<SolidBlock<PackerFileForTesting>>()
+            .expect("Expected SolidBlock");
+
+        // Check first block
+        assert_eq!(solid_block0.items.len(), 1);
+        assert_eq!(solid_block0.items[0].relative_path, "Block0File0");
+        assert_eq!(
+            solid_block0.compression_preference,
+            CompressionPreference::Lz4
+        );
+
+        // Check second block
+        assert_eq!(solid_block1.items.len(), 3);
+        assert_eq!(solid_block1.items[0].relative_path, "Block1File0");
+        assert_eq!(solid_block1.items[1].relative_path, "Block1File1");
+        assert_eq!(solid_block1.items[2].relative_path, "Block1File2");
+        assert_eq!(
+            solid_block1.compression_preference,
+            CompressionPreference::ZStandard
+        );
+    }
+
+    /// Test that `make_blocks` correctly chunks oversized files into multiple `ChunkedFileBlock`s.
+    ///
+    /// **Scenario:** A file exceeds the solid block size and needs to be chunked based on the chunk size.
+    /// The function should split the file into 3 chunked blocks.
+    #[test]
+    fn make_blocks_chunks_correctly() {
+        // Setup
+        let solid_block_size = 9u32;
+        let chunk_size = 10u32;
+        let items = {
+            let mut map = HashMap::new();
+            map.insert(
+                "",
+                vec![Rc::new(PackerFileForTesting {
+                    file_size: 25,
+                    relative_path: "ChunkedFile".to_string(),
+                    solid_type: SolidPreference::Default,
+                    compression_preference: CompressionPreference::NoPreference,
+                })],
+            );
+            map
+        };
+
+        // Act
+        let result = make_blocks(
+            items,
+            solid_block_size,
+            chunk_size,
+            CompressionPreference::NoPreference,
+            CompressionPreference::ZStandard,
+        );
+
+        // Assert
+        assert_eq!(result.blocks.len(), 3);
+
+        let block0 = &result.blocks[0];
+        let block1 = &result.blocks[1];
+        let block2 = &result.blocks[2];
+
+        let chunked_block0 = block0
+            .as_any()
+            .downcast_ref::<ChunkedFileBlock<PackerFileForTesting>>()
+            .expect("Expected ChunkedFileBlock");
+
+        let chunked_block1 = block1
+            .as_any()
+            .downcast_ref::<ChunkedFileBlock<PackerFileForTesting>>()
+            .expect("Expected ChunkedFileBlock");
+
+        let chunked_block2 = block2
+            .as_any()
+            .downcast_ref::<ChunkedFileBlock<PackerFileForTesting>>()
+            .expect("Expected ChunkedFileBlock");
+
+        // Check first block
+        assert_eq!(
+            chunked_block0.state.compression,
+            CompressionPreference::ZStandard
+        );
+        assert_eq!(chunked_block0.start_offset, 0);
+        assert_eq!(chunked_block0.chunk_index, 0);
+        assert_eq!(chunked_block0.chunk_size, chunk_size);
+
+        // Check second block
+        assert_eq!(
+            chunked_block1.state.compression,
+            CompressionPreference::ZStandard
+        );
+        assert_eq!(chunked_block1.start_offset, chunk_size as u64);
+        assert_eq!(chunked_block1.chunk_index, 1);
+        assert_eq!(chunked_block1.chunk_size, chunk_size);
+
+        // Check third block
+        assert_eq!(
+            chunked_block2.state.compression,
+            CompressionPreference::ZStandard
+        );
+        assert_eq!(chunked_block2.start_offset, (chunk_size * 2) as u64);
+        assert_eq!(chunked_block2.chunk_index, 2);
+        assert_eq!(chunked_block2.chunk_size, 5);
+    }
+}
