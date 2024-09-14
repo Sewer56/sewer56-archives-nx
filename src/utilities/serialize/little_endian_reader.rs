@@ -31,7 +31,7 @@ pub trait ReadAsLittleEndian: Sized {
 /// A utility for reading data in little-endian format from a raw pointer.
 #[derive(Debug)]
 pub struct LittleEndianReader {
-    ptr: *const u8,
+    pub(crate) ptr: *const u8,
 }
 
 #[coverage(off)]
