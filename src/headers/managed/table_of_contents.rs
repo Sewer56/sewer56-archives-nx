@@ -1,3 +1,4 @@
+/*
 use crate::api::enums::compression_preference::CompressionPreference;
 use crate::headers::enums::table_of_contents_version::TableOfContentsVersion;
 use crate::headers::managed::block_size::BlockSize;
@@ -365,8 +366,8 @@ fn calculate_table_size(
         TableOfContentsVersion::V1 => 24,
     };
 
-    current_size += (num_entries as usize) * entry_size;
-    current_size += (num_blocks as usize) * size_of::<NativeTocBlockEntry>();
+    current_size += num_entries * entry_size;
+    current_size += num_blocks * size_of::<NativeTocBlockEntry>();
     current_size += pool_len;
 
     current_size
@@ -391,3 +392,302 @@ pub enum SerializeError {
     /// Unsupported table of contents version
     UnsupportedVersion(TableOfContentsVersion),
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::enums::compression_preference::CompressionPreference;
+    use crate::api::enums::solid_preference::SolidPreference;
+    use crate::api::traits::can_provide_file_data::CanProvideFileData;
+    use crate::api::traits::has_compression_preference::HasCompressionPreference;
+    use crate::api::traits::has_file_size::HasFileSize;
+    use crate::api::traits::has_relative_path::HasRelativePath;
+    use crate::api::traits::has_solid_type::HasSolidType;
+    use crate::headers::enums::table_of_contents_version::TableOfContentsVersion;
+    use crate::headers::managed::file_entry::FileEntry;
+    use crate::headers::managed::table_of_contents::TableOfContents;
+    use crate::utilities::arrange::pack::group_by_extension::group_files;
+    use crate::utilities::arrange::pack::make_blocks::make_blocks;
+    use alloc::rc::Rc;
+    use alloc::vec;
+    use alloc::vec::Vec;
+    use rstest::rstest;
+
+    #[derive(Clone)]
+    struct PackerFileForTesting {
+        relative_path: String,
+        file_size: u64,
+        solid_preference: SolidPreference,
+        compression_preference: CompressionPreference,
+    }
+
+    impl HasRelativePath for PackerFileForTesting {
+        fn relative_path(&self) -> &str {
+            &self.relative_path
+        }
+    }
+
+    impl HasFileSize for PackerFileForTesting {
+        fn file_size(&self) -> u64 {
+            self.file_size
+        }
+    }
+
+    impl HasSolidType for PackerFileForTesting {
+        fn solid_type(&self) -> SolidPreference {
+            self.solid_preference
+        }
+    }
+
+    impl HasCompressionPreference for PackerFileForTesting {
+        fn compression_preference(&self) -> CompressionPreference {
+            self.compression_preference
+        }
+    }
+
+    impl CanProvideFileData for PackerFileForTesting {}
+
+    #[rstest]
+    #[case::v0(TableOfContentsVersion::V0)]
+    #[case::v1(TableOfContentsVersion::V1)]
+    fn can_serialize_and_deserialize(#[case] version: TableOfContentsVersion) {
+        const SOLID_BLOCK_SIZE: u32 = 32767; // 32 KiB
+        const CHUNK_SIZE: u32 = 67108864; // 64 MiB
+
+        let files = vec![
+            PackerFileForTesting {
+                relative_path: "dvdroot/textures/s01.txd".to_string(),
+                file_size: 113763968,
+                solid_preference: SolidPreference::Default,
+                compression_preference: CompressionPreference::NoPreference,
+            },
+            PackerFileForTesting {
+                relative_path: "dvdroot/textures/s12.txd".to_string(),
+                file_size: 62939496,
+                solid_preference: SolidPreference::Default,
+                compression_preference: CompressionPreference::NoPreference,
+            },
+            PackerFileForTesting {
+                relative_path: "ModConfig.json".to_string(),
+                file_size: 768,
+                solid_preference: SolidPreference::NoSolid,
+                compression_preference: CompressionPreference::Lz4,
+            },
+            PackerFileForTesting {
+                relative_path: "Readme.md".to_string(),
+                file_size: 3072,
+                solid_preference: SolidPreference::Default,
+                compression_preference: CompressionPreference::NoPreference,
+            },
+            PackerFileForTesting {
+                relative_path: "Changelog.md".to_string(),
+                file_size: 2048,
+                solid_preference: SolidPreference::Default,
+                compression_preference: CompressionPreference::NoPreference,
+            },
+        ];
+
+        // Generate dummy data for archived file.
+        let entries: Vec<FileEntry> = files
+            .iter()
+            .map(|f| FileEntry {
+                hash: 0, // In a real scenario, you'd compute the hash
+                decompressed_size: f.file_size,
+                decompressed_block_offset: 0,
+                file_path_index: 0,
+                first_block_index: 0,
+            })
+            .collect();
+
+        // Generate blocks.
+        let rc_files: Vec<Rc<PackerFileForTesting>> = files.into_iter().map(Rc::new).collect();
+        let groups = group_files(&rc_files);
+        let blocks = make_blocks(
+            groups,
+            SOLID_BLOCK_SIZE,
+            CHUNK_SIZE,
+            CompressionPreference::Lz4,
+            CompressionPreference::ZStandard,
+        );
+
+        // Generate TOC.
+        let mut table_of_contents = TableOfContents::new(&blocks.blocks, &rc_files);
+        table_of_contents.version = version;
+        for entry in entries {
+            table_of_contents.add_file(entry);
+        }
+
+        // Serialize
+        let serialized_data = table_of_contents.serialize().expect("Serialization failed");
+
+        // Deserialize
+        let deserialized_toc =
+            TableOfContents::deserialize(&serialized_data).expect("Deserialization failed");
+
+        // Assert
+        assert_eq!(deserialized_toc.version, table_of_contents.version);
+        assert_eq!(
+            deserialized_toc.entries.len(),
+            table_of_contents.entries.len()
+        );
+        assert_eq!(
+            deserialized_toc.blocks.len(),
+            table_of_contents.blocks.len()
+        );
+    }
+
+    #[rstest]
+    #[case::v0(TableOfContentsVersion::V0)]
+    #[case::v1(TableOfContentsVersion::V1)]
+    fn can_serialize_maximum_file_count(#[case] version: TableOfContentsVersion) {
+        let max_files = MAX_FILE_COUNT_V0V1;
+        let files: Vec<PackerFileForTesting> = (0..max_files)
+            .map(|i| PackerFileForTesting {
+                relative_path: format!("file_{}.txt", i),
+                file_size: 1024,
+                solid_preference: SolidPreference::Default,
+                compression_preference: CompressionPreference::NoPreference,
+            })
+            .collect();
+
+        let rc_files: Vec<Rc<PackerFileForTesting>> = files.into_iter().map(Rc::new).collect();
+        let groups = group_files(&rc_files);
+        let blocks = make_blocks(
+            groups,
+            32767,
+            67108864,
+            CompressionPreference::Lz4,
+            CompressionPreference::ZStandard,
+        );
+
+        let mut table_of_contents = TableOfContents::new(&blocks.blocks, &rc_files);
+        table_of_contents.version = version;
+
+        for _ in 0..max_files {
+            table_of_contents.add_file(FileEntry::default());
+        }
+
+        let result = table_of_contents.serialize();
+        assert!(
+            result.is_ok(),
+            "Serialization should succeed with maximum file count"
+        );
+    }
+
+    #[rstest]
+    #[case::v0(TableOfContentsVersion::V0)]
+    #[case::v1(TableOfContentsVersion::V1)]
+    fn throws_exception_when_file_count_exceeds_maximum(#[case] version: TableOfContentsVersion) {
+        let max_files = MAX_FILE_COUNT_V0V1 + 1;
+        let files: Vec<PackerFileForTesting> = (0..max_files)
+            .map(|i| PackerFileForTesting {
+                relative_path: format!("file_{}.txt", i),
+                file_size: 1024,
+                solid_preference: SolidPreference::Default,
+                compression_preference: CompressionPreference::NoPreference,
+            })
+            .collect();
+
+        let rc_files: Vec<Rc<PackerFileForTesting>> = files.into_iter().map(Rc::new).collect();
+        let groups = group_files(&rc_files);
+        let blocks = make_blocks(
+            groups,
+            32767,
+            67108864,
+            CompressionPreference::Lz4,
+            CompressionPreference::ZStandard,
+        );
+
+        let mut table_of_contents = TableOfContents::new(&blocks.blocks, &rc_files);
+        table_of_contents.version = version;
+
+        for _ in 0..max_files {
+            table_of_contents.add_file(FileEntry::default());
+        }
+
+        let result = table_of_contents.serialize();
+        assert!(
+            result.is_err(),
+            "Serialization should fail when exceeding maximum file count"
+        );
+        assert!(matches!(result, Err(SerializeError::TooManyFiles(_))));
+    }
+
+    #[rstest]
+    #[case::v0(TableOfContentsVersion::V0)]
+    #[case::v1(TableOfContentsVersion::V1)]
+    fn can_serialize_maximum_block_count(#[case] version: TableOfContentsVersion) {
+        let max_blocks = MAX_BLOCK_COUNT_V0V1;
+        let files = vec![PackerFileForTesting {
+            relative_path: "file.txt".to_string(),
+            file_size: 1024,
+            solid_preference: SolidPreference::Default,
+            compression_preference: CompressionPreference::NoPreference,
+        }];
+
+        let rc_files: Vec<Rc<PackerFileForTesting>> = files.into_iter().map(Rc::new).collect();
+        let groups = group_files(&rc_files);
+        let blocks = make_blocks(
+            groups,
+            32767,
+            67108864,
+            CompressionPreference::Lz4,
+            CompressionPreference::ZStandard,
+        );
+
+        let mut table_of_contents = TableOfContents::new(&blocks.blocks, &rc_files);
+        table_of_contents.version = version;
+
+        for _ in 0..max_blocks {
+            table_of_contents.add_block(BlockSize {
+                compressed_size: 1024,
+            });
+        }
+
+        let result = table_of_contents.serialize();
+        assert!(
+            result.is_ok(),
+            "Serialization should succeed with maximum block count"
+        );
+    }
+
+    #[rstest]
+    #[case::v0(TableOfContentsVersion::V0)]
+    #[case::v1(TableOfContentsVersion::V1)]
+    fn throws_exception_when_block_count_exceeds_maximum(#[case] version: TableOfContentsVersion) {
+        let max_blocks = MAX_BLOCK_COUNT_V0V1 + 1;
+        let files = vec![PackerFileForTesting {
+            relative_path: "file.txt".to_string(),
+            file_size: 1024,
+            solid_preference: SolidPreference::Default,
+            compression_preference: CompressionPreference::NoPreference,
+        }];
+
+        let rc_files: Vec<Rc<PackerFileForTesting>> = files.into_iter().map(Rc::new).collect();
+        let groups = group_files(&rc_files);
+        let blocks = make_blocks(
+            groups,
+            32767,
+            67108864,
+            CompressionPreference::Lz4,
+            CompressionPreference::ZStandard,
+        );
+
+        let mut table_of_contents = TableOfContents::new(&blocks.blocks, &rc_files);
+        table_of_contents.version = version;
+
+        for _ in 0..max_blocks {
+            table_of_contents.add_block(BlockSize {
+                compressed_size: 1024,
+            });
+        }
+
+        let result = table_of_contents.serialize();
+        assert!(
+            result.is_err(),
+            "Serialization should fail when exceeding maximum block count"
+        );
+        assert!(matches!(result, Err(SerializeError::TooManyBlocks(_))));
+    }
+}
+*/

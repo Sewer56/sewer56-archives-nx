@@ -78,6 +78,8 @@ pub mod headers {
         pub mod file_entry;
         /// Allows for serialization and deserialization of the Table of Contents.
         pub mod table_of_contents;
+        /// Allows for serialization of the Table of Contents during the packing operation.
+        pub mod table_of_contents_builder;
     }
 
     /// This contains reused traits in the Nx source tree.
@@ -94,6 +96,10 @@ pub mod implementation {
         pub mod blocks {
             pub mod polyfills;
         }
+
+        /// Stores the current state of the table of contents as it is
+        /// built by the individual blocks.
+        pub mod table_of_contents_builder_state;
     }
 }
 
