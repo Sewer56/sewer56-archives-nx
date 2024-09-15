@@ -7,11 +7,10 @@ use crate::headers::parser::string_pool_common::StringPoolUnpackError;
 use crate::headers::raw::native_toc_block_entry::NativeTocBlockEntry;
 use crate::headers::raw::native_toc_header::NativeTocHeader;
 use crate::utilities::serialize::*;
+use core::slice;
 use little_endian_reader::LittleEndianReader;
 use little_endian_writer::LittleEndianWriter;
-use std::alloc::{Allocator, Global, System};
-use std::mem;
-use std::slice;
+use std::alloc::{Allocator, Global};
 
 // Max values for V0 & V1 formats.
 const MAX_BLOCK_COUNT_V0V1: usize = 262143; // 2^18 - 1
@@ -23,13 +22,13 @@ pub struct TableOfContents<
     LongAlloc: Allocator + Clone = Global,
 > {
     /// Used formats for compression of each block.
-    pub block_compressions: Vec<CompressionPreference>,
+    pub block_compressions: Box<[CompressionPreference], LongAlloc>,
 
     /// Individual block sizes in this structure.
-    pub blocks: Vec<BlockSize>,
+    pub blocks: Box<[BlockSize], LongAlloc>,
 
     /// Individual file entries.
-    pub entries: Vec<FileEntry>,
+    pub entries: Box<[FileEntry], LongAlloc>,
 
     /// String pool data.
     pub pool: StringPool<ShortAlloc, LongAlloc>,
@@ -108,10 +107,16 @@ where
             Err(_) => return Err(DeserializeError::UnsupportedTocVersion),
         };
 
-        let mut entries = vec![FileEntry::default(); toc_header.file_count() as usize];
-        let mut blocks = vec![BlockSize::default(); toc_header.block_count() as usize];
-        let mut block_compressions =
-            vec![CompressionPreference::NoPreference; toc_header.block_count() as usize];
+        // Init the vec and resize it to the correct length.
+        let mut entries: Box<[FileEntry], LongAlloc> =
+            Box::new_uninit_slice_in(toc_header.file_count() as usize, long_alloc.clone())
+                .assume_init();
+        let mut blocks: Box<[BlockSize], LongAlloc> =
+            Box::new_uninit_slice_in(toc_header.file_count() as usize, long_alloc.clone())
+                .assume_init();
+        let mut block_compressions: Box<[CompressionPreference], LongAlloc> =
+            Box::new_uninit_slice_in(toc_header.block_count() as usize, long_alloc.clone())
+                .assume_init();
 
         // Read all of the ToC entries.
         if !entries.is_empty() {
@@ -129,7 +134,7 @@ where
             }
         }
 
-        Self::read_blocks_unrolled(&mut blocks, &mut block_compressions, &mut reader);
+        read_blocks_unrolled(&mut blocks, &mut block_compressions, &mut reader);
 
         let pool = StringPool::unpack_v0_with_allocators(
             slice::from_raw_parts(reader.ptr, toc_header.string_pool_size() as usize),
@@ -146,34 +151,6 @@ where
             pool,
             version: toc_version,
         })
-    }
-
-    /// Helper function to read blocks in an unrolled manner for performance.
-    fn read_blocks_unrolled(
-        blocks: &mut [BlockSize],
-        compressions: &mut [CompressionPreference],
-        reader: &mut LittleEndianReader,
-    ) {
-        let mut blocks_iter = blocks.iter_mut();
-        let mut compressions_iter = compressions.iter_mut();
-
-        while blocks_iter.len() >= 4 {
-            for _ in 0..4 {
-                let value = reader.read::<u32>();
-                if let (Some(block), Some(compression)) =
-                    (blocks_iter.next(), compressions_iter.next())
-                {
-                    block.compressed_size = value >> 3;
-                    *compression = unsafe { mem::transmute((value & 0x7) as u8) };
-                }
-            }
-        }
-
-        for (block, compression) in blocks_iter.zip(compressions_iter) {
-            let value = reader.read::<u32>();
-            block.compressed_size = value >> 3;
-            *compression = unsafe { mem::transmute((value & 0x7) as u8) };
-        }
     }
 
     /// Calculates the size of the table after serialization to binary.
@@ -280,6 +257,60 @@ pub unsafe fn serialize_table_of_contents(
     Ok(writer.ptr as usize - data_ptr as usize)
 }
 
+/// Helper function to read blocks in an unrolled manner for performance.
+pub fn read_blocks_unrolled(
+    blocks: &mut [BlockSize],
+    compressions: &mut [CompressionPreference],
+    reader: &mut LittleEndianReader,
+) {
+    let blocks_len = blocks.len();
+    let blocks_ptr = blocks.as_mut_ptr();
+    let compressions_ptr = compressions.as_mut_ptr();
+
+    // SAFETY: We're just avoiding bounds checks here, we know that blocks_len == compressions_len
+    //         by definition, so there is no risk of overflowing.
+    unsafe {
+        for x in 0..blocks_len {
+            let value = NativeTocBlockEntry::from_reader(reader);
+            *blocks_ptr.add(x) = BlockSize::new(value.compressed_block_size());
+            *compressions_ptr.add(x) = value.compression();
+        }
+    }
+
+    // Unrolled Version
+    /*
+        unsafe {
+        let mut x = 0;
+        while x + 4 <= blocks_len {
+            let value1 = NativeTocBlockEntry::from_reader(reader);
+            let value2 = NativeTocBlockEntry::from_reader(reader);
+            let value3 = NativeTocBlockEntry::from_reader(reader);
+            let value4 = NativeTocBlockEntry::from_reader(reader);
+
+            *blocks_ptr.add(x) = BlockSize::new(value1.compressed_block_size());
+            *blocks_ptr.add(x + 1) = BlockSize::new(value2.compressed_block_size());
+            *blocks_ptr.add(x + 2) = BlockSize::new(value3.compressed_block_size());
+            *blocks_ptr.add(x + 3) = BlockSize::new(value4.compressed_block_size());
+
+            *compressions_ptr.add(x) = value1.compression();
+            *compressions_ptr.add(x + 1) = value2.compression();
+            *compressions_ptr.add(x + 2) = value3.compression();
+            *compressions_ptr.add(x + 3) = value4.compression();
+
+            x += 4;
+        }
+
+        // Handle remaining elements
+        while x < blocks_len {
+            let value = NativeTocBlockEntry::from_reader(reader);
+            *blocks_ptr.add(x) = BlockSize::new(value.compressed_block_size());
+            *compressions_ptr.add(x) = value.compression();
+            x += 1;
+        }
+    }
+    */
+}
+
 /// Helper function to write blocks.
 ///
 /// # Remarks
@@ -360,23 +391,3 @@ pub enum SerializeError {
     /// Unsupported table of contents version
     UnsupportedVersion(TableOfContentsVersion),
 }
-
-/*
-impl<T> PartialEq for TableOfContents<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.block_compressions == other.block_compressions
-            && self.blocks == other.blocks
-            && self.entries == other.entries
-            && self.pool == other.pool
-            && self.version == other.version
-    }
-}
-
-impl<T> Eq for TableOfContents<T> {}
-
-impl<T> std::hash::Hash for TableOfContents<T> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.pool.len().hash(state);
-    }
-}
-*/
