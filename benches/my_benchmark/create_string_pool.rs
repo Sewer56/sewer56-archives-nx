@@ -29,7 +29,7 @@ fn unpack_string_pool(
 
 pub fn benchmark_string_pool(c: &mut Criterion) {
     let yakuza_file_list = assets::get_yakuza_file_list();
-    let string_counts = [1000, 2000, 4000];
+    let string_counts = [256, 1000, 2000, 4000];
     let formats = [StringPoolFormat::V0, StringPoolFormat::VPrefix];
 
     for &count in &string_counts {
