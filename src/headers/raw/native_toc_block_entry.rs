@@ -4,7 +4,7 @@ use bitfield::bitfield;
 
 use crate::{
     api::enums::compression_preference::CompressionPreference,
-    utilities::serialize::little_endian_reader::{self, LittleEndianReader},
+    utilities::serialize::little_endian_reader::LittleEndianReader,
 };
 
 bitfield! {

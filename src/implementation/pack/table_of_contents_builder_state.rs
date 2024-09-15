@@ -2,6 +2,8 @@ use crate::{
     api::enums::compression_preference::CompressionPreference,
     headers::managed::{block_size::BlockSize, file_entry::FileEntry},
 };
+use ahash::RandomState;
+use hashbrown::HashMap;
 use std::alloc::{Allocator, Global};
 
 /// This contains the shared 'state' used to build the final binary Table of Contents.
@@ -13,18 +15,24 @@ use std::alloc::{Allocator, Global};
 /// This struct uses uninitialized memory. It's the caller's responsibility to ensure
 /// that all elements are properly initialized before reading from them. In this case,
 /// this is done by the blocks which write to this state.
-pub struct TableOfContentsBuilderState<LongAlloc: Allocator + Clone = Global> {
+#[allow(dead_code)]
+pub(crate) struct TableOfContentsBuilderState<'a, LongAlloc: Allocator + Clone = Global> {
     /// Used formats for compression of each block.
-    block_compressions: Box<[CompressionPreference], LongAlloc>,
+    pub(crate) block_compressions: Box<[CompressionPreference], LongAlloc>,
 
     /// Individual block sizes in this structure.
-    blocks: Box<[BlockSize], LongAlloc>,
+    pub(crate) blocks: Box<[BlockSize], LongAlloc>,
 
     /// Individual file entries.
-    entries: Box<[FileEntry], LongAlloc>,
+    pub(crate) entries: Box<[FileEntry], LongAlloc>,
+
+    /// HashMap mapping file names to their index in the string pool.
+    /// This is used to determine which file path indices to insert into each [FileEntry] in the [Self::entries] array.
+    pub(crate) file_name_to_index: HashMap<&'a str, u32, RandomState>,
 }
 
-impl<LongAlloc: Allocator + Clone> TableOfContentsBuilderState<LongAlloc> {
+#[allow(dead_code)]
+impl<'a, LongAlloc: Allocator + Clone> TableOfContentsBuilderState<'a, LongAlloc> {
     /// Creates a new `TableOfContentsBuilderState` with uninitialized boxes.
     ///
     /// # Arguments
@@ -42,6 +50,7 @@ impl<LongAlloc: Allocator + Clone> TableOfContentsBuilderState<LongAlloc> {
             block_compressions: Box::new_uninit_slice_in(block_count, alloc.clone()).assume_init(),
             blocks: Box::new_uninit_slice_in(block_count, alloc.clone()).assume_init(),
             entries: Box::new_uninit_slice_in(entry_count, alloc).assume_init(),
+            file_name_to_index: HashMap::with_capacity_and_hasher(entry_count, RandomState::new()),
         }
     }
 
@@ -163,12 +172,37 @@ impl<LongAlloc: Allocator + Clone> TableOfContentsBuilderState<LongAlloc> {
             .map(|x| *x = value)
             .ok_or(TocBuilderError::IndexOutOfBounds)
     }
+
+    /// Adds a file name to the HashMap with its corresponding index.
+    ///
+    /// Returns an error if the file name already exists in the HashMap.
+    pub fn add_or_replace_file_name(&mut self, file_name: &'a str, index: u32) {
+        self.file_name_to_index.insert(file_name, index);
+    }
+
+    /// Gets the index for a given file name.
+    pub fn get_file_index(&self, file_name: &str) -> Option<u32> {
+        self.file_name_to_index.get(file_name).copied()
+    }
+
+    /// Removes a file name from the HashMap.
+    pub fn remove_file_name(&mut self, file_name: &str) -> Option<u32> {
+        self.file_name_to_index.remove(file_name)
+    }
+
+    /// Returns the number of file names in the HashMap.
+    pub fn file_name_count(&self) -> usize {
+        self.file_name_to_index.len()
+    }
 }
 
 /// Error type for TableOfContentsBuilderState operations
 #[derive(Debug, PartialEq, Eq)]
 pub enum TocBuilderError {
+    /// Tried accessing an item out of bounds.
     IndexOutOfBounds = 0,
+    /// Added a file name which was already present.
+    DuplicateFileName = 1,
 }
 
 #[cfg(test)]
@@ -282,5 +316,26 @@ mod tests {
             state.set_entry_unchecked(0, new_entry);
             assert_eq!(state.get_entry_unchecked(0), new_entry);
         }
+    }
+
+    #[test]
+    fn file_name_hashtable_operations() {
+        let mut state = unsafe { TableOfContentsBuilderState::new(1, 1, System) };
+
+        // Test adding file names
+        state.add_or_replace_file_name("file1.txt", 0);
+        state.add_or_replace_file_name("file2.txt", 1);
+
+        // Test getting file indices
+        assert_eq!(state.get_file_index("file1.txt"), Some(0));
+        assert_eq!(state.get_file_index("file2.txt"), Some(1));
+        assert_eq!(state.get_file_index("file3.txt"), None);
+
+        // Test removing file names
+        assert_eq!(state.remove_file_name("file1.txt"), Some(0));
+        assert_eq!(state.get_file_index("file1.txt"), None);
+
+        // Test file name count
+        assert_eq!(state.file_name_count(), 1);
     }
 }
