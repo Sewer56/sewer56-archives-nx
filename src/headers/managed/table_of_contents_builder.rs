@@ -17,6 +17,8 @@ use crate::{
 use little_endian_writer::LittleEndianWriter;
 use std::alloc::Allocator;
 
+use super::file_entry_intrinsics::{write_entries_as_v0, write_entries_as_v1};
+
 // Max values for V0 & V1 formats.
 const MAX_BLOCK_COUNT_V0V1: usize = 262143; // 2^18 - 1
 const MAX_FILE_COUNT_V0V1: usize = 1048575; // 2^20 - 1
@@ -226,14 +228,10 @@ pub unsafe fn serialize_table_of_contents(
     if !entries.is_empty() {
         match version {
             TableOfContentsVersion::V0 => {
-                for entry in entries {
-                    entry.write_as_v0(&mut writer);
-                }
+                write_entries_as_v0(&mut writer, entries);
             }
             TableOfContentsVersion::V1 => {
-                for entry in entries {
-                    entry.write_as_v1(&mut writer);
-                }
+                write_entries_as_v1(&mut writer, entries);
             }
         }
     }
@@ -274,7 +272,7 @@ fn write_blocks(
         }
     }
 
-    // Note: Unlike C#, unrolling is not needed. LLVM is clever enough to do it for us.
+    // No benefit found from unrolling here.
 }
 
 /// Calculates the size of the table after serialization to binary.

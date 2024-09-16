@@ -76,6 +76,8 @@ pub mod headers {
         pub mod block_size;
         /// Represents a file entry that was decoded from the Table of Contents.
         pub mod file_entry;
+        /// Optimized functionality for dealing with file entries.
+        pub mod file_entry_intrinsics;
         /// Allows for serialization of the Table of Contents during the packing operation.
         pub mod table_of_contents_builder;
         /// Allows for deserialization of the Table of Contents during the unpacking operation.

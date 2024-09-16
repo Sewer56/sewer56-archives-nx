@@ -97,6 +97,7 @@ where
                 .assume_init();
 
         // Read all of the ToC entries.
+        // Perf: Nothing gained here from unrolling.
         if !entries.is_empty() {
             match toc_version {
                 TableOfContentsVersion::V0 => {
@@ -144,17 +145,9 @@ pub fn read_blocks_unrolled(
 
     // SAFETY: We're just avoiding bounds checks here, we know that blocks_len == compressions_len
     //         by definition, so there is no risk of overflowing.
-    unsafe {
-        for x in 0..blocks_len {
-            let value = NativeTocBlockEntry::from_reader(reader);
-            *blocks_ptr.add(x) = BlockSize::new(value.compressed_block_size());
-            *compressions_ptr.add(x) = value.compression();
-        }
-    }
 
     // Unrolled Version
-    /*
-        unsafe {
+    unsafe {
         let mut x = 0;
         while x + 4 <= blocks_len {
             let value1 = NativeTocBlockEntry::from_reader(reader);
@@ -183,7 +176,6 @@ pub fn read_blocks_unrolled(
             x += 1;
         }
     }
-    */
 }
 
 /// Errors that can occur when deserializing TableOfContents
