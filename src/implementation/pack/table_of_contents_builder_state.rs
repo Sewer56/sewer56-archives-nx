@@ -28,12 +28,30 @@ pub(crate) struct TableOfContentsBuilderState<'a, LongAlloc: Allocator + Clone =
 
     /// HashMap mapping file names to their index in the string pool.
     /// This is used to determine which file path indices to insert into each [FileEntry] in the [Self::entries] array.
-    pub(crate) file_name_to_index: HashMap<&'a str, u32, RandomState>,
+    pub(crate) relative_path_to_index: HashMap<&'a str, u32, RandomState>,
+}
+
+#[allow(dead_code)]
+impl<'a> TableOfContentsBuilderState<'a> {
+    /// Creates a new [TableOfContentsBuilderState] with uninitialized boxes.
+    ///
+    /// # Arguments
+    ///
+    /// * `block_count` - The number of blocks.
+    /// * `entry_count` - The number of file entries.
+    ///
+    /// # Safety
+    ///
+    /// This function creates uninitialized memory. It's the caller's responsibility
+    /// to initialize all elements before reading from them.
+    pub unsafe fn new(block_count: usize, entry_count: usize) -> Self {
+        Self::new_with_allocator(block_count, entry_count, Global)
+    }
 }
 
 #[allow(dead_code)]
 impl<'a, LongAlloc: Allocator + Clone> TableOfContentsBuilderState<'a, LongAlloc> {
-    /// Creates a new `TableOfContentsBuilderState` with uninitialized boxes.
+    /// Creates a new [TableOfContentsBuilderState] with uninitialized boxes.
     ///
     /// # Arguments
     ///
@@ -45,12 +63,20 @@ impl<'a, LongAlloc: Allocator + Clone> TableOfContentsBuilderState<'a, LongAlloc
     ///
     /// This function creates uninitialized memory. It's the caller's responsibility
     /// to initialize all elements before reading from them.
-    pub unsafe fn new(block_count: usize, entry_count: usize, alloc: LongAlloc) -> Self {
+    pub unsafe fn new_with_allocator(
+        block_count: usize,
+        entry_count: usize,
+        long_alloc: LongAlloc,
+    ) -> Self {
         Self {
-            block_compressions: Box::new_uninit_slice_in(block_count, alloc.clone()).assume_init(),
-            blocks: Box::new_uninit_slice_in(block_count, alloc.clone()).assume_init(),
-            entries: Box::new_uninit_slice_in(entry_count, alloc).assume_init(),
-            file_name_to_index: HashMap::with_capacity_and_hasher(entry_count, RandomState::new()),
+            block_compressions: Box::new_uninit_slice_in(block_count, long_alloc.clone())
+                .assume_init(),
+            blocks: Box::new_uninit_slice_in(block_count, long_alloc.clone()).assume_init(),
+            entries: Box::new_uninit_slice_in(entry_count, long_alloc).assume_init(),
+            relative_path_to_index: HashMap::with_capacity_and_hasher(
+                entry_count,
+                RandomState::new(),
+            ),
         }
     }
 
@@ -177,22 +203,22 @@ impl<'a, LongAlloc: Allocator + Clone> TableOfContentsBuilderState<'a, LongAlloc
     ///
     /// Returns an error if the file name already exists in the HashMap.
     pub fn add_or_replace_file_name(&mut self, file_name: &'a str, index: u32) {
-        self.file_name_to_index.insert(file_name, index);
+        self.relative_path_to_index.insert(file_name, index);
     }
 
     /// Gets the index for a given file name.
     pub fn get_file_index(&self, file_name: &str) -> Option<u32> {
-        self.file_name_to_index.get(file_name).copied()
+        self.relative_path_to_index.get(file_name).copied()
     }
 
     /// Removes a file name from the HashMap.
     pub fn remove_file_name(&mut self, file_name: &str) -> Option<u32> {
-        self.file_name_to_index.remove(file_name)
+        self.relative_path_to_index.remove(file_name)
     }
 
     /// Returns the number of file names in the HashMap.
     pub fn file_name_count(&self) -> usize {
-        self.file_name_to_index.len()
+        self.relative_path_to_index.len()
     }
 }
 
@@ -212,7 +238,7 @@ mod tests {
 
     #[test]
     fn new_creates_correct_sizes() {
-        let state = unsafe { TableOfContentsBuilderState::new(10, 20, System) };
+        let state = unsafe { TableOfContentsBuilderState::new_with_allocator(10, 20, System) };
         assert_eq!(state.block_compressions.len(), 10);
         assert_eq!(state.blocks.len(), 10);
         assert_eq!(state.entries.len(), 20);
@@ -220,7 +246,7 @@ mod tests {
 
     #[test]
     fn block_compression_getters_and_setters() {
-        let mut state = unsafe { TableOfContentsBuilderState::new(1, 1, System) };
+        let mut state = unsafe { TableOfContentsBuilderState::new_with_allocator(1, 1, System) };
 
         // Test setters
         assert!(state
@@ -252,7 +278,7 @@ mod tests {
 
     #[test]
     fn block_getters_and_setters() {
-        let mut state = unsafe { TableOfContentsBuilderState::new(1, 1, System) };
+        let mut state = unsafe { TableOfContentsBuilderState::new_with_allocator(1, 1, System) };
         let block = BlockSize {
             compressed_size: 100,
         };
@@ -282,7 +308,7 @@ mod tests {
 
     #[test]
     fn entry_getters_and_setters() {
-        let mut state = unsafe { TableOfContentsBuilderState::new(1, 1, System) };
+        let mut state = unsafe { TableOfContentsBuilderState::new_with_allocator(1, 1, System) };
         let entry = FileEntry {
             hash: 123,
             decompressed_size: 456,
@@ -320,7 +346,7 @@ mod tests {
 
     #[test]
     fn file_name_hashtable_operations() {
-        let mut state = unsafe { TableOfContentsBuilderState::new(1, 1, System) };
+        let mut state = unsafe { TableOfContentsBuilderState::new_with_allocator(1, 1, System) };
 
         // Test adding file names
         state.add_or_replace_file_name("file1.txt", 0);

@@ -76,10 +76,10 @@ pub mod headers {
         pub mod block_size;
         /// Represents a file entry that was decoded from the Table of Contents.
         pub mod file_entry;
-        /// Allows for serialization and deserialization of the Table of Contents.
-        pub mod table_of_contents;
         /// Allows for serialization of the Table of Contents during the packing operation.
         pub mod table_of_contents_builder;
+        /// Allows for deserialization of the Table of Contents during the unpacking operation.
+        pub mod table_of_contents_reader;
     }
 
     /// This contains reused traits in the Nx source tree.
@@ -135,6 +135,7 @@ pub mod utilities {
 
     #[cfg(test)]
     pub mod tests {
+        pub mod packer_file_for_testing;
         pub mod packing_test_helpers;
         pub mod permutations;
     }

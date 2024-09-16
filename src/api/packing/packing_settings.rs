@@ -6,6 +6,18 @@ use crate::{
 use core::num::NonZeroU32;
 use std::io::{Seek, Write};
 
+/// The minimum block size that the user is allowed to specify
+pub const MIN_BLOCK_SIZE: u32 = 4095;
+
+/// The maximum block size that the user is allowed to specify
+pub const MAX_BLOCK_SIZE: u32 = 67_108_863;
+
+/// The minimum chunk size that the user is allowed to specify
+pub const MIN_CHUNK_SIZE: u32 = 32_768;
+
+/// The maximum chunk size that the user is allowed to specify
+pub const MAX_CHUNK_SIZE: u32 = 1_073_741_824;
+
 /// Controls the configuration settings of the packer.
 ///
 /// # Remarks
@@ -26,7 +38,7 @@ pub struct PackingSettings<W: Write + Seek> {
     pub max_num_threads: NonZeroU32,
 
     /// Size of SOLID blocks.\
-    /// Range is 4095 to 67108863 (64 MiB).\
+    /// Range is MIN_BLOCK_SIZE to 67108863 (64 MiB).\
     /// Values are powers of 2, minus 1.\
     ///
     /// Must be smaller than [`Self::chunk_size`].
@@ -91,9 +103,9 @@ impl<W: Write + Seek> PackingSettings<W> {
     /// Sanitizes settings to acceptable values if they are out of range or undefined.
     pub fn sanitize(&mut self) {
         // Note: BlockSize is minus one, see spec.
-        self.block_size = self.block_size.clamp(4095, 67_108_863);
+        self.block_size = self.block_size.clamp(MIN_BLOCK_SIZE, MAX_BLOCK_SIZE);
         // 1GiB because larger chunks cause problems with LZ4 and the likes
-        self.chunk_size = self.chunk_size.clamp(32_768, 1_073_741_824);
+        self.chunk_size = self.chunk_size.clamp(MIN_CHUNK_SIZE, MAX_CHUNK_SIZE);
 
         self.block_size = self.block_size.next_power_of_two() - 1;
         self.chunk_size = self.chunk_size.next_power_of_two();
@@ -130,24 +142,24 @@ mod tests {
     use std::io::Cursor;
 
     #[rstest(chunk_size, expected,
-        case(1_073_741_825u32, 1_073_741_824u32), // Exceeds max chunk size, clamped down
-        case(u32::MAX, 1_073_741_824u32),         // Max u32 value, clamped to max chunk size
-        case(0u32, 32_768u32)                     // Zero value, adjusted to min chunk size
+        case(1_073_741_825u32, MAX_CHUNK_SIZE), // Exceeds max chunk size, clamped down
+        case(u32::MAX, MAX_CHUNK_SIZE),         // Max u32 value, clamped to max chunk size
+        case(0u32, MIN_CHUNK_SIZE)              // Zero value, adjusted to min chunk size
     )]
     fn chunk_size_is_clamped(chunk_size: u32, expected: u32) {
         let output = Cursor::new(Vec::new());
         let mut settings = PackingSettings::new(output);
         settings.chunk_size = chunk_size;
-        settings.block_size = 4095; // Set block_size to minimum to avoid influencing chunk_size
+        settings.block_size = MIN_BLOCK_SIZE; // Set block_size to minimum to avoid influencing chunk_size
         settings.sanitize();
         assert_eq!(settings.chunk_size, expected);
     }
 
     #[rstest(value, expected,
-        case(67_108_864u32, 67_108_863u32), // Exceeds max block size, clamped down
-        case(u32::MAX, 67_108_863u32),      // Max u32 value, clamped to max block size
-        case(4094u32, 4095u32),             // Below minimum, adjusted to min block size
-        case(0u32, 4095u32)                 // Zero value, adjusted to min block size
+        case(MAX_BLOCK_SIZE + 1, MAX_BLOCK_SIZE), // Exceeds max block size, clamped down
+        case(u32::MAX, MAX_BLOCK_SIZE),           // Max u32 value, clamped to max block size
+        case(MIN_BLOCK_SIZE - 1, MIN_BLOCK_SIZE), // Below minimum, adjusted to min block size
+        case(0u32, MIN_BLOCK_SIZE)                // Zero value, adjusted to min block size
     )]
     fn block_size_is_clamped(value: u32, expected: u32) {
         let output = Cursor::new(Vec::new());
@@ -159,15 +171,15 @@ mod tests {
 
     #[rstest(block_size, chunk_size,
         // Regular Values
-        case(32_767u32, 4_194_304u32),     // Valid block and chunk sizes
-        case(67_108_863u32, 67_108_864u32),// Max block size and valid chunk size
-        case(4_095u32, 32_768u32),         // Minimum block and chunk sizes
-        case(67_108_862u32, 67_108_863u32),// Just below max sizes
+        case(32_767u32, 4_194_304u32),            // Valid block and chunk sizes
+        case(MAX_BLOCK_SIZE, MAX_BLOCK_SIZE + 1), // Max block size and valid chunk size
+        case(MIN_BLOCK_SIZE - 1, MIN_CHUNK_SIZE), // Minimum block and chunk sizes
+        case(67_108_862u32, MAX_BLOCK_SIZE),      // Just below max sizes
 
         // BlockSize > ChunkSize (should adjust chunk_size)
-        case(67_108_863u32, 4_194_304u32), // Block size exceeds chunk size
-        case(4_194_305u32, 4_194_304u32),  // Block size slightly larger than chunk size
-        case(67_108_863u32, 67_108_862u32) // Block size one more than chunk size
+        case(MAX_BLOCK_SIZE, 4_194_304u32), // Block size exceeds chunk size
+        case(4_194_305u32, 4_194_304u32),   // Block size slightly larger than chunk size
+        case(MAX_BLOCK_SIZE, 67_108_862u32) // Block size one more than chunk size
     )]
     fn chunk_size_must_be_greater_than_block_size(block_size: u32, chunk_size: u32) {
         let output = Cursor::new(Vec::new());
