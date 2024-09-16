@@ -58,6 +58,7 @@ impl OffsetPathIndexTuple {
     /// Copy the values of this tuple to a managed [`FileEntry`].
     ///
     /// This was written to avoid a stack spill.
+    #[inline(always)]
     pub fn copy_to(&self, entry: &mut FileEntry) {
         entry.decompressed_block_offset = self.decompressed_block_offset();
         entry.file_path_index = self.file_path_index();
