@@ -1,3 +1,5 @@
+use derive_new::new;
+
 use crate::{
     headers::raw::{
         common::offset_index_path_tuple::OffsetPathIndexTuple,
@@ -9,7 +11,7 @@ use crate::{
 };
 
 /// Entry for the individual file.
-#[derive(Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Hash, Debug, new)]
 pub struct FileEntry {
     /// [u64] Hash of the file described in this entry.
     pub hash: u64,

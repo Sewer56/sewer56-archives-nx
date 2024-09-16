@@ -2,7 +2,10 @@ use core::hint::unreachable_unchecked;
 
 use bitfield::bitfield;
 
-use crate::api::enums::compression_preference::CompressionPreference;
+use crate::{
+    api::enums::compression_preference::CompressionPreference,
+    utilities::serialize::little_endian_reader::LittleEndianReader,
+};
 
 bitfield! {
     /// Native 'block entry' in the 'Table of Contents'
@@ -28,6 +31,11 @@ impl NativeTocBlockEntry {
         // Convert to little endian
         header.0 = header.0.to_le();
         header
+    }
+
+    /// Creates a new entry from the little endian reader
+    pub fn from_reader(reader: &mut LittleEndianReader) -> Self {
+        NativeTocBlockEntry(unsafe { reader.read::<u32>() })
     }
 
     /// Get the compression preference

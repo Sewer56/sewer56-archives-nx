@@ -302,6 +302,11 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
         // Note: This is very fast `O(1)` because the zstd frame header will contain the necessary info.
         let decompressed_size = zstd::get_decompressed_size(source)?;
 
+        // SAFETY: Compressed data is empty, return an empty pool.
+        if decompressed_size == 0 {
+            return return_empty_pool(&long_alloc);
+        }
+
         // Decompress the data
         let mut decompressed =
             unsafe { Box::new_uninit_slice_in(decompressed_size, short_alloc).assume_init() };
@@ -444,6 +449,12 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     ) -> Result<StringPool<ShortAlloc, LongAlloc>, StringPoolUnpackError> {
         // Determine size of decompressed data
         let decompressed_size = zstd::get_decompressed_size(source)?;
+
+        // SAFETY: Compressed data is empty, return an empty pool.
+        if decompressed_size == 0 {
+            return return_empty_pool(&long_alloc);
+        }
+
         let mut decompressor = ZstdDecompressor::new(source)?;
 
         // Decompress the 'lengths' section.
@@ -508,6 +519,22 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
             Err(x) => Err(StringPoolPackError::FailedToCompress(x)),
         }
     }
+}
+
+fn return_empty_pool<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>(
+    long_alloc: &LongAlloc,
+) -> Result<StringPool<ShortAlloc, LongAlloc>, StringPoolUnpackError> {
+    let str_offsets: Box<[u32], LongAlloc> =
+        unsafe { Box::new_uninit_slice_in(0, long_alloc.clone()).assume_init() };
+    let raw_data: Box<[u8], LongAlloc> =
+        unsafe { Box::new_uninit_slice_in(0, long_alloc.clone()).assume_init() };
+
+    Ok(StringPool {
+        _offsets: str_offsets,
+        _raw_data: raw_data,
+        _temp_allocator: PhantomData,
+        _comp_allocator: PhantomData,
+    })
 }
 
 /// Calculates the total size of the pool for both the

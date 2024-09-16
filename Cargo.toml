@@ -8,13 +8,17 @@ license-file = "LICENSE"
 include = ["src/**/*"]
 
 [features]
-default = ["lz4", "detect_num_cores"]
+default = ["lz4", "detect_num_cores", "aggressive_unrolling"]
 # See README.md for more information on using Profile-Guided Optimization.
 pgo = []
 # Feature for enabling C library exports.
 c-exports = []
 # Enables support for LZ4 compression/decompression
 lz4 = []
+# Aggressively unrolls loops for slightly (< 3%) better performance at expense of binary size.
+# In operations such as:
+# - Table of Contents (de/Serialization)
+aggressive_unrolling = []
 
 # Panics with full error text on unhandled ZStandard Errors.
 # Increases binary size in favour of better error messages.
@@ -38,6 +42,8 @@ thiserror-no-std = "2.0.2"
 memchr = "2.7.4"
 hashbrown = "0.14.5"
 num_cpus = { version = "1.16.0", optional = true }
+derive-new = "0.7.0"
+ahash = "0.8.11"
 
 # C# Bindings
 [build-dependencies]

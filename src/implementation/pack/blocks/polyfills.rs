@@ -13,6 +13,12 @@ where
 {
     // Define necessary methods
     fn as_any(&self) -> &dyn Any;
+
+    /// Returns the size of the largest item in this block.
+    fn largest_item_size(&self) -> u64;
+
+    /// Returns true if this block can create chunks, false otherwise.
+    fn can_create_chunks(&self) -> bool;
 }
 
 /// Represents an individual SOLID block packed by the Nx library.
@@ -49,6 +55,14 @@ where
     // Implement necessary methods
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn largest_item_size(&self) -> u64 {
+        todo!()
+    }
+
+    fn can_create_chunks(&self) -> bool {
+        todo!()
     }
 }
 
@@ -139,5 +153,13 @@ where
 {
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn largest_item_size(&self) -> u64 {
+        todo!()
+    }
+
+    fn can_create_chunks(&self) -> bool {
+        todo!()
     }
 }

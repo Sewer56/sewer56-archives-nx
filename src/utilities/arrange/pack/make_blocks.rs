@@ -252,8 +252,8 @@ mod tests {
     use super::*;
     use crate::api::enums::compression_preference::CompressionPreference;
     use crate::api::enums::solid_preference::SolidPreference;
+    use alloc::rc::Rc;
     use hashbrown::HashMap;
-    use std::rc::Rc;
 
     #[derive(Clone)]
     struct PackerFileForTesting {
