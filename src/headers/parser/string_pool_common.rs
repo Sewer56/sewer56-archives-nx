@@ -200,4 +200,9 @@ pub enum StringPoolUnpackError {
 
     /// Failed to determine decompressed size.
     FailedToGetDecompressedSize(#[from] GetDecompressedSizeError),
+
+    /// Size of decompressed pool exceeds max limit;
+    /// this is a measure to prevent servers from running out of memory
+    /// due to malformed string pool size. Since you can't always trust user input.
+    ExceededMaxSize(u32),
 }

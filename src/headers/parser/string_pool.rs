@@ -300,9 +300,17 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
         // Note: This is very fast `O(1)` because the zstd frame header will contain the necessary info.
         let decompressed_size = zstd::get_decompressed_size(source)?;
 
-        // SAFETY: Compressed data is empty, return an empty pool.
+        // SAFETY: Compressed data is empty or zstd frame is missing size, return an empty pool.
         if decompressed_size == 0 {
             return return_empty_pool(&long_alloc);
+        }
+
+        // SAFETY: Don't trust user input; in case Nx is being ran on a server.
+        //         If the frame size exceeds our allowed limit, return an error.
+        if decompressed_size > MAX_STRING_POOL_SIZE {
+            return Err(StringPoolUnpackError::ExceededMaxSize(
+                MAX_STRING_POOL_SIZE as u32,
+            ));
         }
 
         // Decompress the data
@@ -453,6 +461,14 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
             return return_empty_pool(&long_alloc);
         }
 
+        // SAFETY: Don't trust user input; in case Nx is being ran on a server.
+        //         If the frame size exceeds our allowed limit, return an error.
+        if decompressed_size > MAX_STRING_POOL_SIZE {
+            return Err(StringPoolUnpackError::ExceededMaxSize(
+                MAX_STRING_POOL_SIZE as u32,
+            ));
+        }
+
         let mut decompressor = ZstdDecompressor::new(source)?;
 
         // Decompress the 'lengths' section.
@@ -548,12 +564,8 @@ fn calc_pool_size<T: HasRelativePath>(items: &mut [T]) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use alloc::format;
-    use alloc::vec;
-    use alloc::{string::String, vec::Vec};
-    use rstest::rstest;
-    use std::alloc::System;
-
+    use crate::headers::raw::native_toc_header::MAX_STRING_POOL_SIZE;
+    use crate::utilities::compression::zstd::compress_no_copy_fallback;
     use crate::{
         api::traits::has_relative_path::HasRelativePath,
         headers::parser::{
@@ -564,6 +576,11 @@ mod tests {
             },
         },
     };
+    use alloc::format;
+    use alloc::vec;
+    use alloc::{string::String, vec::Vec};
+    use rstest::rstest;
+    use std::alloc::System;
 
     #[derive(Debug, PartialEq, Eq)]
     struct TestItem {
@@ -771,5 +788,44 @@ mod tests {
                 "data/音楽/曲.mp3"
             ]
         );
+    }
+
+    #[rstest]
+    #[case(StringPoolFormat::V0)]
+    #[case(StringPoolFormat::VPrefix)]
+    fn unpack_fails_when_zstd_frame_size_exceeds_max(#[case] format: StringPoolFormat) {
+        // Create a large input that exceeds MAX_STRING_POOL_SIZE
+        let large_input = vec![b'A'; MAX_STRING_POOL_SIZE + 1];
+
+        // Compress the large input
+        let mut compressed = vec![0u8; MAX_STRING_POOL_SIZE + 1];
+        let comp_result = compress_no_copy_fallback(1, &large_input, &mut compressed).unwrap();
+        compressed.truncate(comp_result);
+
+        // Attempt to unpack the compressed data
+        let result = StringPool::unpack(&compressed, 1, format);
+
+        // Check that the result is an error and specifically an ExceededMaxSize error
+        assert!(matches!(
+            result,
+            Err(StringPoolUnpackError::ExceededMaxSize(size)) if size == MAX_STRING_POOL_SIZE as u32
+        ));
+    }
+
+    #[rstest]
+    #[case(StringPoolFormat::V0)]
+    #[case(StringPoolFormat::VPrefix)]
+    fn unpack_fails_when_frame_size_missing(#[case] format: StringPoolFormat) {
+        // Pre-compressed "Hello, World!" without frame size
+        let no_frame_size = vec![
+            0x28, 0xB5, 0x2F, 0xFD, 0x04, 0x00, 0x41, 0x10, 0x00, 0x00, 0x48, 0x65, 0x6C, 0x6C,
+            0x6F, 0x2C, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, 0x21, 0x03,
+        ];
+
+        let result = StringPool::unpack(&no_frame_size, 1, format);
+        assert!(matches!(
+            result,
+            Err(StringPoolUnpackError::FailedToGetDecompressedSize(_))
+        ));
     }
 }
