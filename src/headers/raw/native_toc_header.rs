@@ -2,6 +2,28 @@ use crate::headers::enums::table_of_contents_version::TableOfContentsVersion;
 use crate::headers::traits::can_convert_to_little_endian::CanConvertToLittleEndian;
 use bitfield::bitfield;
 
+/// Maximum possible size of the string pool.
+/// This is constrained by the [`NativeTocHeader::string_pool_size`] variable of the table of contents header.
+///
+/// Realistically this pool size limit allows for a file count of approximately ~4.4 million.
+///
+/// ## Deriveration
+///
+/// This count is derived from the following approximation:
+///
+/// An archive with Sewer's SteamApps (180k files and 150+ games) has the following sizes.
+///
+/// - FileEntries = 4.3MiB
+/// - Blocks = 1MiB
+/// - StringPool = 0.66MiB (~11% of total size)
+///
+/// By this account, we can surmise that an archive with 1M files would have a string pool size
+/// of 0.66 / 180000 * 1000000 = 3.6MiB.
+///
+/// 1M files is the limit of the archive format currently; so there's some leeway left over
+/// in case of poor compression.
+pub const MAX_STRING_POOL_SIZE: usize = 16777215; // 2^24 - 1
+
 bitfield! {
     /// Represents the native structure of the Table of Contents header.
     ///
@@ -31,28 +53,6 @@ bitfield! {
 }
 
 impl NativeTocHeader {
-    /// Maximum possible size of the string pool.
-    /// This is constrained by the [`NativeTocHeader::string_pool_size`] variable of the table of contents header.
-    ///
-    /// Realistically this pool size limit allows for a file count of approximately ~4.4 million.
-    ///
-    /// ## Deriveration
-    ///
-    /// This count is derived from the following approximation:
-    ///
-    /// An archive with Sewer's SteamApps (180k files and 150+ games) has the following sizes.
-    ///
-    /// - FileEntries = 4.3MiB
-    /// - Blocks = 1MiB
-    /// - StringPool = 0.66MiB (~11% of total size)
-    ///
-    /// By this account, we can surmise that an archive with 1M files would have a string pool size
-    /// of 0.66 / 180000 * 1000000 = 3.6MiB.
-    ///
-    /// 1M files is the limit of the archive format currently; so there's some leeway left over
-    /// in case of poor compression.
-    pub const MAX_STRING_POOL_SIZE: usize = 16777215; // 2^24 - 1
-
     /// Maximum possible size of the Native ToC header.
     pub const SIZE_BYTES: usize = 8;
 

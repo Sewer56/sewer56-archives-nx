@@ -1,14 +1,12 @@
 use super::string_pool_common::{
     self, StringPoolFormat, StringPoolPackError, StringPoolUnpackError,
 };
+use crate::api::traits::has_relative_path::HasRelativePath;
+use crate::headers::raw::native_toc_header::MAX_STRING_POOL_SIZE;
 use crate::utilities::compression::zstd::{
     self, compress_no_copy_fallback, max_alloc_for_compress_size,
 };
 use crate::utilities::compression::zstd_stream::ZstdDecompressor;
-use crate::{
-    api::traits::has_relative_path::HasRelativePath,
-    headers::raw::native_toc_header::NativeTocHeader,
-};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
@@ -507,7 +505,7 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
 
         match comp_result {
             Ok(num_bytes) => {
-                if destination.len() <= NativeTocHeader::MAX_STRING_POOL_SIZE {
+                if destination.len() <= MAX_STRING_POOL_SIZE {
                     let mut vec = destination.into_vec();
                     // SAFETY: We know exact length of pool after compression, if it did not fit, we would have matched the error branch.
                     unsafe { vec.set_len(num_bytes) };
