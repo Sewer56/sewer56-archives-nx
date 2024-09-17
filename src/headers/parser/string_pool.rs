@@ -566,6 +566,7 @@ fn calc_pool_size<T: HasRelativePath>(items: &mut [T]) -> usize {
 mod tests {
     use crate::headers::raw::native_toc_header::MAX_STRING_POOL_SIZE;
     use crate::utilities::compression::zstd::compress_no_copy_fallback;
+    use crate::utilities::compression::NxDecompressionError;
     use crate::{
         api::traits::has_relative_path::HasRelativePath,
         headers::parser::{
@@ -826,6 +827,66 @@ mod tests {
         assert!(matches!(
             result,
             Err(StringPoolUnpackError::FailedToGetDecompressedSize(_))
+        ));
+    }
+
+    #[rstest]
+    #[case(StringPoolFormat::V0)]
+    #[case(StringPoolFormat::VPrefix)]
+    fn unpack_fails_when_zstd_frame_size_made_too_small(#[case] format: StringPoolFormat) {
+        // Compressed data with altered frame size 86 -> 40 bytes.
+        // Data is following text:
+        //
+        //      Hello World!!
+        //      I am an evil file, my frame size is too small compared to actual size!!
+
+        let altered_frame_size = vec![
+            0x28, 0xB5, 0x2F, 0xFD, 0x24, 0x28, 0x2D, 0x02, 0x00, 0x62, 0x45, 0x10, 0x11, 0xA0,
+            0xED, 0x78, 0x78, 0x0F, 0xFA, 0x02, 0x02, 0x6D, 0x44, 0x74, 0xAB, 0x5E, 0x63, 0xBE,
+            0x67, 0x46, 0x20, 0x84, 0x9D, 0xC9, 0x9D, 0x15, 0x3E, 0xA3, 0xEF, 0xF7, 0xB3, 0x4D,
+            0x99, 0x6A, 0x73, 0x66, 0x55, 0xEE, 0xDD, 0xEF, 0x2E, 0x7D, 0x67, 0x72, 0x5F, 0xA5,
+            0x0D, 0x5D, 0xAA, 0x8B, 0xE5, 0x84, 0xCE, 0x29, 0xEE, 0x97, 0x5E, 0xE9, 0x09, 0x08,
+            0xE1, 0x70, 0xEB, 0xF2, 0x66, 0xDE, 0x11, 0x00, 0x20, 0x1F, 0x7A, 0x48,
+        ];
+
+        let result = StringPool::unpack(&altered_frame_size, 1, format);
+        assert!(matches!(
+            result,
+            Err(StringPoolUnpackError::FailedToDecompress(NxDecompressionError::ZStandard(err)))
+            if matches!(err,
+                zstd_sys::ZSTD_ErrorCode::ZSTD_error_srcSize_wrong |
+                zstd_sys::ZSTD_ErrorCode::ZSTD_error_corruption_detected
+            )
+        ));
+    }
+
+    #[rstest]
+    #[case(StringPoolFormat::V0)]
+    #[case(StringPoolFormat::VPrefix)]
+    fn unpack_fails_when_zstd_frame_size_made_too_large(#[case] format: StringPoolFormat) {
+        // Compressed data with altered frame size 86 -> 120 bytes.
+        // Data is following text:
+        //
+        //      Hello World!!
+        //      I am an evil file, my frame size is too large compared to actual size!!
+
+        let altered_frame_size = vec![
+            0x28, 0xB5, 0x2F, 0xFD, 0x24, 0x78, 0x35, 0x02, 0x00, 0x62, 0x85, 0x10, 0x11, 0xA0,
+            0xED, 0x78, 0x78, 0xE7, 0x1F, 0x07, 0x8B, 0x36, 0x22, 0xBA, 0x55, 0xAF, 0x31, 0xDF,
+            0x33, 0x23, 0x20, 0x04, 0xAE, 0x0A, 0xBE, 0x57, 0x46, 0xB3, 0x6F, 0xF1, 0x87, 0xDF,
+            0xBA, 0xD5, 0xCC, 0x39, 0xBD, 0xED, 0xB7, 0x16, 0x0F, 0xD5, 0xB9, 0x2A, 0x78, 0x5E,
+            0xFB, 0xD0, 0xE9, 0xBA, 0xE0, 0x56, 0xE8, 0xAD, 0x26, 0x9F, 0xED, 0xD7, 0x9E, 0x80,
+            0x10, 0x4E, 0xBF, 0x56, 0xDE, 0xBA, 0x79, 0x04, 0x00, 0xE2, 0xC7, 0x15, 0x50,
+        ];
+
+        let result = StringPool::unpack(&altered_frame_size, 1, format);
+        assert!(matches!(
+            result,
+            Err(StringPoolUnpackError::FailedToDecompress(NxDecompressionError::ZStandard(err)))
+            if matches!(err,
+                zstd_sys::ZSTD_ErrorCode::ZSTD_error_srcSize_wrong |
+                zstd_sys::ZSTD_ErrorCode::ZSTD_error_corruption_detected
+            )
         ));
     }
 }
