@@ -46,7 +46,7 @@ bitfield! {
     pub file_count, set_file_count: 19, 0;
     /// `u18` The BlockCount (18 bits).
     pub block_count, set_block_count: 37, 20;
-    /// `u24` The size of the string pool (24 bits).
+    /// `u24` The size of the (compressed) string pool (24 bits).
     pub string_pool_size, set_string_pool_size: 61, 38;
     /// `u2`` The version (2 bits).
     pub u8, version, set_version: 63, 62;

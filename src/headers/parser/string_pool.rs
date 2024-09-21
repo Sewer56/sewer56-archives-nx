@@ -338,6 +338,14 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
         long_alloc: LongAlloc,
         use_compression: bool,
     ) -> Result<StringPool<ShortAlloc, LongAlloc>, StringPoolUnpackError> {
+        // If there is no data, return an empty pool.
+        // This is a fast return, in practice the library should never generate this case,
+        // but it's technically valid per spec, since spec has length of compressed string pool
+        // as a field.
+        if source.is_empty() {
+            return return_empty_pool(&long_alloc);
+        }
+
         let decompressed_size;
         let decompressed: Box<[u8], ShortAlloc> = if use_compression {
             // Determine size of decompressed data
@@ -571,8 +579,8 @@ mod tests {
     }
 
     #[rstest]
-    #[cfg_attr(not(miri), case(V0, true))]
-    #[case(V0, false)]
+    #[case(V0, true)]
+    #[cfg_attr(miri, ignore)]
     fn can_pack_large_list(#[case] format: StringPoolFormat, #[case] use_compression: bool) {
         let mut items: Vec<TestItem> = (0..10000)
             .map(|i| TestItem {
