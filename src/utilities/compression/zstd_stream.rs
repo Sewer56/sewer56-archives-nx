@@ -123,6 +123,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn can_decompress_basic_data() {
         let original_data = b"Hello, ZStandard!".repeat(100);
         let compressed_data = create_compressed_data(&original_data, 3);

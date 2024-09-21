@@ -340,6 +340,7 @@ mod tests {
     #[rstest]
     #[case(TableOfContentsVersion::V0)]
     #[case(TableOfContentsVersion::V1)]
+    #[cfg_attr(miri, ignore)]
     fn can_serialize_and_deserialize(#[case] version: TableOfContentsVersion) {
         // Note: We're not testing the actual file/chunk creation logic, this data can be whatever.
         let files = [
@@ -442,6 +443,7 @@ mod tests {
     #[rstest]
     #[case(TableOfContentsVersion::V0)]
     #[case(TableOfContentsVersion::V1)]
+    #[cfg_attr(miri, ignore)]
     fn can_serialize_maximum_file_count_v0_v1(#[case] version: TableOfContentsVersion) {
         // Generate maximum number of dummy file entries
         let entries: Vec<FileEntry> = generate_file_entries(MAX_FILE_COUNT_V0V1);
@@ -507,6 +509,7 @@ mod tests {
     #[rstest]
     #[case(TableOfContentsVersion::V0)]
     #[case(TableOfContentsVersion::V1)]
+    #[cfg_attr(miri, ignore)]
     fn throws_error_when_file_count_exceeds_maximum(#[case] version: TableOfContentsVersion) {
         // Generate one more than the maximum number of dummy file entries
         let entries: Vec<FileEntry> = generate_file_entries(MAX_FILE_COUNT_V0V1 + 1);
@@ -564,6 +567,7 @@ mod tests {
     #[rstest]
     #[case(TableOfContentsVersion::V0)]
     #[case(TableOfContentsVersion::V1)]
+    #[cfg_attr(miri, ignore)]
     fn can_serialize_maximum_block_count(#[case] version: TableOfContentsVersion) {
         let blocks = generate_blocks(MAX_BLOCK_COUNT_V0V1);
         let block_compressions = generate_block_compressions(MAX_BLOCK_COUNT_V0V1);
@@ -651,6 +655,7 @@ mod tests {
     #[rstest]
     #[case(TableOfContentsVersion::V0)]
     #[case(TableOfContentsVersion::V1)]
+    #[cfg_attr(miri, ignore)]
     fn throws_error_when_block_count_exceeds_maximum(#[case] version: TableOfContentsVersion) {
         let blocks = generate_blocks(MAX_BLOCK_COUNT_V0V1 + 1);
         let block_compressions = generate_block_compressions(MAX_BLOCK_COUNT_V0V1 + 1);

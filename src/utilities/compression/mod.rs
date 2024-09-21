@@ -139,6 +139,7 @@ mod tests {
     #[case::copy(CompressionPreference::Copy)]
     #[case::zstd(CompressionPreference::ZStandard)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
+    #[cfg_attr(miri, ignore)]
     fn can_round_trip(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
         let mut decompressed = vec![0u8; TEST_DATA.len()];
@@ -158,6 +159,7 @@ mod tests {
     #[case::copy(CompressionPreference::Copy)]
     #[case::zstd(CompressionPreference::ZStandard)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
+    #[cfg_attr(miri, ignore)]
     fn incompressible_data_defaults_to_copy(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(INCOMPRESSIBLE_DATA.len())];
         let mut used_copy = false;
@@ -190,6 +192,7 @@ mod tests {
             NxCompressionError::Lz4(Lz4CompressionError::CompressionFailed)
         )
     )]
+    #[cfg_attr(miri, ignore)]
     fn destination_too_small_returns_err(
         #[case] method: CompressionPreference,
         #[case] expected_compression_error: NxCompressionError,
@@ -213,6 +216,7 @@ mod tests {
     #[case::copy(CompressionPreference::Copy)]
     #[case::zstd(CompressionPreference::ZStandard)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
+    #[cfg_attr(miri, ignore)]
     fn partial_decompression_succeeds(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
         let mut used_copy = false;
@@ -253,6 +257,7 @@ mod tests {
             NxDecompressionError::Lz4(Lz4DecompressionError::DecompressionFailed)
         )
     )]
+    #[cfg_attr(miri, ignore)]
     fn decompress_buffer_too_small_returms_error(
         #[case] method: CompressionPreference,
         #[case] expected_decompression_error: NxDecompressionError,

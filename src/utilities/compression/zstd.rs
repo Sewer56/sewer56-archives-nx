@@ -233,6 +233,7 @@ mod tests {
     use alloc::vec;
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn decompress_invalid_data_returns_error() {
         let invalid_compressed_data = vec![0u8; 100];
         let mut destination = vec![0u8; 1000];
@@ -255,6 +256,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn decompress_partial_invalid_data_returns_error() {
         let invalid_compressed_data = vec![0u8; 100];
         let mut destination = vec![0u8; 1000];
@@ -277,6 +279,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn get_decompressed_size() {
         // Create some sample data
         let original_data = b"Hello, ZStandard!".repeat(100);

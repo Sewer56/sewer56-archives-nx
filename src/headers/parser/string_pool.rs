@@ -455,6 +455,7 @@ mod tests {
 
     #[rstest]
     #[case(V0)]
+    #[cfg_attr(miri, ignore)]
     fn can_pack_and_unpack(#[case] format: StringPoolFormat) {
         let mut items: Vec<TestItem> = vec![
             TestItem {
@@ -490,6 +491,7 @@ mod tests {
 
     #[rstest]
     #[case(V0)]
+    #[cfg_attr(miri, ignore)]
     fn can_pack_empty_list(#[case] format: StringPoolFormat) {
         let mut items: Vec<TestItem> = Vec::new();
         let packed = StringPool::pack(&mut items, format).unwrap();
@@ -501,6 +503,7 @@ mod tests {
 
     #[rstest]
     #[case(V0)]
+    #[cfg_attr(miri, ignore)]
     fn can_pack_large_list(#[case] format: StringPoolFormat) {
         let mut items: Vec<TestItem> = (0..10000)
             .map(|i| TestItem {
@@ -518,6 +521,7 @@ mod tests {
 
     #[rstest]
     #[case(V0)]
+    #[cfg_attr(miri, ignore)]
     fn unpack_invalid_data(#[case] format: StringPoolFormat) {
         let invalid_data = vec![0, 1, 2, 3, 4]; // Invalid compressed data
         let result = StringPool::unpack(&invalid_data, 1, format);
@@ -530,6 +534,7 @@ mod tests {
 
     #[rstest]
     #[case(V0)]
+    #[cfg_attr(miri, ignore)]
     fn pack_with_custom_allocators(#[case] format: StringPoolFormat) {
         let mut items = vec![
             TestItem {
@@ -552,6 +557,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn v0_can_use_paths_over_256chars() {
         let mut items = vec![
             TestItem {
@@ -574,6 +580,7 @@ mod tests {
 
     #[rstest]
     #[case(V0)]
+    #[cfg_attr(miri, ignore)]
     fn can_use_non_ascii_paths(#[case] format: StringPoolFormat) {
         let mut items = vec![
             TestItem {
@@ -609,6 +616,7 @@ mod tests {
 
     #[rstest]
     #[case(StringPoolFormat::V0)]
+    #[cfg_attr(miri, ignore)]
     fn unpack_fails_when_zstd_frame_size_exceeds_max(#[case] format: StringPoolFormat) {
         // Create a large input that exceeds MAX_STRING_POOL_SIZE
         let large_input = vec![b'A'; MAX_STRING_POOL_SIZE + 1];
@@ -630,6 +638,7 @@ mod tests {
 
     #[rstest]
     #[case(StringPoolFormat::V0)]
+    #[cfg_attr(miri, ignore)]
     fn unpack_fails_when_frame_size_missing(#[case] format: StringPoolFormat) {
         // Pre-compressed "Hello, World!" without frame size
         let no_frame_size = vec![
@@ -646,6 +655,7 @@ mod tests {
 
     #[rstest]
     #[case(StringPoolFormat::V0)]
+    #[cfg_attr(miri, ignore)]
     fn unpack_fails_when_zstd_frame_size_made_too_small(#[case] format: StringPoolFormat) {
         // Compressed data with altered frame size 86 -> 40 bytes.
         // Data is following text:
@@ -675,6 +685,7 @@ mod tests {
 
     #[rstest]
     #[case(StringPoolFormat::V0)]
+    #[cfg_attr(miri, ignore)]
     fn unpack_fails_when_zstd_frame_size_made_too_large(#[case] format: StringPoolFormat) {
         // Compressed data with altered frame size 86 -> 120 bytes.
         // Data is following text:
