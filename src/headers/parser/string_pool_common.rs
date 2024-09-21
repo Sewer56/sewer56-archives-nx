@@ -148,34 +148,6 @@ pub enum StringPoolFormat {
     /// The null terminators in this structure also help aid compression ratio; as they follow
     /// file extensions and therefore very often match multiple bytes back.
     V0,
-
-    /// # String Pool (VPrefix) Format
-    ///
-    /// [This is a variation of V0 with length prefixed string buffer]
-    ///
-    /// The string pool is a flat buffer of deduplicated UTF-8 file paths.
-    ///
-    /// The pool starts with a section of string lengths (1 byte per string),
-    /// followed by the strings themselves without terminators.
-    ///
-    /// Each string:
-    /// - Uses '/' as separator on all platforms
-    /// - Is not null-terminated
-    ///
-    /// # An Example
-    ///
-    ///  A valid (decompressed) pool might look like this:  
-    /// `[22, 22, 24, ...]data/textures/cat.pngdata/textures/dog.pngdata/models/house.obj...`
-    ///
-    /// # Optimization
-    ///
-    /// The strings in this pool are first lexicographically sorted (to group similar paths together);
-    /// and then compressed using ZStd. This improves compression ratio.
-    ///
-    /// The data is then compressed using non-streaming API, such that the
-    /// ZStd frames contain the length info and the length can be determined with
-    /// `ZSTD_findDecompressedSize`.
-    VPrefix,
 }
 
 /// Represents an error obtained when trying to pack the string pool.
