@@ -49,12 +49,16 @@ impl StringPool {
     /// # Arguments
     /// * `items` - The list of items to pack
     /// * `format` - The format of the string pool
+    /// * `use_compression` - Whether to compress the string pool.
+    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///                       In actual archive use this is always 'true'.
     pub fn pack<T: HasRelativePath>(
         items: &mut [T],
         format: StringPoolFormat,
+        use_compression: bool,
     ) -> Result<Vec<u8>, StringPoolPackError> {
         match format {
-            StringPoolFormat::V0 => Self::pack_v0(items),
+            StringPoolFormat::V0 => Self::pack_v0(items, use_compression),
         }
     }
 
@@ -63,8 +67,14 @@ impl StringPool {
     ///
     /// # Arguments
     /// * `items` - The list of items to pack
-    pub fn pack_v0<T: HasRelativePath>(items: &mut [T]) -> Result<Vec<u8>, StringPoolPackError> {
-        Self::pack_v0_with_allocators(items, Global, Global)
+    /// * `use_compression` - Whether to compress the string pool.
+    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///                       In actual archive use this is always 'true'.
+    pub fn pack_v0<T: HasRelativePath>(
+        items: &mut [T],
+        use_compression: bool,
+    ) -> Result<Vec<u8>, StringPoolPackError> {
+        Self::pack_v0_with_allocators(items, Global, Global, use_compression)
     }
 
     /// Unpacks a list of items into a string pool in its native binary format.
@@ -74,13 +84,17 @@ impl StringPool {
     /// * `source` - The compressed data to unpack.
     /// * `file_count` - Number of files in the archive. This is equal to number of entries.
     /// * `format` - The (file) format of the string pool
+    /// * `use_compression` - Whether to compress the string pool.
+    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///                       In actual archive use this is always 'true'.
     pub fn unpack(
         source: &[u8],
         file_count: usize,
         format: StringPoolFormat,
+        use_compression: bool,
     ) -> Result<Self, StringPoolUnpackError> {
         match format {
-            StringPoolFormat::V0 => Self::unpack_v0(source, file_count),
+            StringPoolFormat::V0 => Self::unpack_v0(source, file_count, use_compression),
         }
     }
 
@@ -90,8 +104,15 @@ impl StringPool {
     /// # Arguments
     /// * `source` - The compressed data to unpack.
     /// * `file_count` - Number of files in the archive. This is equal to number of entries.
-    pub fn unpack_v0(source: &[u8], file_count: usize) -> Result<Self, StringPoolUnpackError> {
-        Self::unpack_v0_with_allocators(source, file_count, Global, Global)
+    /// * `use_compression` - Whether to compress the string pool.
+    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///                       In actual archive use this is always 'true'.
+    pub fn unpack_v0(
+        source: &[u8],
+        file_count: usize,
+        use_compression: bool,
+    ) -> Result<Self, StringPoolUnpackError> {
+        Self::unpack_v0_with_allocators(source, file_count, Global, Global, use_compression)
     }
 }
 
@@ -184,14 +205,20 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     /// * `format` - The format of the string pool
     /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
     /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
+    /// * `use_compression` - Whether to compress the string pool.
+    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///                       In actual archive use this is always 'true'.
     pub fn pack_with_allocators<T: HasRelativePath>(
         items: &mut [T],
         short_alloc: ShortAlloc,
         long_alloc: LongAlloc,
         format: StringPoolFormat,
+        use_compression: bool,
     ) -> Result<Vec<u8, LongAlloc>, StringPoolPackError> {
         match format {
-            StringPoolFormat::V0 => Self::pack_v0_with_allocators(items, short_alloc, long_alloc),
+            StringPoolFormat::V0 => {
+                Self::pack_v0_with_allocators(items, short_alloc, long_alloc, use_compression)
+            }
         }
     }
 
@@ -204,17 +231,25 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     /// * `format` - The (file) format of the string pool
     /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
     /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
+    /// * `use_compression` - Whether to compress the string pool.
+    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///                       In actual archive use this is always 'true'.
     pub fn unpack_with_allocators(
         source: &[u8],
         file_count: usize,
         short_alloc: ShortAlloc,
         long_alloc: LongAlloc,
         format: StringPoolFormat,
+        use_compression: bool,
     ) -> Result<StringPool<ShortAlloc, LongAlloc>, StringPoolUnpackError> {
         match format {
-            StringPoolFormat::V0 => {
-                Self::unpack_v0_with_allocators(source, file_count, short_alloc, long_alloc)
-            }
+            StringPoolFormat::V0 => Self::unpack_v0_with_allocators(
+                source,
+                file_count,
+                short_alloc,
+                long_alloc,
+                use_compression,
+            ),
         }
     }
 
@@ -225,6 +260,9 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     /// * `items` - The list of items to pack
     /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
     /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
+    /// * `use_compression` - Whether to compress the string pool.
+    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///                       In actual archive use this is always 'true'.
     ///
     /// # Remarks
     ///
@@ -233,6 +271,7 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
         items: &mut [T],
         short_alloc: ShortAlloc,
         long_alloc: LongAlloc,
+        use_compression: bool,
     ) -> Result<Vec<u8, LongAlloc>, StringPoolPackError> {
         items.sort_by(|a, b| a.relative_path().cmp(b.relative_path()));
 
@@ -264,7 +303,17 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
         }
 
         let decompressed_pool = unsafe { decompressed_pool.assume_init() };
-        Self::compress_pool(&decompressed_pool, long_alloc)
+        if use_compression {
+            Self::compress_pool(&decompressed_pool, long_alloc)
+        } else {
+            // This path is unoptimized in grand scheme of things, because it's only used for testing.
+            let mut result = Vec::with_capacity_in(total_size, long_alloc);
+            unsafe {
+                copy_nonoverlapping(decompressed_pool.as_ptr(), result.as_mut_ptr(), total_size);
+                result.set_len(total_size);
+            }
+            Ok(result)
+        }
     }
 
     /// Unpacks a list of items into a string pool in its native binary format.
@@ -275,6 +324,9 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     /// * `file_count` - Number of files in the archive. This is equal to number of entries.
     /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
     /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
+    /// * `use_compression` - Whether to compress the string pool.
+    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///                       In actual archive use this is always 'true'.
     ///
     /// # Remarks
     ///
@@ -284,28 +336,45 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
         file_count: usize,
         short_alloc: ShortAlloc,
         long_alloc: LongAlloc,
+        use_compression: bool,
     ) -> Result<StringPool<ShortAlloc, LongAlloc>, StringPoolUnpackError> {
-        // Determine size of decompressed data
-        // Note: This is very fast `O(1)` because the zstd frame header will contain the necessary info.
-        let decompressed_size = zstd::get_decompressed_size(source)?;
+        let decompressed_size;
+        let decompressed: Box<[u8], ShortAlloc> = if use_compression {
+            // Determine size of decompressed data
+            // Note: This is very fast `O(1)` because the zstd frame header will contain the necessary info.
+            decompressed_size = zstd::get_decompressed_size(source)?;
 
-        // SAFETY: Compressed data is empty or zstd frame is missing size, return an empty pool.
-        if decompressed_size == 0 {
-            return return_empty_pool(&long_alloc);
-        }
+            // SAFETY: Compressed data is empty or zstd frame is missing size, return an empty pool.
+            if decompressed_size == 0 {
+                return return_empty_pool(&long_alloc);
+            }
 
-        // SAFETY: Don't trust user input; in case Nx is being ran on a server.
-        //         If the frame size exceeds our allowed limit, return an error.
-        if decompressed_size > MAX_STRING_POOL_SIZE {
-            return Err(StringPoolUnpackError::ExceededMaxSize(
-                MAX_STRING_POOL_SIZE as u32,
-            ));
-        }
+            // SAFETY: Don't trust user input; in case Nx is being ran on a server.
+            //         If the frame size exceeds our allowed limit, return an error.
+            if decompressed_size > MAX_STRING_POOL_SIZE {
+                return Err(StringPoolUnpackError::ExceededMaxSize(
+                    MAX_STRING_POOL_SIZE as u32,
+                ));
+            }
 
-        // Decompress the data
-        let mut decompressed =
-            unsafe { Box::new_uninit_slice_in(decompressed_size, short_alloc).assume_init() };
-        zstd::decompress(source, &mut decompressed[..])?;
+            // Decompress the data
+            let mut decompressed =
+                unsafe { Box::new_uninit_slice_in(decompressed_size, short_alloc).assume_init() };
+            zstd::decompress(source, &mut decompressed[..])?;
+            decompressed
+        } else {
+            // For uncompressed data, we can directly use the source
+            decompressed_size = source.len();
+            let mut decompressed = Box::new_uninit_slice_in(source.len(), short_alloc);
+            unsafe {
+                copy_nonoverlapping(
+                    source.as_ptr(),
+                    decompressed.as_mut_ptr() as *mut u8,
+                    source.len(),
+                );
+                decompressed.assume_init()
+            }
+        };
 
         // Populate all offsets
         let mut str_offsets: Box<[u32], LongAlloc> =
@@ -454,9 +523,9 @@ mod tests {
     }
 
     #[rstest]
-    #[case(V0)]
-    #[cfg_attr(miri, ignore)]
-    fn can_pack_and_unpack(#[case] format: StringPoolFormat) {
+    #[cfg_attr(not(miri), case(V0, true))]
+    #[case(V0, false)]
+    fn can_pack_and_unpack(#[case] format: StringPoolFormat, #[case] use_compression: bool) {
         let mut items: Vec<TestItem> = vec![
             TestItem {
                 path: "data/textures/cat.png".to_string(),
@@ -469,8 +538,8 @@ mod tests {
             },
         ];
 
-        let packed = StringPool::pack(&mut items, format).unwrap();
-        let unpacked = StringPool::unpack(&packed, items.len(), format).unwrap();
+        let packed = StringPool::pack(&mut items, format, use_compression).unwrap();
+        let unpacked = StringPool::unpack(&packed, items.len(), format, use_compression).unwrap();
 
         // Check if the unpacked string pool contains all original items
         for item in &items {
@@ -494,25 +563,25 @@ mod tests {
     #[cfg_attr(miri, ignore)]
     fn can_pack_empty_list(#[case] format: StringPoolFormat) {
         let mut items: Vec<TestItem> = Vec::new();
-        let packed = StringPool::pack(&mut items, format).unwrap();
+        let packed = StringPool::pack(&mut items, format, true).unwrap();
         assert!(!packed.is_empty()); // Even an empty pool should have some metadata
 
-        let unpacked = StringPool::unpack(&packed, 0, format).unwrap();
+        let unpacked = StringPool::unpack(&packed, 0, format, true).unwrap();
         assert_eq!(unpacked.len(), 0);
     }
 
     #[rstest]
-    #[case(V0)]
-    #[cfg_attr(miri, ignore)]
-    fn can_pack_large_list(#[case] format: StringPoolFormat) {
+    #[cfg_attr(not(miri), case(V0, true))]
+    #[case(V0, false)]
+    fn can_pack_large_list(#[case] format: StringPoolFormat, #[case] use_compression: bool) {
         let mut items: Vec<TestItem> = (0..10000)
             .map(|i| TestItem {
                 path: format!("file_{:05}.txt", i),
             })
             .collect();
 
-        let packed = StringPool::pack(&mut items, format).unwrap();
-        let unpacked = StringPool::unpack(&packed, items.len(), format).unwrap();
+        let packed = StringPool::pack(&mut items, format, use_compression).unwrap();
+        let unpacked = StringPool::unpack(&packed, items.len(), format, use_compression).unwrap();
 
         assert_eq!(unpacked.len(), items.len());
         (0..unpacked.len())
@@ -524,7 +593,7 @@ mod tests {
     #[cfg_attr(miri, ignore)]
     fn unpack_invalid_data(#[case] format: StringPoolFormat) {
         let invalid_data = vec![0, 1, 2, 3, 4]; // Invalid compressed data
-        let result = StringPool::unpack(&invalid_data, 1, format);
+        let result = StringPool::unpack(&invalid_data, 1, format, true);
         assert!(matches!(
             result,
             Err(StringPoolUnpackError::FailedToGetDecompressedSize(_)
@@ -545,9 +614,10 @@ mod tests {
             },
         ];
 
-        let packed = StringPool::pack_with_allocators(&mut items, System, System, format).unwrap();
+        let packed =
+            StringPool::pack_with_allocators(&mut items, System, System, format, true).unwrap();
         let unpacked =
-            StringPool::unpack_with_allocators(&packed, items.len(), System, System, format)
+            StringPool::unpack_with_allocators(&packed, items.len(), System, System, format, true)
                 .unwrap();
 
         assert_eq!(unpacked.len(), items.len());
@@ -556,9 +626,10 @@ mod tests {
         }
     }
 
-    #[test]
-    #[cfg_attr(miri, ignore)]
-    fn v0_can_use_paths_over_256chars() {
+    #[rstest]
+    #[case(false)]
+    #[cfg_attr(not(miri), case(true))]
+    fn v0_can_use_paths_over_256chars(#[case] use_compression: bool) {
         let mut items = vec![
             TestItem {
                 // Exceeds 256 chars
@@ -569,8 +640,8 @@ mod tests {
             },
         ];
 
-        let packed = StringPool::pack(&mut items, V0).unwrap();
-        let unpacked = StringPool::unpack(&packed, items.len(), V0).unwrap();
+        let packed = StringPool::pack(&mut items, V0, use_compression).unwrap();
+        let unpacked = StringPool::unpack(&packed, items.len(), V0, use_compression).unwrap();
 
         assert_eq!(unpacked.len(), items.len());
         for item in &items {
@@ -579,9 +650,9 @@ mod tests {
     }
 
     #[rstest]
-    #[case(V0)]
-    #[cfg_attr(miri, ignore)]
-    fn can_use_non_ascii_paths(#[case] format: StringPoolFormat) {
+    #[cfg_attr(not(miri), case(V0, true))]
+    #[case(V0, false)]
+    fn can_use_non_ascii_paths(#[case] format: StringPoolFormat, #[case] use_compression: bool) {
         let mut items = vec![
             TestItem {
                 path: "data/textures/猫.png".to_string(),
@@ -594,8 +665,8 @@ mod tests {
             },
         ];
 
-        let packed = StringPool::pack(&mut items, format).unwrap();
-        let unpacked = StringPool::unpack(&packed, items.len(), format).unwrap();
+        let packed = StringPool::pack(&mut items, format, use_compression).unwrap();
+        let unpacked = StringPool::unpack(&packed, items.len(), format, use_compression).unwrap();
 
         assert_eq!(unpacked.len(), items.len());
         for item in &items {
@@ -627,7 +698,7 @@ mod tests {
         compressed.truncate(comp_result);
 
         // Attempt to unpack the compressed data
-        let result = StringPool::unpack(&compressed, 1, format);
+        let result = StringPool::unpack(&compressed, 1, format, true);
 
         // Check that the result is an error and specifically an ExceededMaxSize error
         assert!(matches!(
@@ -646,7 +717,7 @@ mod tests {
             0x6F, 0x2C, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, 0x21, 0x03,
         ];
 
-        let result = StringPool::unpack(&no_frame_size, 1, format);
+        let result = StringPool::unpack(&no_frame_size, 1, format, true);
         assert!(matches!(
             result,
             Err(StringPoolUnpackError::FailedToGetDecompressedSize(_))
@@ -672,7 +743,7 @@ mod tests {
             0xE1, 0x70, 0xEB, 0xF2, 0x66, 0xDE, 0x11, 0x00, 0x20, 0x1F, 0x7A, 0x48,
         ];
 
-        let result = StringPool::unpack(&altered_frame_size, 1, format);
+        let result = StringPool::unpack(&altered_frame_size, 1, format, true);
         assert!(matches!(
             result,
             Err(StringPoolUnpackError::FailedToDecompress(NxDecompressionError::ZStandard(err)))
@@ -702,7 +773,7 @@ mod tests {
             0x10, 0x4E, 0xBF, 0x56, 0xDE, 0xBA, 0x79, 0x04, 0x00, 0xE2, 0xC7, 0x15, 0x50,
         ];
 
-        let result = StringPool::unpack(&altered_frame_size, 1, format);
+        let result = StringPool::unpack(&altered_frame_size, 1, format, true);
         assert!(matches!(
             result,
             Err(StringPoolUnpackError::FailedToDecompress(NxDecompressionError::ZStandard(err)))

@@ -120,6 +120,7 @@ where
             toc_header.file_count() as usize,
             short_alloc.clone(),
             long_alloc.clone(),
+            true,
         )
         .map_err(DeserializeError::StringPoolUnpackError)?;
 

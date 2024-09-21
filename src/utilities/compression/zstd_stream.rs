@@ -139,6 +139,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn can_decompress_in_chunks() {
         let original_data = b"Chunked decompression test".repeat(1000);
         let compressed_data = create_compressed_data(&original_data, 3);
@@ -156,6 +157,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn can_reset_and_reuse_decompressor() {
         let original_data = b"Reset test data".repeat(50);
         let compressed_data = create_compressed_data(&original_data, 3);
@@ -175,6 +177,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn handles_invalid_data() {
         let invalid_data = vec![0u8; 100];
         let mut decompressor = ZstdDecompressor::new(&invalid_data).unwrap();
@@ -185,6 +188,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn works_with_small_output_buffer() {
         let original_data = b"Small buffer test".repeat(100);
         let compressed_data = create_compressed_data(&original_data, 3);
@@ -199,6 +203,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn can_decompress_empty_input() {
         let empty_data = create_compressed_data(&[], 3);
         let mut decompressor = ZstdDecompressor::new(&empty_data).unwrap();

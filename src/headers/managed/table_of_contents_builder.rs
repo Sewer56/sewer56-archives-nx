@@ -109,7 +109,7 @@ pub fn pack_string_pool_with_allocators<
     short_alloc: ShortAlloc,
     long_alloc: LongAlloc,
 ) -> Result<Vec<u8, LongAlloc>, StringPoolPackError> {
-    StringPool::pack_v0_with_allocators(files, short_alloc, long_alloc)
+    StringPool::pack_v0_with_allocators(files, short_alloc, long_alloc, true)
 }
 
 /// Serializes the table of contents data into a binary format from a builder state.

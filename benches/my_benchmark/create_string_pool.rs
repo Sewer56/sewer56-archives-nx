@@ -16,7 +16,7 @@ impl HasRelativePath for StringWrapper {
 }
 
 fn create_string_pool(strings: &mut [StringWrapper], format: StringPoolFormat) -> Vec<u8> {
-    StringPool::pack(strings, format).unwrap()
+    StringPool::pack(strings, format, true).unwrap()
 }
 
 fn unpack_string_pool(
@@ -24,7 +24,7 @@ fn unpack_string_pool(
     file_count: usize,
     format: StringPoolFormat,
 ) -> StringPool {
-    StringPool::unpack(packed_data, file_count, format).unwrap()
+    StringPool::unpack(packed_data, file_count, format, true).unwrap()
 }
 
 pub fn benchmark_string_pool(c: &mut Criterion) {
