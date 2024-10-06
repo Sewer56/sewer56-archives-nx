@@ -1,51 +1,178 @@
 # Table of Contents (TOC)
 
-Header (8 bytes):
+This document describes the Table of Contents (TOC) format used in the archive files.
 
-- `u2`: [Version]
-- `u24`: StringPoolSize
-- `u18`: BlockCount
-- `u20`: [FileCount]
+**Size**: 8 bytes
 
-Variable Size:
+- `u3`: Version (`0-7`)
+- Remaining bits are allocated differently depending on the version.
 
-- `FileEntry[FileCount]`
-    - `u64`: FileHash (xxHash64)
-    - `u32/u64`: DecompressedSize
-    - `u26`: DecompressedBlockOffset [[limits max block size](./File-Header.md#block-size)]
-    - `u20`: FilePathIndex (in [StringPool]) [[limits max file count](./File-Header.md#versionvariant)]
-    - `u18`: FirstBlockIndex
+## Version `0`
+
+- **Summary**: 20-byte `FileEntry`. Suitable for 99.9% of mods.
+- **Purpose**: General archival/unarchival of larger mods.
+- **Limits:**
+    - **Max File Count**: 1M
+    - **Max Block Count**: 256K
+    - **Max Block Size**: 64MiB
+    - **Max Content Size**: 16,384 TiB
+    - **Max File Size**: 4GiB
+
+Format:
+
+- **TOC Header**:
+    - `u3`: Version (`0`)
+    - `u23`: [StringPoolSize]
+    - `u18`: [BlockCount]
+    - `u20`: [FileCount]
+- **FileEntry** (20 bytes):
+    - `u64`: FileHash (XXH3)
+    - `u32`: DecompressedSize
+    - `u26`: DecompressedBlockOffset
+    - `u20`: [FilePathIndex]
+    - `u18`: [FirstBlockIndex]
 - [Blocks[BlockCount]](#blocks)
     - `u29` CompressedBlockSize
     - `u3` [Compression]
 - [StringPool]
     - `RawCompressedData...`
 
-## Version
+## Version `1`
 
-!!! info "This describes the format of the [FileEntry] structure"
+- **Summary**: 24-byte `FileEntry`. For truly exceptional edge cases.
+- **Purpose**: Edge cases. Exceptionally huge archives.
+- **Limits:**
+    - **Max File Count**: 1M
+    - **Max Block Count**: 16,384 G
+    - **Max Block Size**: 64MiB
+    - **Max Content Size**: 1,073,741,824 TiB
+    - **Max File Size**: 256GiB
 
-- `0`:
-    - Most common variant covering 99.99% of cases.
-    - 20 byte FileEntry w/ `u32` Size
-    - Up to 4GB (2^32) per file and 1 million files.
+Format:
 
-- `1`:
-    - Variant for archives with large files >= 4GB size.
-    - 24 byte FileEntry w/ `u64` Size
-    - 2^64 bytes per file and 1 million files.
+- **TOC Header**:
+    - `u3`: Version (`1`)
+    - `u23`: [StringPoolSize]
+    - `u18`: [BlockCount]
+    - `u20`: [FileCount]
+- **FileEntry** (24 bytes):
+    - `u64`: FileHash (XXH3)
+    - `u38`: DecompressedSize
+    - `u26`: DecompressedBlockOffset
+    - `u20`: [FilePathIndex]
+    - `u44`: [FirstBlockIndex]
+- [Blocks[BlockCount]](#blocks)
+    - `u29` CompressedBlockSize
+    - `u3` [Compression]
+- [StringPool]
+    - `RawCompressedData...`
 
-- `3`:
-    - RESERVED.
 
-Remaining bits reserved for possible future revisions.
-Limitation of 1 million files is inferred from [FileEntry -> FilePathIndex](./Table-Of-Contents.md).
+## Version `2`
 
-## File Count
+- **Summary**: 12-byte `FileEntry`. Variant of [Version 1](#version-1), but with no hash, reduced file count and increased block count.
+- **Purpose**: When hashes are not needed. e.g. Read-only virtual filesystems.
+- **Limits:**
+    - **Max File Count**: 256K
+    - **Max Block Count**: 1M
+    - **Max Block Size**: 64MiB
+    - **Max Content Size**: 16,384 TiB
+    - **Max File Size**: 4GiB
+    - **Max Size for VFS:**: 64GiB (@ 64K Block Sizes)
 
-!!! info "Marks the number of file entries in the TOC."
+Format:
 
-This number is [[limited to 1 million due to FilePathIndex][Version]].
+- **TOC Header**:
+    - `u3`: Version (`2`)
+    - `u23`: [StringPoolSize]
+    - `u20`: [BlockCount]
+    - `u18`: [FileCount]
+- **FileEntry** (12 bytes):
+    - `u32`: DecompressedSize
+    - `u26`: DecompressedBlockOffset
+    - `u18`: [FilePathIndex]
+    - `u20`: [FirstBlockIndex]
+- [Blocks[BlockCount]](#blocks)
+    - `u29` CompressedBlockSize
+    - `u3` [Compression]
+- [StringPool]
+    - `RawCompressedData...`
+
+!!! note "Compressed pool data is ~4 bytes per entry."
+
+    This version works under the assumption of ~24 bytes per entry.
+    To reach the 4K size target, `4080 / 20 == 255` files.
+
+## Version `3`
+
+- **Summary**: 16-byte `FileEntry`, fits most small mods and update packages.
+- **Purpose**: Uploads/downloads to/from the internet.
+- **Limits:**
+    - **Max File Count**: 255
+    - **Max Block Count**: 255
+    - **Max Block Size**: 1MiB
+    - **Max Content Size**: 255MiB
+    - **Max File Size**: 255MiB
+
+Format:
+
+- **TOC Header**:
+    - `u3`: Version (`3`)
+    - `u28`: [StringPoolSize]
+    - `u8`: [BlockCount]
+    - `u8`: [FileCount]
+    - `u17`: Padding
+- **FileEntry** (16 bytes):
+    - `u64`: `FileHash` (XXH3)
+    - `u28`: DecompressedSize
+    - `u20`: DecompressedBlockOffset
+    - `u8`: [FilePathIndex]
+    - `u8`: [FirstBlockIndex]
+- [Blocks[BlockCount]](#blocks)
+    - `u29` CompressedBlockSize
+    - `u3` [Compression]
+- [StringPool]
+    - `RawCompressedData...`
+
+!!! note "Compressed pool data is ~4 bytes per entry usually."
+
+    This version works under the assumption of ~24 bytes per entry.
+    To reach the 4K size target, `4080 / 24 == 204` files.
+
+## Version `7`
+
+- **Purpose**: **RESERVED** for extended formats.
+
+## Field Explanations
+
+### FileCount
+
+!!! info "The `FileCount` in the TOC header determines the number of [FileEntry](#file-entries) structs following."
+
+### BlockCount
+
+!!! info "The `BlockCount` in the TOC header determines the number of [Block](#blocks) structs following."
+
+### StringPoolSize
+
+!!! info "The `StringPoolSize` in the TOC header specifies the size of the compressed [StringPool]"
+
+Based on observation, a `StringPoolSize` of 16 MB can accommodate approximately 4.4 million
+files with average path lengths.
+
+### DecompressedBlockOffset
+
+!!! info "Offset of the decompressed block"
+
+### FilePathIndex
+
+!!! info "The `FilePathIndex` specifies the order of the file path for a given `FileEntry` in the [StringPool]."
+
+### FirstBlockIndex
+
+!!! info "The `FirstBlockIndex` specifies the index of the block containing the file."
+
+    Or the first block if the file is split into multiple chunks.
 
 ## File Entries
 
@@ -147,10 +274,36 @@ a.k.a. ['Advanced Format'][Advanced-Format].
 This is very convenient (especially since it matches page granularity); as when we open a mapped file (or even just read unbuffered),
 we can read the exact amount of bytes to get header.
 
+### Version Optimization Note
 
-[Version]: #version
-[FileCount]: #file-count
+!!! info "The version formats are optimized around the read speeds of a 980 Pro NVMe SSD as reference"
+
+  - 4K: 52us
+  - 8K: 80us
+  - 16K: 95us
+  - 32K: 85us
+  - 64K: 89us
+  - 128K: 100us
+  - 256K: 140us
+  - 512K: 218us
+
+There are 2 size 'thresholds':
+
+- Up to 4K
+- Up to 128K
+
+In practice, the 128K size can handle around 5000 files when using a 20-byte [FileEntry].
+
+This is considered to be the 'upper limit' in terms of file counts for mod packages; therefore
+we do not have many variants beyond 20 bytes/entry. i.e. Beyond this limit, we don't aggressively optimize.
+
+[FileCount]: #filecount
 [StringPool]: #string-pool
 [Compression]: #compression
 [FileEntry]: #file-entries
 [Advanced-Format]: https://learn.microsoft.com/en-us/windows/win32/fileio/file-buffering#alignment-and-file-access-requirements
+[StringPoolSize]: #stringpoolsize
+[fh-version]: ./File-Header.md#versionvariant
+[BlockCount]: #blockcount
+[FilePathIndex]: #filepathindex
+[FirstBlockIndex]: #firstblockindex

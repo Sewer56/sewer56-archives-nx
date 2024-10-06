@@ -1,6 +1,6 @@
 ﻿# Format Specification
 
-!!! tip "File Format Version: `1.0.0`"
+!!! tip "File Format Version: `2.0.0`"
 
 !!! note
 
@@ -111,7 +111,7 @@ Alternatively, contributions are welcome if anyone wants to make a [Kaitai Struc
 Table of Contents:
 
 - [ToC Header][ToC Header]: 8
-- [FileEntry[FileCount]][FileEntry]: 4 (V0) / 8 (V1)
+- [FileEntry[FileCount]][FileEntry]: 4 / 8 (Depends on ToC [Version])
 - [Blocks[BlockCount]][Blocks]: 4
 - [StringPool][StringPool]: 4
 
@@ -120,14 +120,12 @@ User Data:
 - `align8`: 0-7
 - [User Data Header][User Data Header]: 8
 
-File entries are aligned to 8 bytes when [Version] is V0,
-
 ## Version History
 
 !!! info "This is the version history for the file format, not the reference implementation/library."
 
-To view the file format specification for a given version, navigate to the linked commit
-for each version and read this specification.
+***To view the file format specification for a given version, navigate to the linked commit
+for each version and read this specification.***
 
 ### 2.0.0
 
@@ -185,6 +183,7 @@ containing the path lengths. The strings following naturally.
 !!! info "Revisions of the Spec"
 
     This is a minor revision of the spec which tightens some assumptions about the format.
+    Last commit with 1.1.0 version: [3fc966ff5c352ac7a9b7360beb25988a6c9ef15c](https://github.com/Nexus-Mods/NexusMods.Archives.Nx/commit/3fc966ff5c352ac7a9b7360beb25988a6c9ef15c)
 
 This does not increment the version in the header. There are no changes in the actual format itself,
 just that certain behaviours of the reference implementation are being standardised into the spec.
@@ -204,7 +203,7 @@ This was already the case previously, but now this is part of the spec.
 
 !!! info "Initial Release"
 
-    Last commit with previous version: [196d116d09cd436818dfd596e069eaef2b7a616d](https://github.com/Nexus-Mods/NexusMods.Archives.Nx/commit/196d116d09cd436818dfd596e069eaef2b7a616d)
+    Last commit with 1.0.0 version: [196d116d09cd436818dfd596e069eaef2b7a616d](https://github.com/Nexus-Mods/NexusMods.Archives.Nx/commit/196d116d09cd436818dfd596e069eaef2b7a616d)
 
 Dated 21st of July 2024, this marks the 'initial release' as `1.0.0`.
 
@@ -222,7 +221,7 @@ The version field is repurposed. In the previous version, it was used to indicat
 the version of the table of contents. Now that is moved to the actual table
 of contents itself. The version field is now used to indicate incompatible changes
 in the format itself. This field is `u7`. The previous field, was moved to the actual
-[Table of Contents](./Table-Of-Contents.md#version) itself.
+[Table of Contents](./Table-Of-Contents.md) itself.
 
 The `Header Page Count` field is extended to 16 bits, allowing for a max size of
 256MiB. This allows for storage of [arbitrary user data][User Data Header]
@@ -232,9 +231,9 @@ as part of the Nx header. A reserved, but not yet implemented section for
 The [Table of Contents][ToC Header] has also received its own proper
 'size' field. Which led to some fields being slightly re-organised.
 
-
+[Version]: ./Table-Of-Contents.md
 [String Pool]: ./Table-Of-Contents.md#string-pool
-[FileCount]: ./Table-Of-Contents.md#file-count
+[FileCount]: ./Table-Of-Contents.md#filecount
 [XXH3]: https://xxhash.com/
 [Nexus Mods App]: https://github.com/Nexus-Mods/NexusMods.App
 [FileEntry]: ./Table-Of-Contents.md#file-entries

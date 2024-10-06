@@ -88,7 +88,7 @@ return 4096 * tocPageCount;
 
     Based on 150+ game `SteamApps` folder (180k files) on Sewer's PC:
 
-    - FileEntries: 4.3MB ([Version 1](./Table-Of-Contents.md#version))
+    - FileEntries: 4.3MB (w/ 24 byte entries)
     - Blocks: 1M
     - StringPool: 660K (3.3MB uncompressed)
 
@@ -120,7 +120,7 @@ then decide if you want to fetch the rest of the archive.
 
 !!! question "[Why is max size 256MB](#header-page-count)?"
 
-    In practice, around 64MB should be sufficient given the [current limits](./Table-Of-Contents.md#version).
+    In practice, around 64MB should be sufficient for the common Table of Contents Formats.
 
     The header however allows for up to 256MB to allow for extra info via [arbitrary user data](./User-Data.md) to be stored in the header.
 
