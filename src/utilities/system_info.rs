@@ -3,6 +3,7 @@ use core::num::NonZeroU32;
 static mut NUM_CORES: Option<NonZeroU32> = None;
 
 /// Retrieves the number of cores that the system has.
+#[allow(static_mut_refs)]
 pub fn get_num_cores() -> NonZeroU32 {
     // No thread safety needed here (we're running code with no side effects), so we omit lazy_static to save on library space.
     unsafe {
