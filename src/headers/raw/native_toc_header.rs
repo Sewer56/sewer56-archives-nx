@@ -18,7 +18,7 @@ use bitfield::bitfield;
 /// - StringPool = 0.66MiB (~11% of total size)
 ///
 /// By this account, we can surmise that an archive with 1M files would have a string pool size
-/// of 0.66 / 180000 * 1000000 = 3.6MiB.
+/// of 0.66 / 180000 * 1000000 = 3.6MiB. Or around 4 bytes per name.
 ///
 /// 1M files is the limit of the archive format currently; so there's some leeway left over
 /// in case of poor compression.
