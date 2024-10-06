@@ -1,5 +1,5 @@
 use super::{CompressionResult, DecompressionResult};
-use crate::api::enums::compression_preference::CompressionPreference;
+use crate::api::enums::*;
 
 /// Represents an error specific to LZ4 compression operations.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

@@ -1,4 +1,4 @@
-use crate::headers::managed::file_entry::FileEntry;
+use crate::headers::managed::*;
 use bitfield::bitfield;
 
 bitfield! {

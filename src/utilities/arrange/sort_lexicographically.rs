@@ -1,4 +1,4 @@
-use crate::api::traits::has_relative_path::HasRelativePath;
+use crate::api::traits::*;
 
 /// Helper function to sort items lexicographically.
 ///

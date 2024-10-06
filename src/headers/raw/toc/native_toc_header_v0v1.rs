@@ -1,4 +1,4 @@
-use crate::headers::enums::table_of_contents_version::TableOfContentsVersion;
+use crate::headers::enums::*;
 use crate::headers::traits::can_convert_to_little_endian::CanConvertToLittleEndian;
 use bitfield::bitfield;
 

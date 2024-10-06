@@ -1,4 +1,4 @@
-use crate::api::traits::has_relative_path::HasRelativePath;
+use crate::api::traits::*;
 use alloc::rc::Rc;
 use alloc::vec::Vec;
 use hashbrown::HashMap;
@@ -46,7 +46,6 @@ fn extract_extension(path: &str) -> &str {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::api::traits::has_relative_path::HasRelativePath;
     use alloc::vec;
     use alloc::{string::String, vec::Vec};
 

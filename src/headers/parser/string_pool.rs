@@ -1,8 +1,8 @@
 use super::string_pool_common::{
     self, StringPoolFormat, StringPoolPackError, StringPoolUnpackError,
 };
-use crate::api::traits::has_relative_path::HasRelativePath;
-use crate::headers::raw::native_toc_header::MAX_STRING_POOL_SIZE;
+use crate::api::traits::*;
+use crate::headers::raw::toc::*;
 use crate::utilities::compression::zstd::{
     self, compress_no_copy_fallback, max_alloc_for_compress_size,
 };
@@ -503,11 +503,11 @@ fn calc_pool_size<T: HasRelativePath>(items: &mut [T]) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use crate::headers::raw::native_toc_header::MAX_STRING_POOL_SIZE;
+    use crate::headers::raw::toc::*;
     use crate::utilities::compression::zstd::compress_no_copy_fallback;
     use crate::utilities::compression::NxDecompressionError;
     use crate::{
-        api::traits::has_relative_path::HasRelativePath,
+        api::traits::*,
         headers::parser::{
             string_pool::{StringPool, StringPoolUnpackError},
             string_pool_common::StringPoolFormat::{self, *},

@@ -1,7 +1,5 @@
-use super::{
-    common::offset_index_path_tuple::OffsetPathIndexTuple, native_file_entry::NativeFileEntry,
-};
-use crate::headers::managed::file_entry::FileEntry;
+use super::*;
+use crate::headers::managed::*;
 use core::hash::Hash;
 #[cfg(test)]
 use fake::*;

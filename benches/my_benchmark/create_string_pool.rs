@@ -1,5 +1,5 @@
 use criterion::{black_box, Criterion};
-use sewer56_archives_nx::api::traits::has_relative_path::HasRelativePath;
+use sewer56_archives_nx::api::traits::*;
 use sewer56_archives_nx::headers::parser::string_pool::StringPool;
 use sewer56_archives_nx::headers::parser::string_pool_common::StringPoolFormat;
 

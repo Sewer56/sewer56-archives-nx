@@ -1,12 +1,5 @@
 use crate::{
-    api::{
-        enums::{compression_preference::CompressionPreference, solid_preference::SolidPreference},
-        traits::{
-            can_provide_file_data::CanProvideFileData,
-            has_compression_preference::HasCompressionPreference, has_file_size::HasFileSize,
-            has_relative_path::HasRelativePath, has_solid_type::HasSolidType,
-        },
-    },
+    api::{enums::*, traits::*},
     implementation::pack::blocks::polyfills::{
         Block, ChunkedBlockState, ChunkedFileBlock, SolidBlock,
     },
@@ -250,8 +243,6 @@ fn chunk_item<T>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::enums::compression_preference::CompressionPreference;
-    use crate::api::enums::solid_preference::SolidPreference;
     use alloc::rc::Rc;
     use hashbrown::HashMap;
 

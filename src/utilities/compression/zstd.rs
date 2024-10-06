@@ -1,5 +1,5 @@
 use super::{CompressionResult, DecompressionResult, NxCompressionError, NxDecompressionError};
-use crate::api::enums::compression_preference::CompressionPreference;
+use crate::api::enums::*;
 use core::ffi::c_void;
 use zstd_sys::ZSTD_ErrorCode::*;
 use zstd_sys::*;

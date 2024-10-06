@@ -6,7 +6,7 @@ pub mod zstd_stream;
 #[cfg(feature = "lz4")]
 pub mod lz4;
 
-use crate::api::enums::compression_preference::CompressionPreference;
+use crate::api::enums::*;
 use copy::*;
 use lz4::{Lz4CompressionError, Lz4DecompressionError};
 use thiserror_no_std::Error;
@@ -127,7 +127,6 @@ pub fn decompress_partial(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::enums::compression_preference::CompressionPreference;
     use alloc::vec;
     use rstest::rstest;
 

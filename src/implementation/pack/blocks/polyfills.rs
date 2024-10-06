@@ -1,7 +1,5 @@
-use crate::api::enums::compression_preference::CompressionPreference;
-use crate::api::traits::can_provide_file_data::CanProvideFileData;
-use crate::api::traits::has_file_size::HasFileSize;
-use crate::api::traits::has_relative_path::HasRelativePath;
+use crate::api::enums::*;
+use crate::api::traits::*;
 use alloc::vec::Vec;
 use alloc::{rc::Rc, sync::Arc};
 use core::any::Any;

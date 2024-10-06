@@ -1,4 +1,4 @@
-use crate::api::enums::solid_preference::SolidPreference;
+use crate::api::enums::*;
 
 /// Used for items which can specify a preference on whether they'd prefer to be SOLIDly packed or not.
 pub trait HasSolidType {

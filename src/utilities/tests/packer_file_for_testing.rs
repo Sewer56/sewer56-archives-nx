@@ -1,5 +1,5 @@
 use crate::api::{
-    enums::{compression_preference::CompressionPreference, solid_preference::SolidPreference},
+    enums::*,
     traits::{
         can_provide_file_data::CanProvideFileData,
         has_compression_preference::HasCompressionPreference, has_file_size::HasFileSize,

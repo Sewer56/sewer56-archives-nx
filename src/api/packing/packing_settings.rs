@@ -1,8 +1,5 @@
 // STD ALERT!! However it's portable traits only.
-use crate::{
-    api::enums::compression_preference::CompressionPreference,
-    utilities::system_info::get_num_cores,
-};
+use crate::{api::enums::*, utilities::system_info::get_num_cores};
 use core::num::NonZeroU32;
 use std::io::{Seek, Write};
 

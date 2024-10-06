@@ -1,7 +1,5 @@
-use super::{
-    common::offset_index_path_tuple::OffsetPathIndexTuple, native_file_entry::NativeFileEntry,
-};
-use crate::headers::managed::file_entry::FileEntry;
+use super::*;
+use crate::headers::managed::*;
 use core::hash::Hash;
 
 /// Structure that represents the native serialized file entry.
@@ -92,7 +90,7 @@ mod tests {
     #[rstest]
     #[case::random_entry(Faker.fake())]
     fn can_copy_to_from_managed_entry(#[case] entry: NativeFileEntryV1) {
-        use crate::headers::raw::native_file_entry_v0::tests::test_copy_to_and_from_managed_entry;
+        use crate::headers::raw::toc::native_file_entry_v0::tests::test_copy_to_and_from_managed_entry;
         test_copy_to_and_from_managed_entry(&entry);
     }
 

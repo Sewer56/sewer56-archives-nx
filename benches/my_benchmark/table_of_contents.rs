@@ -1,15 +1,7 @@
 use criterion::{black_box, Criterion};
 use sewer56_archives_nx::{
-    api::enums::compression_preference::CompressionPreference,
-    headers::{
-        enums::table_of_contents_version::TableOfContentsVersion,
-        managed::{
-            block_size::BlockSize,
-            file_entry::FileEntry,
-            table_of_contents_builder::{calculate_table_size, serialize_table_of_contents},
-            table_of_contents_reader::TableOfContents,
-        },
-    },
+    api::enums::*,
+    headers::{enums::table_of_contents_version::*, managed::*},
 };
 
 fn generate_test_data(

@@ -1,11 +1,5 @@
 use super::file_entry::FileEntry;
-use crate::{
-    headers::raw::{
-        common::offset_index_path_tuple::OffsetPathIndexTuple,
-        native_file_entry_v0::NativeFileEntryV0, native_file_entry_v1::NativeFileEntryV1,
-    },
-    utilities::serialize::little_endian_writer::LittleEndianWriter,
-};
+use crate::{headers::raw::toc::*, utilities::serialize::little_endian_writer::LittleEndianWriter};
 
 pub(crate) fn write_entries_as_v0(writer: &mut LittleEndianWriter, entries: &[FileEntry]) {
     let mut index = 0;

@@ -1,20 +1,11 @@
-use crate::api::traits::can_provide_file_data::CanProvideFileData;
-use crate::api::traits::has_file_size::HasFileSize;
-use crate::api::traits::has_relative_path::HasRelativePath;
-use crate::headers::enums::table_of_contents_version::TableOfContentsVersion;
-use crate::headers::managed::block_size::BlockSize;
-use crate::headers::managed::file_entry::FileEntry;
-use crate::headers::parser::string_pool::StringPool;
-use crate::headers::parser::string_pool_common::StringPoolPackError;
-use crate::headers::raw::native_toc_block_entry::NativeTocBlockEntry;
-use crate::headers::raw::native_toc_header::NativeTocHeader;
-use crate::implementation::pack::table_of_contents_builder_state::TableOfContentsBuilderState;
-use crate::utilities::serialize::*;
 use crate::{
-    api::enums::compression_preference::CompressionPreference,
-    implementation::pack::blocks::polyfills::Block,
+    api::{enums::compression_preference::CompressionPreference, traits::*},
+    headers::{enums::*, managed::*, parser::*, raw::toc::*},
+    implementation::pack::{
+        blocks::polyfills::Block, table_of_contents_builder_state::TableOfContentsBuilderState,
+    },
+    utilities::serialize::little_endian_writer::LittleEndianWriter,
 };
-use little_endian_writer::LittleEndianWriter;
 use std::alloc::Allocator;
 
 use super::file_entry_intrinsics::{write_entries_as_v0, write_entries_as_v1};
@@ -233,6 +224,8 @@ pub unsafe fn serialize_table_of_contents(
             TableOfContentsVersion::V1 => {
                 write_entries_as_v1(&mut writer, entries);
             }
+            TableOfContentsVersion::V2 => todo!(),
+            TableOfContentsVersion::V3 => todo!(),
         }
     }
 
@@ -300,6 +293,8 @@ pub fn calculate_table_size(
     let entry_size = match version {
         TableOfContentsVersion::V0 => 20,
         TableOfContentsVersion::V1 => 24,
+        TableOfContentsVersion::V2 => todo!(),
+        TableOfContentsVersion::V3 => todo!(),
     };
 
     current_size += num_entries * entry_size;
@@ -333,7 +328,6 @@ pub enum SerializeError {
 mod tests {
     use super::*;
     use crate::api::packing::packing_settings::MAX_BLOCK_SIZE;
-    use crate::headers::managed::table_of_contents_reader::TableOfContents;
     use crate::utilities::tests::packer_file_for_testing::PackerFileForTesting;
     use rstest::rstest;
 

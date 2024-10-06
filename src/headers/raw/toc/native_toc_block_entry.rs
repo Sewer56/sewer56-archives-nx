@@ -2,10 +2,7 @@ use core::hint::unreachable_unchecked;
 
 use bitfield::bitfield;
 
-use crate::{
-    api::enums::compression_preference::CompressionPreference,
-    utilities::serialize::little_endian_reader::LittleEndianReader,
-};
+use crate::{api::enums::*, utilities::serialize::little_endian_reader::LittleEndianReader};
 
 bitfield! {
     /// Native 'block entry' in the 'Table of Contents'

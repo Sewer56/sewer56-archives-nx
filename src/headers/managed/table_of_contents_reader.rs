@@ -1,12 +1,8 @@
-use crate::api::enums::compression_preference::CompressionPreference;
-use crate::headers::enums::table_of_contents_version::TableOfContentsVersion;
-use crate::headers::managed::block_size::BlockSize;
-use crate::headers::managed::file_entry::FileEntry;
-use crate::headers::parser::string_pool::StringPool;
-use crate::headers::parser::string_pool_common::StringPoolUnpackError;
-use crate::headers::raw::native_toc_block_entry::NativeTocBlockEntry;
-use crate::headers::raw::native_toc_header::NativeTocHeader;
-use crate::utilities::serialize::*;
+use crate::{
+    api::enums::compression_preference::CompressionPreference,
+    headers::{enums::*, managed::*, parser::*, raw::toc::*},
+    utilities::serialize::*,
+};
 use core::slice;
 use little_endian_reader::LittleEndianReader;
 use std::alloc::{Allocator, Global};
@@ -110,6 +106,8 @@ where
                         entry.from_reader_v1(&mut reader);
                     }
                 }
+                TableOfContentsVersion::V2 => todo!(),
+                TableOfContentsVersion::V3 => todo!(),
             }
         }
 

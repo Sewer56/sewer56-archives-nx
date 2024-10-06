@@ -1,4 +1,4 @@
-use crate::headers::managed::file_entry::FileEntry;
+use crate::headers::managed::*;
 
 /// Common interface for native file entries, used for copying data.
 pub trait NativeFileEntry {

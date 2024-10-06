@@ -8,12 +8,7 @@ extern crate alloc;
 
 /// Public High Level API
 pub mod api {
-    pub mod enums {
-        /// Allows you to specify how the data should be compressed.
-        pub mod compression_preference;
-        /// Allows you to specify whether a given file should be SOLID or not.
-        pub mod solid_preference;
-    }
+    pub mod enums;
 
     /// Public APIs related to packing.
     pub mod packing {
@@ -22,18 +17,7 @@ pub mod api {
 
     /// This contains traits that are implementable by outside entities
     /// that wish to integrate with the library.
-    pub mod traits {
-        /// Trait for items which can provide bytes corresponding to a file.
-        pub mod can_provide_file_data;
-        /// Used for items to with which format they would like to be compressed.
-        pub mod has_compression_preference;
-        /// Indicates the item has a file size. For data input into the packer.
-        pub mod has_file_size;
-        /// Indicates an item has a relative path. For data input into the packer.
-        pub mod has_relative_path;
-        /// Used for items to specify a preference on whether they'd prefer to be SOLIDly packed or not.
-        pub mod has_solid_type;
-    }
+    pub mod traits;
 }
 
 /// This module contains all of the data structures that you'll
@@ -42,47 +26,20 @@ pub mod api {
 /// This contains both the 'raw' implementations that match what you'll find in the file,
 /// and the 'managed' implementations that are more ergonomic to work with.
 pub mod headers {
-    pub mod enums {
-        pub mod table_of_contents_version;
-    }
+    pub mod enums;
 
     /// This contains the serialization/deserialization logic for various parts of Table of Contents
     /// with variable sizes.
-    pub mod parser {
-        /// Contains the implementation of the NX string pool.
-        pub mod string_pool;
-
-        /// Logic belonging to multiple versions of the string pool.
-        pub mod string_pool_common;
-    }
+    pub mod parser;
 
     /// This module contains all of the raw data structures that match 1:1 what's in the file.
     pub mod raw {
-        pub mod common {
-            pub mod offset_index_path_tuple;
-        }
-
-        pub mod native_file_entry;
-        pub mod native_file_entry_v0;
-        pub mod native_file_entry_v1;
         pub mod native_file_header;
-        pub mod native_toc_block_entry;
-        pub mod native_toc_header;
+        pub mod toc;
     }
 
     /// This represents the unpacked 'managed' version of the headers.
-    pub mod managed {
-        /// Represents the size of a compressed block following the header.
-        pub mod block_size;
-        /// Represents a file entry that was decoded from the Table of Contents.
-        pub mod file_entry;
-        /// Optimized functionality for dealing with file entries.
-        pub mod file_entry_intrinsics;
-        /// Allows for serialization of the Table of Contents during the packing operation.
-        pub mod table_of_contents_builder;
-        /// Allows for deserialization of the Table of Contents during the unpacking operation.
-        pub mod table_of_contents_reader;
-    }
+    pub mod managed;
 
     /// This contains reused traits in the Nx source tree.
     pub mod traits {

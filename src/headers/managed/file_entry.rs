@@ -1,10 +1,7 @@
 use derive_new::new;
 
 use crate::{
-    headers::raw::{
-        common::offset_index_path_tuple::OffsetPathIndexTuple,
-        native_file_entry_v0::NativeFileEntryV0, native_file_entry_v1::NativeFileEntryV1,
-    },
+    headers::raw::toc::*,
     utilities::serialize::{
         little_endian_reader::LittleEndianReader, little_endian_writer::LittleEndianWriter,
     },
