@@ -84,7 +84,7 @@ pub fn bench_deserialize_toc(c: &mut Criterion) {
         data.truncate(serialized_size);
 
         group.bench_function(format!("{:?}", version), |b| {
-            b.iter(|| unsafe { TableOfContents::deserialize(black_box(data.as_ptr())) })
+            b.iter(|| unsafe { TableOfContents::deserialize_v1xx(black_box(data.as_ptr())) })
         });
     }
 

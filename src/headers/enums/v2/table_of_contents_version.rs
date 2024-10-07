@@ -17,7 +17,7 @@ pub enum TableOfContentsVersion {
     ///   - **Max File Count**: 1 million (20 bits)
     ///   - **Max Block Count**: 256 thousand (18 bits)
     ///   - **Max Block Size**: 64 MiB
-    ///   - **Max Content Size**: 16,384 TiB
+    ///   - **Max Content Size**: 128 TiB
     ///   - **Max File Size**: 4 GiB
     ///
     /// **Format**:
@@ -41,10 +41,10 @@ pub enum TableOfContentsVersion {
     /// - **Purpose**: Handling exceptionally large archives.
     /// - **Limits**:
     ///   - **Max File Count**: 1 million (20 bits)
-    ///   - **Max Block Count**: 16,384 billion (34 bits)
+    ///   - **Max Block Count**: 256 thousand (18 bits)
     ///   - **Max Block Size**: 64 MiB
-    ///   - **Max Content Size**: 1,073,741,824 TiB
-    ///   - **Max File Size**: 256 GiB
+    ///   - **Max Content Size**: 128 TiB
+    ///   - **Max File Size**: 2^64 Bytes
     ///
     /// **Format**:
     ///
@@ -55,10 +55,10 @@ pub enum TableOfContentsVersion {
     ///   - `u20`: `FileCount`
     /// - **FileEntry** (24 bytes):
     ///   - `u64`: `FileHash` (XXH3)
-    ///   - `u38`: `DecompressedSize`
+    ///   - `u64`: `DecompressedSize`
     ///   - `u26`: `DecompressedBlockOffset`
     ///   - `u20`: `FilePathIndex`
-    ///   - `u44`: `FirstBlockIndex`
+    ///   - `u18`: `FirstBlockIndex`
     V1 = 1,
 
     /// **Version 2**:

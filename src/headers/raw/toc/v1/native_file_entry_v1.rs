@@ -5,7 +5,8 @@ use core::hash::Hash;
 /// Structure that represents the native serialized file entry.
 ///
 /// Remarks:
-/// V1 represents [`TableOfContentsVersion::V1`](crate::headers::enums::table_of_contents_version::TableOfContentsVersion::V1).
+/// V1 represents [`TableOfContentsVersion::V1`](crate::headers::enums::table_of_contents_version::TableOfContentsVersion::V1)
+/// in legacy v1.x.x archives (File Header Version: 0)
 #[repr(C, packed(8))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
 pub struct NativeFileEntryV1 {

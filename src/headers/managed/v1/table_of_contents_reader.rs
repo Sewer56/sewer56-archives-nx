@@ -1,33 +1,11 @@
 use crate::{
     api::enums::compression_preference::CompressionPreference,
-    headers::{enums::*, managed::*, parser::*, raw::toc::*},
+    headers::{enums::v1::*, managed::*, parser::*, raw::toc::*},
     utilities::serialize::*,
 };
 use core::slice;
 use little_endian_reader::LittleEndianReader;
 use std::alloc::{Allocator, Global};
-
-// TODO: Make this read only
-/// Managed representation of the deserialized table of contents.
-pub struct TableOfContents<
-    ShortAlloc: Allocator + Clone = Global,
-    LongAlloc: Allocator + Clone = Global,
-> {
-    /// Used formats for compression of each block.
-    pub block_compressions: Box<[CompressionPreference], LongAlloc>,
-
-    /// Individual block sizes in this structure.
-    pub blocks: Box<[BlockSize], LongAlloc>,
-
-    /// Individual file entries.
-    pub entries: Box<[FileEntry], LongAlloc>,
-
-    /// String pool data.
-    pub pool: StringPool<ShortAlloc, LongAlloc>,
-
-    /// Contains the version of the table of contents.
-    pub version: TableOfContentsVersion,
-}
 
 impl TableOfContents {
     /// Deserializes the table of contents from a given address and version.
@@ -45,8 +23,8 @@ impl TableOfContents {
     /// # Returns
     ///
     /// Result containing the deserialized table of contents or a DeserializeError.
-    pub unsafe fn deserialize(data_ptr: *const u8) -> Result<Self, DeserializeError> {
-        Self::deserialize_with_allocator(data_ptr, Global, Global)
+    pub unsafe fn deserialize_v1xx(data_ptr: *const u8) -> Result<Self, DeserializeError> {
+        Self::deserialize_v1xx_with_allocator(data_ptr, Global, Global)
     }
 }
 
@@ -55,7 +33,7 @@ where
     ShortAlloc: Allocator + Clone,
     LongAlloc: Allocator + Clone,
 {
-    /// Deserializes the table of contents from a given address and version.
+    /// Deserializes the table of contents [NX v1.x.x format] from a given address and version.
     ///
     /// # Safety
     ///
@@ -68,7 +46,7 @@ where
     /// # Returns
     ///
     /// Result containing the deserialized table of contents or a DeserializeError.
-    pub unsafe fn deserialize_with_allocator(
+    pub unsafe fn deserialize_v1xx_with_allocator(
         data_ptr: *const u8,
         short_alloc: ShortAlloc,
         long_alloc: LongAlloc,
@@ -106,8 +84,6 @@ where
                         entry.from_reader_v1(&mut reader);
                     }
                 }
-                TableOfContentsVersion::V2 => todo!(),
-                TableOfContentsVersion::V3 => todo!(),
             }
         }
 
@@ -127,7 +103,6 @@ where
             blocks,
             entries,
             pool,
-            version: toc_version,
         })
     }
 }
@@ -175,13 +150,4 @@ pub fn read_blocks_unrolled(
             x += 1;
         }
     }
-}
-
-/// Errors that can occur when deserializing TableOfContents
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum DeserializeError {
-    /// Error unpacking the string pool
-    StringPoolUnpackError(StringPoolUnpackError),
-    /// Unsupported table of contents version
-    UnsupportedTocVersion,
 }

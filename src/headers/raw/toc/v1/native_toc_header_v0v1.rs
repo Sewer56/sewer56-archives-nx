@@ -1,4 +1,4 @@
-use crate::headers::enums::*;
+use crate::headers::enums::v1::*;
 use crate::headers::traits::can_convert_to_little_endian::CanConvertToLittleEndian;
 use bitfield::bitfield;
 
@@ -25,7 +25,8 @@ use bitfield::bitfield;
 pub const MAX_STRING_POOL_SIZE: usize = 16777215; // 2^24 - 1
 
 bitfield! {
-    /// Represents the native structure of the Table of Contents header.
+    /// Represents the native structure of the Table of Contents header
+    /// for Version 0 and Version 1 of the Table of Contents.
     ///
     /// This struct is read-only after initialization to ensure consistent endianness.
     /// Use the [Self::init] function to create and initialize a new instance.

@@ -1,14 +1,13 @@
+use super::super::file_entry_intrinsics::{write_entries_as_v0, write_entries_as_v1};
 use crate::{
     api::{enums::compression_preference::CompressionPreference, traits::*},
-    headers::{enums::*, managed::*, parser::*, raw::toc::*},
+    headers::{enums::v1::*, managed::*, parser::*, raw::toc::*},
     implementation::pack::{
         blocks::polyfills::Block, table_of_contents_builder_state::TableOfContentsBuilderState,
     },
     utilities::serialize::little_endian_writer::LittleEndianWriter,
 };
 use std::alloc::Allocator;
-
-use super::file_entry_intrinsics::{write_entries_as_v0, write_entries_as_v1};
 
 // Max values for V0 & V1 formats.
 const MAX_BLOCK_COUNT_V0V1: usize = 262143; // 2^18 - 1
@@ -224,8 +223,6 @@ pub unsafe fn serialize_table_of_contents(
             TableOfContentsVersion::V1 => {
                 write_entries_as_v1(&mut writer, entries);
             }
-            TableOfContentsVersion::V2 => todo!(),
-            TableOfContentsVersion::V3 => todo!(),
         }
     }
 
@@ -293,8 +290,6 @@ pub fn calculate_table_size(
     let entry_size = match version {
         TableOfContentsVersion::V0 => 20,
         TableOfContentsVersion::V1 => 24,
-        TableOfContentsVersion::V2 => todo!(),
-        TableOfContentsVersion::V3 => todo!(),
     };
 
     current_size += num_entries * entry_size;
@@ -405,10 +400,9 @@ mod tests {
             assert_eq!(bytes_written, data_size);
 
             // Deserialize
-            let new_table = TableOfContents::deserialize(data.as_ptr()).unwrap();
+            let new_table = TableOfContents::deserialize_v1xx(data.as_ptr()).unwrap();
 
             // Compare deserialized data with original
-            assert_eq!(new_table.version, version);
             assert_eq!(new_table.entries.len(), entries.len());
             assert_eq!(new_table.blocks.len(), blocks.len());
 
@@ -485,10 +479,9 @@ mod tests {
             );
 
             // Deserialize to verify
-            let new_table = TableOfContents::deserialize(data.as_ptr()).unwrap();
+            let new_table = TableOfContents::deserialize_v1xx(data.as_ptr()).unwrap();
 
             // Verify deserialized data
-            assert_eq!(new_table.version, version);
             assert_eq!(new_table.entries.len(), MAX_FILE_COUNT_V0V1);
 
             // Check each file entry
@@ -611,10 +604,9 @@ mod tests {
             );
 
             // Deserialize to verify
-            let new_table = TableOfContents::deserialize(data.as_ptr()).unwrap();
+            let new_table = TableOfContents::deserialize_v1xx(data.as_ptr()).unwrap();
 
             // Verify deserialized data
-            assert_eq!(new_table.version, version);
             assert_eq!(new_table.blocks.len(), MAX_BLOCK_COUNT_V0V1);
             assert_eq!(new_table.block_compressions.len(), MAX_BLOCK_COUNT_V0V1);
 
