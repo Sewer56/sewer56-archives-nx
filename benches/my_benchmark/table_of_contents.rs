@@ -1,8 +1,9 @@
 use criterion::{black_box, Criterion};
 use sewer56_archives_nx::{
     api::enums::*,
-    headers::{enums::table_of_contents_version::*, managed::*},
+    headers::{enums::v1::*, managed::*},
 };
+use v1::*;
 
 fn generate_test_data(
     file_count: usize,
