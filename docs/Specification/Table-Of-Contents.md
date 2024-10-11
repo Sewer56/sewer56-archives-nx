@@ -182,10 +182,11 @@ Format:
 - **TOC Header**:
     - `u1`: IsFlexibleFormat (Always `0`)
     - `u2`: Preset (Always `3`)
+    - `u1`: HasHash (Always `0`)
     - `u13`: [StringPoolSize]
     - `u16`: [BlockCount]
     - `u16`: [FileCount]
-    - `u16`: Padding (Align to 8 bytes)
+    - `u15`: Padding (Align to 8 bytes)
 - **FileEntry** (16 bytes):
     - `u64`: `FileHash` (XXH3)
     - `u32`: DecompressedSize

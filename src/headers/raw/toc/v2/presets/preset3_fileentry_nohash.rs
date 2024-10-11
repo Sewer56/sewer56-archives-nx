@@ -1,18 +1,16 @@
-use crate::headers::{managed::*, raw::toc::NativeFileEntry, types::xxh3sum::XXH3sum};
+use crate::headers::{managed::*, raw::toc::NativeFileEntry};
 use core::hash::Hash;
 #[cfg(test)]
 use fake::*;
 
 /// Structure that represents the native serialized file entry
 /// in the V2 Table of Contents format named 'Preset 3'.
+/// This is the variant without file hashes.
 ///
 /// See project documentation for more details.
 #[repr(C, packed(8))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
-pub struct NativeFileEntryP3 {
-    /// [u64] Hash (XXH3) of the file described in this entry.
-    pub hash: XXH3sum,
-
+pub struct NativeFileEntryP3NoHash {
     /// [u32] Size of the file after decompression.
     pub decompressed_size: u32,
 
@@ -23,16 +21,14 @@ pub struct NativeFileEntryP3 {
     pub block_index: u16,
 }
 
-impl NativeFileEntry for NativeFileEntryP3 {
+impl NativeFileEntry for NativeFileEntryP3NoHash {
     fn copy_from(&mut self, entry: &FileEntry) {
-        self.hash.0 = entry.hash;
         self.decompressed_size = entry.decompressed_size as u32;
         self.file_path_index = entry.file_path_index as u16;
         self.block_index = entry.first_block_index as u16;
     }
 
     fn copy_to(&self, entry: &mut FileEntry) {
-        entry.hash = self.hash.0;
         entry.decompressed_size = self.decompressed_size as u64;
         entry.file_path_index = self.file_path_index as u32;
         entry.first_block_index = self.block_index as u32;
@@ -47,12 +43,12 @@ pub(crate) mod tests {
 
     #[test]
     fn is_correct_size_bytes() {
-        assert_eq!(size_of::<NativeFileEntryP3>(), 16);
+        assert_eq!(size_of::<NativeFileEntryP3NoHash>(), 8);
     }
 
     #[rstest]
     #[case::random_entry(Faker.fake())]
-    fn can_copy_to_from_managed_entry(#[case] entry: NativeFileEntryP3) {
+    fn can_copy_to_from_managed_entry(#[case] entry: NativeFileEntryP3NoHash) {
         test_copy_to_and_from_managed_entry(&entry);
     }
 
@@ -73,10 +69,9 @@ pub(crate) mod tests {
     }
 
     #[cfg(test)]
-    impl Dummy<Faker> for NativeFileEntryP3 {
+    impl Dummy<Faker> for NativeFileEntryP3NoHash {
         fn dummy_with_rng<R: Rng + ?Sized>(_: &Faker, rng: &mut R) -> Self {
-            NativeFileEntryP3 {
-                hash: rng.gen::<u64>().into(),
+            NativeFileEntryP3NoHash {
                 decompressed_size: rng.gen(),
                 block_index: rng.gen(),
                 file_path_index: rng.gen(),
