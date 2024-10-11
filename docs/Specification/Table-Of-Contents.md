@@ -29,18 +29,18 @@ Format:
 - **TOC Header (8 Bytes)**:
     - `u1`: IsFlexibleFormat (Always `1`)
     - `u1`: HasHash
-    - `u6`: StringPoolSizeBits (num bits for [StringPoolSize] in `Item Counts` below.)
-    - `u6`: FileCountBits (num bits for [FileCount] in `Item Counts` below.)
-    - `u6`: BlockCountBits (num bits for [BlockCount] in `Item Counts` below.)
-    - `u6`: [DecompressedBlockOffset]Bits (num bits for [StringPoolSize] in `Item Counts` below.)
-    - `u38`: Padding (`align8`) OR Item Counts (if fits in 38 bits)
-- **Item Counts (8 Bytes) [If Greater than 38 bits]**:
-    - `align8`
+    - `u5`: StringPoolSizeBits (num bits for [StringPoolSize] in `Item Counts` below.)
+    - `u5`: FileCountBits (num bits for [FileCount] in `Item Counts` below.)
+    - `u5`: BlockCountBits (num bits for [BlockCount] in `Item Counts` below.)
+    - `u5`: [DecompressedBlockOffset]Bits (num bits for [StringPoolSize] in `Item Counts` below.)
+    - `u42`: Padding (`align8`) OR ItemCounts (if fits in 42 bits)
+- [Optional: If Greater than 42 bits] **ItemCounts Struct (8 Bytes)**:
+    - `align8` (Padding)
     - `u[StringPoolSizeBits]`: [StringPoolSize]
     - `u[BlockCountBits]`: [BlockCount]
     - `u[FileCountBits]`: [FileCount]
 - **FileEntry** (8/16 bytes):
-    - `u0`/ `u64`: FileHash (XXH3) [Optional]
+    - `u0` / `u64`: FileHash (XXH3) [Optional]
     - `u[64 - DecompressedBlockOffsetBits - FileCountBits - BlockCountBits]`: DecompressedSize
     - `u[DecompressedBlockOffsetBits]`: [DecompressedBlockOffset]
     - `u[FileCountBits]`: [FilePathIndex]
@@ -51,8 +51,11 @@ Format:
 - [StringPool]
     - `RawCompressedData...`
 
+Values stored in `StringPoolSizeBits`, `BlockCountBits` and`FileCountBits` are offset by 1.
+That means that if the stored value is `0`, we actually mean 1.
 
-If ***StringPoolSizeBits + BlockCountBits + FileCountBits*** fit in the 38 bits of padding.
+If ***StringPoolSizeBits + BlockCountBits + FileCountBits*** fit in the 42 bits of padding; then they
+are placed in the lower 42 bits. Otherwise we allocate 8 bytes for the ItemCounts struct.
 
 !!! note "Compressed pool data is ~4 bytes per entry usually."
 
