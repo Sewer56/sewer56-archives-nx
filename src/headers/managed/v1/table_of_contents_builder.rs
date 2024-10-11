@@ -206,7 +206,7 @@ pub unsafe fn serialize_table_of_contents(
     }
 
     let mut writer = LittleEndianWriter::new(data_ptr);
-    let header = NativeTocHeader::init(
+    let header = NativeTocHeader::new(
         entries.len() as u32,
         blocks.len() as u32,
         raw_string_pool_data.len() as u32,
