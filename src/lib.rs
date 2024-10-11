@@ -45,6 +45,12 @@ pub mod headers {
     pub mod traits {
         pub mod can_convert_to_little_endian;
     }
+
+    /// Various data types, usually nominally typed.
+    pub mod types {
+        /// XXH3 checksums
+        pub mod xxh3sum;
+    }
 }
 
 /// This contains the implementation of the low level APIs.

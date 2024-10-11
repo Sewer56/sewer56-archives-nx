@@ -1,19 +1,16 @@
 use super::*;
-use crate::headers::{managed::*, raw::toc::NativeFileEntry, types::xxh3sum::XXH3sum};
+use crate::headers::{managed::*, raw::toc::NativeFileEntry};
 use core::hash::Hash;
 #[cfg(test)]
 use fake::*;
 
 /// Structure that represents the native serialized file entry
-/// in the V2 Table of Contents format named 'Preset 0'.
+/// in the V2 Table of Contents format named 'Preset 1'.
 ///
 /// See project documentation for more details.
 #[repr(C, packed(4))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
-pub struct NativeFileEntryP0 {
-    /// [u64] Hash (XXH3) of the file described in this entry.
-    pub hash: XXH3sum,
-
+pub struct NativeFileEntryP1 {
     /// [u32] Size of the file after decompression.
     pub decompressed_size: u32,
 
@@ -21,7 +18,7 @@ pub struct NativeFileEntryP0 {
 }
 
 #[coverage(off)] // Impl without coverage
-impl NativeFileEntryP0 {
+impl NativeFileEntryP1 {
     /// `u24` Offset of the file inside the decompressed block.
     pub fn decompressed_block_offset(&self) -> u32 {
         { self.offset_path_index_tuple }.decompressed_block_offset()
@@ -59,9 +56,8 @@ impl NativeFileEntryP0 {
     }
 }
 
-impl NativeFileEntry for NativeFileEntryP0 {
+impl NativeFileEntry for NativeFileEntryP1 {
     fn copy_from(&mut self, entry: &FileEntry) {
-        self.hash.0 = entry.hash;
         self.decompressed_size = entry.decompressed_size as u32;
         self.offset_path_index_tuple = CommonOffsetPathIndexTuple::new(
             entry.decompressed_block_offset,
@@ -71,7 +67,7 @@ impl NativeFileEntry for NativeFileEntryP0 {
     }
 
     fn copy_to(&self, entry: &mut FileEntry) {
-        entry.hash = self.hash.0;
+        entry.hash = 0;
         entry.decompressed_size = self.decompressed_size as u64;
         { self.offset_path_index_tuple }.copy_to(entry);
     }
@@ -85,12 +81,12 @@ pub(crate) mod tests {
 
     #[test]
     fn is_correct_size_bytes() {
-        assert_eq!(size_of::<NativeFileEntryP0>(), 20);
+        assert_eq!(size_of::<NativeFileEntryP1>(), 12);
     }
 
     #[rstest]
     #[case::random_entry(Faker.fake())]
-    fn can_copy_to_from_managed_entry(#[case] entry: NativeFileEntryP0) {
+    fn can_copy_to_from_managed_entry(#[case] entry: NativeFileEntryP1) {
         test_copy_to_and_from_managed_entry(&entry);
     }
 
@@ -111,10 +107,9 @@ pub(crate) mod tests {
     }
 
     #[cfg(test)]
-    impl Dummy<Faker> for NativeFileEntryP0 {
+    impl Dummy<Faker> for NativeFileEntryP1 {
         fn dummy_with_rng<R: Rng + ?Sized>(_: &Faker, rng: &mut R) -> Self {
-            NativeFileEntryP0 {
-                hash: rng.gen::<u64>().into(),
+            NativeFileEntryP1 {
                 decompressed_size: rng.gen(),
                 offset_path_index_tuple: Faker.fake(),
             }
