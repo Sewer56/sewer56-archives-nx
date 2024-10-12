@@ -98,6 +98,9 @@ pub mod utilities {
     /// Exposes the system information.
     pub mod system_info;
 
+    /// Number related code.
+    pub mod math;
+
     #[cfg(test)]
     pub mod tests {
         pub mod packer_file_for_testing;
