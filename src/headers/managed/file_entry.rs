@@ -56,11 +56,11 @@ impl FileEntry {
     ///
     /// * `writer` - The writer to write to.
     #[inline(always)]
-    pub fn write_as_v0(&self, writer: &mut LittleEndianWriter) {
+    pub fn write_as_v0(&self, lewriter: &mut LittleEndianWriter) {
         unsafe {
-            writer.write_at_offset::<u64>(self.hash, 0);
-            writer.write_at_offset::<u32>(self.decompressed_size as u32, 8);
-            writer.write_at_offset::<u64>(
+            lewriter.write_at_offset::<u64>(self.hash, 0);
+            lewriter.write_at_offset::<u32>(self.decompressed_size as u32, 8);
+            lewriter.write_at_offset::<u64>(
                 OffsetPathIndexTuple::new(
                     self.decompressed_block_offset,
                     self.file_path_index,
@@ -69,7 +69,7 @@ impl FileEntry {
                 .into_raw(),
                 12,
             );
-            writer.seek(NativeFileEntryV0::SIZE_BYTES as isize);
+            lewriter.seek(NativeFileEntryV0::SIZE_BYTES as isize);
         }
     }
 
@@ -79,11 +79,11 @@ impl FileEntry {
     ///
     /// * `writer` - The writer to write to.
     #[inline(always)]
-    pub fn write_as_v1(&self, writer: &mut LittleEndianWriter) {
+    pub fn write_as_v1(&self, lewriter: &mut LittleEndianWriter) {
         unsafe {
-            writer.write_at_offset::<u64>(self.hash, 0);
-            writer.write_at_offset::<u64>(self.decompressed_size, 8);
-            writer.write_at_offset::<u64>(
+            lewriter.write_at_offset::<u64>(self.hash, 0);
+            lewriter.write_at_offset::<u64>(self.decompressed_size, 8);
+            lewriter.write_at_offset::<u64>(
                 OffsetPathIndexTuple::new(
                     self.decompressed_block_offset,
                     self.file_path_index,
@@ -92,7 +92,7 @@ impl FileEntry {
                 .into_raw(),
                 16,
             );
-            writer.seek(NativeFileEntryV1::SIZE_BYTES as isize);
+            lewriter.seek(NativeFileEntryV1::SIZE_BYTES as isize);
         }
     }
 
@@ -102,13 +102,13 @@ impl FileEntry {
     ///
     /// * `reader` - The reader to read from.
     #[inline(always)]
-    pub fn from_reader_v0(&mut self, reader: &mut LittleEndianReader) {
+    pub fn from_reader_v0(&mut self, lereader: &mut LittleEndianReader) {
         unsafe {
-            self.hash = reader.read_at_offset::<u64>(0);
-            self.decompressed_size = reader.read_at_offset::<u32>(8) as u64;
-            let packed = OffsetPathIndexTuple::from_raw(reader.read_at_offset::<u64>(12));
+            self.hash = lereader.read_at_offset::<u64>(0);
+            self.decompressed_size = lereader.read_at_offset::<u32>(8) as u64;
+            let packed = OffsetPathIndexTuple::from_raw(lereader.read_at_offset::<u64>(12));
             packed.copy_to(self);
-            reader.seek(NativeFileEntryV0::SIZE_BYTES as isize);
+            lereader.seek(NativeFileEntryV0::SIZE_BYTES as isize);
         }
     }
 
@@ -118,13 +118,13 @@ impl FileEntry {
     ///
     /// * `reader` - The reader to read from.
     #[inline(always)]
-    pub fn from_reader_v1(&mut self, reader: &mut LittleEndianReader) {
+    pub fn from_reader_v1(&mut self, lereader: &mut LittleEndianReader) {
         unsafe {
-            self.hash = reader.read_at_offset::<u64>(0);
-            self.decompressed_size = reader.read_at_offset::<u64>(8);
-            let packed = OffsetPathIndexTuple::from_raw(reader.read_at_offset::<u64>(16));
+            self.hash = lereader.read_at_offset::<u64>(0);
+            self.decompressed_size = lereader.read_at_offset::<u64>(8);
+            let packed = OffsetPathIndexTuple::from_raw(lereader.read_at_offset::<u64>(16));
             packed.copy_to(self);
-            reader.seek(NativeFileEntryV1::SIZE_BYTES as isize);
+            lereader.seek(NativeFileEntryV1::SIZE_BYTES as isize);
         }
     }
 }

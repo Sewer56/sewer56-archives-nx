@@ -246,7 +246,7 @@ pub unsafe fn serialize_table_of_contents(
 fn write_blocks(
     blocks: &[BlockSize],
     compressions: &[CompressionPreference],
-    writer: &mut LittleEndianWriter,
+    lewriter: &mut LittleEndianWriter,
 ) {
     // This makes the bounds checker leave us alone.
     debug_assert!(blocks.len() == compressions.len());
@@ -258,7 +258,7 @@ fn write_blocks(
             let num_blocks = (*blocks.as_ptr().add(x)).compressed_size;
             let compression = *compressions.as_ptr().add(x);
             let entry = NativeV1TocBlockEntry::new(num_blocks, compression);
-            writer.write(entry.0);
+            lewriter.write(entry.0);
         }
     }
 

@@ -31,8 +31,8 @@ impl NativeV1TocBlockEntry {
     }
 
     /// Creates a new entry from the little endian reader
-    pub fn from_reader(reader: &mut LittleEndianReader) -> Self {
-        NativeV1TocBlockEntry(unsafe { reader.read::<u32>() })
+    pub fn from_reader(lereader: &mut LittleEndianReader) -> Self {
+        NativeV1TocBlockEntry(unsafe { lereader.read::<u32>() })
     }
 
     /// Get the compression preference

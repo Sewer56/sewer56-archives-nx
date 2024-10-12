@@ -111,7 +111,7 @@ where
 pub fn read_blocks_unrolled(
     blocks: &mut [BlockSize],
     compressions: &mut [CompressionPreference],
-    reader: &mut LittleEndianReader,
+    lereader: &mut LittleEndianReader,
 ) {
     let blocks_len = blocks.len();
     let blocks_ptr = blocks.as_mut_ptr();
@@ -124,10 +124,10 @@ pub fn read_blocks_unrolled(
     unsafe {
         let mut x = 0;
         while x + 4 <= blocks_len {
-            let value1 = NativeV1TocBlockEntry::from_reader(reader);
-            let value2 = NativeV1TocBlockEntry::from_reader(reader);
-            let value3 = NativeV1TocBlockEntry::from_reader(reader);
-            let value4 = NativeV1TocBlockEntry::from_reader(reader);
+            let value1 = NativeV1TocBlockEntry::from_reader(lereader);
+            let value2 = NativeV1TocBlockEntry::from_reader(lereader);
+            let value3 = NativeV1TocBlockEntry::from_reader(lereader);
+            let value4 = NativeV1TocBlockEntry::from_reader(lereader);
 
             *blocks_ptr.add(x) = BlockSize::new(value1.compressed_block_size());
             *blocks_ptr.add(x + 1) = BlockSize::new(value2.compressed_block_size());
@@ -144,7 +144,7 @@ pub fn read_blocks_unrolled(
 
         // Handle remaining elements
         while x < blocks_len {
-            let value = NativeV1TocBlockEntry::from_reader(reader);
+            let value = NativeV1TocBlockEntry::from_reader(lereader);
             *blocks_ptr.add(x) = BlockSize::new(value.compressed_block_size());
             *compressions_ptr.add(x) = value.compression();
             x += 1;
