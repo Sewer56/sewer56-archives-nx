@@ -23,20 +23,34 @@ pub fn determine_optimal_toc_format(
 ) -> ToCFormat {
     // In order of preference (by file size first, then decode complexity for those with equal size):
     // - [8B] Preset3 [a.k.a. NoSolid] (no hash)
+    // - [8B] FEF64 (no hash)
     // - [12B] Preset1 [a.k.a. NoHash]
     // - [16B] Preset3 [a.k.a. NoSolid] (with hash)
-    // - [16B] FEF64
+    // - [16B] FEF64 (with hash)
     // - [20B] Preset0 [a.k.a. GeneralFallback]
     // - [24B] Preset2 [a.k.a. FinalFallback]
+    let supports_fef64 = can_use_fef64(
+        string_pool_size,
+        max_decompressed_block_offset,
+        block_count,
+        file_count,
+        max_file_size,
+    );
+
     let supports_preset_3 = string_pool_size <= PRESET3_STRING_POOL_SIZE_MAX
         && block_count <= PRESET3_BLOCK_COUNT_MAX
         && file_count <= PRESET3_FILE_COUNT_MAX
         && max_decompressed_block_offset <= PRESET3_MAX_DECOMPRESSED_BLOCK_OFFSET
         && max_file_size <= PRESET3_MAX_FILE_SIZE as u64;
 
-    // 1. Check Preset3 (no hash)
+    // 0. Check Preset3 (no hash)
     if supports_preset_3 && !hashes_required {
         return ToCFormat::Preset3NoHash;
+    }
+
+    // 1. Check FEF64 (no hash)
+    if !hashes_required && supports_fef64 {
+        return ToCFormat::FEF64;
     }
 
     // 2. Check Preset1 [Nohash]
@@ -55,13 +69,7 @@ pub fn determine_optimal_toc_format(
     }
 
     // 4. Check FEF64
-    if can_use_fef64(
-        string_pool_size,
-        max_decompressed_block_offset,
-        block_count,
-        file_count,
-        max_file_size,
-    ) {
+    if supports_fef64 {
         return ToCFormat::FEF64;
     }
 
