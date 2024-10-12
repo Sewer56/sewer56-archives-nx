@@ -1,6 +1,6 @@
 use bitfield::bitfield;
 
-pub const PRESET3_STRING_POOL_SIZE_MAX: u32 = (1 << 13) - 1; // u13
+pub const PRESET3_STRING_POOL_SIZE_MAX: u32 = (1 << 20) - 1; // u20
 pub const PRESET3_BLOCK_COUNT_MAX: u32 = (1 << 16) - 1; // u16
 pub const PRESET3_FILE_COUNT_MAX: u32 = (1 << 16) - 1; // u16
 pub const PRESET3_MAX_DECOMPRESSED_BLOCK_OFFSET: u32 = 0; // Not used in Preset3
@@ -16,10 +16,10 @@ bitfield! {
     /// | 63      | `IsFlexibleFormat`  | Always `0`                                 |
     /// | 62 - 61 | `Preset`            | Always `3`                                 |
     /// | 60      | `HasHash`           | Indicates presence of hash (1 bit)         |
-    /// | 59 - 47 | `StringPoolSize`    | Size of the string pool (13 bits)          |
-    /// | 46 - 32 | `BlockCount`        | Number of blocks (15 bits)                 |
-    /// | 31 - 17 | `FileCount`         | Number of files (15 bits)                  |
-    /// | 16 - 0  | `Padding`           | Padding (17 bits)                          |
+    /// | 59 - 40 | `StringPoolSize`    | Size of the string pool (20 bits)          |
+    /// | 39 - 24 | `BlockCount`        | Number of blocks (16 bits)                 |
+    /// | 23 - 8  | `FileCount`         | Number of files (16 bits)                  |
+    /// | 7 - 0   | `Padding`           | Padding (8 bits)                           |
     #[derive(Clone, Copy, PartialEq, Eq, Hash)]
     pub struct Preset3TocHeader(u64);
     impl Debug;
@@ -33,17 +33,17 @@ bitfield! {
     /// `HasHash` (1 bit) - Bit 60
     pub bool, has_hash, set_has_hash: 60;
 
-    /// `StringPoolSize` (13 bits) - Bits 59 to 47
-    pub u16, string_pool_size, set_string_pool_size: 59,47;
+    /// `StringPoolSize` (20 bits) - Bits 59 to 40
+    pub u32, string_pool_size, set_string_pool_size: 59,40;
 
-    /// `BlockCount` (15 bits) - Bits 46 to 32
-    pub u16, block_count, set_block_count: 46,32;
+    /// `BlockCount` (16 bits) - Bits 39 to 24
+    pub u16, block_count, set_block_count: 39,24;
 
-    /// `FileCount` (15 bits) - Bits 31 to 17
-    pub u16, file_count, set_file_count: 31,17;
+    /// `FileCount` (16 bits) - Bits 23 to 8
+    pub u16, file_count, set_file_count: 23,8;
 
-    /// `Padding` (17 bits) - Bits 16 to 0
-    pub u32, padding, set_padding: 16,0;
+    /// `Padding` (8 bits) - Bits 7 to 0
+    pub u8, padding, set_padding: 7,0;
 }
 
 impl Preset3TocHeader {
@@ -54,19 +54,18 @@ impl Preset3TocHeader {
     ///
     /// - Sets `IsFlexibleFormat` to `0` as per specification.
     /// - Sets `Preset` to `3` as per specification.
-    /// - Sets `HasHash` to `true` by default.
     ///
     /// # Arguments
     ///
     /// * `has_hash` - Indicates presence of hash (1 bit).
-    /// * `string_pool_size` - Size of the string pool (13 bits).
-    /// * `block_count` - Number of blocks (15 bits).
-    /// * `file_count` - Number of files (15 bits).
+    /// * `string_pool_size` - Size of the string pool (20 bits).
+    /// * `block_count` - Number of blocks (16 bits).
+    /// * `file_count` - Number of files (16 bits).
     ///
     /// # Returns
     ///
     /// A new `Preset3TocHeader` instance in little-endian format.
-    pub fn new(has_hash: bool, string_pool_size: u16, block_count: u16, file_count: u16) -> Self {
+    pub fn new(has_hash: bool, string_pool_size: u32, block_count: u16, file_count: u16) -> Self {
         let mut header = Preset3TocHeader(0);
         header.set_is_flexible_format(false);
         header.set_preset(3);
@@ -116,7 +115,7 @@ impl Preset3TocHeader {
     }
 
     /// Gets the `StringPoolSize` field.
-    pub fn get_string_pool_size(&self) -> u16 {
+    pub fn get_string_pool_size(&self) -> u32 {
         self.string_pool_size()
     }
 
@@ -131,7 +130,7 @@ impl Preset3TocHeader {
     }
 
     /// Gets the `Padding` field.
-    pub fn get_padding(&self) -> u32 {
+    pub fn get_padding(&self) -> u8 {
         self.padding()
     }
 }
@@ -155,26 +154,28 @@ mod tests {
     #[test]
     fn can_init_max_values() {
         let header = Preset3TocHeader::new(
-            true, 0x1FFF, // Max 13 bits
-            0x7FFF, // Max 15 bits
-            0x7FFF, // Max 15 bits
+            true,
+            PRESET3_STRING_POOL_SIZE_MAX,   // Max 20 bits
+            PRESET3_BLOCK_COUNT_MAX as u16, // Max 16 bits
+            PRESET3_FILE_COUNT_MAX as u16,  // Max 16 bits
         );
 
         assert!(!header.get_is_flexible_format());
         assert_eq!(header.get_preset(), 3);
-        assert!(header.get_has_hash()); // `HasHash` should default to true
-        assert_eq!(header.get_string_pool_size(), 0x1FFF);
-        assert_eq!(header.get_block_count(), 0x7FFF);
-        assert_eq!(header.get_file_count(), 0x7FFF);
+        assert!(header.get_has_hash());
+        assert_eq!(header.get_string_pool_size(), PRESET3_STRING_POOL_SIZE_MAX);
+        assert_eq!(header.get_block_count(), PRESET3_BLOCK_COUNT_MAX as u16);
+        assert_eq!(header.get_file_count(), PRESET3_FILE_COUNT_MAX as u16);
         assert_eq!(header.get_padding(), 0);
     }
 
     #[test]
     fn values_correctly_overflow() {
         let header = Preset3TocHeader::new(
-            true, 0x2000, // 14 bits, should truncate to 13 bits (0)
-            0x8000, // 16 bits, should truncate to 15 bits (0)
-            0x8000, // 16 bits, should truncate to 15 bits (0)
+            true,
+            PRESET3_STRING_POOL_SIZE_MAX + 1, // 21 bits, should truncate to 20 bits
+            (PRESET3_BLOCK_COUNT_MAX + 1) as u16, // 17 bits, should truncate to 16 bits
+            (PRESET3_FILE_COUNT_MAX + 1) as u16, // 17 bits, should truncate to 16 bits
         );
 
         assert_eq!(header.get_string_pool_size(), 0);
@@ -186,9 +187,9 @@ mod tests {
     #[test]
     fn is_little_endian() {
         let header = Preset3TocHeader::new(
-            true, 0x1234, // string_pool_size
-            0xABCD, // block_count
-            0x0123, // file_count
+            true, 0xABCDE, // string_pool_size (20 bits)
+            0x1234,  // block_count
+            0x5678,  // file_count
         );
         let le_header = header.to_le();
         assert_eq!(header.0, le_header.0);
