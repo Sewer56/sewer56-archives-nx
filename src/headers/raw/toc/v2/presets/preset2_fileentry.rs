@@ -5,7 +5,7 @@ use core::hash::Hash;
 use fake::*;
 
 /// Structure that represents the native serialized file entry
-/// in the V2 Table of Contents format named 'Preset 0'.
+/// in the V2 Table of Contents format named 'Preset 2'.
 ///
 /// See project documentation for more details.
 #[repr(C, packed(8))]

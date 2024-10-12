@@ -1,5 +1,10 @@
 use bitfield::bitfield;
 
+pub const PRESET1_STRING_POOL_SIZE_MAX: u32 = (1 << 21) - 1; // u21
+pub const PRESET1_BLOCK_COUNT_MAX: u32 = (1 << 22) - 1; // u22
+pub const PRESET1_FILE_COUNT_MAX: u32 = (1 << 18) - 1; // u18
+pub const PRESET1_MAX_FILE_SIZE: u32 = ((1_u64 << 32) - 1) as u32; // 4 GiB
+
 bitfield! {
     /// Represents the TOC Header structure for Preset 1.
     ///

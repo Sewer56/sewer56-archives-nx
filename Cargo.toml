@@ -44,7 +44,8 @@ no-panic = "0.1"
 int-enum = "1.1.2"
 thiserror-no-std = "2.0.2"
 memchr = "2.7.4"
-hashbrown = "0.14.5"
+hashbrown = "0.15.0"
+nanokit = "0.2.0"
 num_cpus = { version = "1.16.0", optional = true }
 derive-new = "0.7.0"
 ahash = "0.8.11"
@@ -56,8 +57,8 @@ csbindgen = "1.9.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dev-dependencies]
 criterion = "0.5.1"
-rstest = "0.22.0"
-fake = { version = "2.9.2" }
+rstest = "0.23.0"
+fake = { version = "2.10.0" }
 itertools = "0.13.0"
 
 [target.'cfg(unix)'.dev-dependencies]

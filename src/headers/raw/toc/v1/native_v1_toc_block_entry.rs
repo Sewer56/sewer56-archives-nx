@@ -7,7 +7,7 @@ use crate::{api::enums::*, utilities::serialize::little_endian_reader::LittleEnd
 bitfield! {
     /// Native 'block entry' in the 'Table of Contents'
     #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
-    pub struct NativeTocBlockEntry(u32);
+    pub struct NativeV1TocBlockEntry(u32);
     impl Debug;
     u32;
 
@@ -18,10 +18,10 @@ bitfield! {
     compression_raw, set_compression_raw: 2, 0;
 }
 
-impl NativeTocBlockEntry {
+impl NativeV1TocBlockEntry {
     /// Create a new NativeTocBlockEntry
     pub fn new(compressed_block_size: u32, compression: CompressionPreference) -> Self {
-        let mut header = NativeTocBlockEntry(0);
+        let mut header = NativeV1TocBlockEntry(0);
         header.set_compressed_block_size(compressed_block_size);
         header.set_compression(compression);
 
@@ -32,7 +32,7 @@ impl NativeTocBlockEntry {
 
     /// Creates a new entry from the little endian reader
     pub fn from_reader(reader: &mut LittleEndianReader) -> Self {
-        NativeTocBlockEntry(unsafe { reader.read::<u32>() })
+        NativeV1TocBlockEntry(unsafe { reader.read::<u32>() })
     }
 
     /// Get the compression preference

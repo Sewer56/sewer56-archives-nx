@@ -4,7 +4,7 @@ pub const PRESET3_STRING_POOL_SIZE_MAX: u32 = (1 << 13) - 1; // u13
 pub const PRESET3_BLOCK_COUNT_MAX: u32 = (1 << 16) - 1; // u16
 pub const PRESET3_FILE_COUNT_MAX: u32 = (1 << 16) - 1; // u16
 pub const PRESET3_MAX_DECOMPRESSED_BLOCK_OFFSET: u32 = 0; // Not used in Preset3
-pub const PRESET3_MAX_FILE_SIZE: u32 = 4_000_000_000; // 4 GiB
+pub const PRESET3_MAX_FILE_SIZE: u32 = ((1_u64 << 32) - 1) as u32; // 4 GiB
 
 bitfield! {
     /// Represents the TOC Header structure for Preset 3.

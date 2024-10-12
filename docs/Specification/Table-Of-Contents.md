@@ -11,11 +11,11 @@ This document describes the Table of Contents (TOC) format used in the archive f
 If the first bit is set, use [Flexible Entry Format 64 (FEF64)](#flexible-entry-format-64-fef64),
 otherwise use one of the presets.
 
-`1XX` : [Flexible Entry Format 64 (FEF64)](#flexible-entry-format-64-fef64)
-`000` : [Preset `0`](#preset-0)
-`001` : [Preset `1`](#preset-1)
-`011` : [Preset `2`](#preset-2)
-`011` : [Preset `3`](#preset-3)
+- `1XX` : [Flexible Entry Format 64 (FEF64)](#flexible-entry-format-64-fef64)
+- `000` : [Preset `0`](#preset-0)
+- `001` : [Preset `1`](#preset-1)
+- `010` : [Preset `2`](#preset-2)
+- `011` : [Preset `3`](#preset-3)
 
 ## Flexible Entry Format 64 (FEF64)
 
@@ -166,7 +166,7 @@ Format:
 
 ## Preset 3
 
-- **Summary**: 16-byte `FileEntry`, for services hosting SOLID-less mods.
+- **Summary**: 8/16-byte `FileEntry`, for services hosting SOLID-less mods.
 - **Purpose**: Uploads/downloads of mods with small files to the internet.
 - **Limits:**
     - **Max File Count**: 64K

@@ -25,6 +25,9 @@ pub mod preset2_fileentry;
 /// File entry format for 'Preset 3'
 pub mod preset3_fileentry;
 
+/// File entry format for 'Preset 3 w/o Hash'
+pub mod preset3_fileentry_nohash;
+
 // Prelude
 pub use offset_index_path_tuple_p0_p1_p2::*;
 pub use preset0_fileentry::*;
@@ -34,4 +37,5 @@ pub use preset1_header::*;
 pub use preset2_fileentry::*;
 pub use preset2_header::*;
 pub use preset3_fileentry::*;
+pub use preset3_fileentry_nohash::*;
 pub use preset3_header::*;
