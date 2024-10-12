@@ -27,17 +27,6 @@ pub const MAX_STRING_POOL_SIZE: usize = 16777215; // 2^24 - 1
 bitfield! {
     /// Represents the native structure of the Table of Contents header
     /// for Version 0 and Version 1 of the Table of Contents.
-    ///
-    /// This struct is read-only after initialization to ensure consistent endianness.
-    /// Use the [Self::init] function to create and initialize a new instance.
-    ///
-    /// ## Reading from External Source
-    ///
-    /// When reading from a file from an external source, such as a pre-generated archive file,
-    /// use the [to_le](crate::headers::traits::can_convert_to_little_endian::CanConvertToLittleEndian::to_le)
-    /// method to ensure correct endianness.
-    ///
-    /// It is assumed that [NativeTocHeader] is always little endian.
     #[derive(Clone, Copy, PartialEq, Eq, Hash)]
     pub struct NativeTocHeader(u64);
     impl Debug;
@@ -58,9 +47,7 @@ impl NativeTocHeader {
     pub const SIZE_BYTES: usize = 8;
 
     /// Initializes the header with given data.
-    ///
     /// This is the only way to create and modify a NativeTocHeader.
-    /// The returned header is in little-endian format.
     ///
     /// # Arguments
     ///
@@ -79,7 +66,7 @@ impl NativeTocHeader {
         header.set_block_count(block_count);
         header.set_string_pool_size(string_pool_size);
         header.set_version(version as u8);
-        header.to_le()
+        header
     }
 
     /// Creates a NativeTocHeader from a raw u64 value.
@@ -95,7 +82,7 @@ impl NativeTocHeader {
     ///
     /// A new NativeTocHeader instance.
     pub fn from_raw(raw: u64) -> Self {
-        Self(raw.to_le())
+        Self(raw)
     }
 
     /// Gets the Version as TableOfContentsVersion enum.
@@ -145,13 +132,6 @@ mod tests {
         assert_eq!(header.file_count(), 0);
         assert_eq!(header.block_count(), 0);
         assert_eq!(header.string_pool_size(), 0);
-    }
-
-    #[test]
-    fn is_little_endian() {
-        let header = NativeTocHeader::new(0xFFFFF, 0x3FFFF, 0xFFFFFF, TableOfContentsVersion::V1);
-        let le_header = header.to_le();
-        assert_eq!(header.0, le_header.0);
     }
 
     #[test]

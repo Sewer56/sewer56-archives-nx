@@ -61,7 +61,7 @@ impl TocHeader {
     ///
     /// # Returns
     ///
-    /// A new `TocHeader` instance in little-endian format.
+    /// A new `TocHeader` instance.
     pub fn new(
         has_hash: bool,
         string_pool_size_bits: u8,
@@ -78,13 +78,10 @@ impl TocHeader {
         header.set_block_count_bits(block_count_bits);
         header.set_decompressed_block_offset_bits(decompressed_block_offset_bits);
         header.set_padding_or_item_counts(padding_or_item_counts);
-        header.to_le()
+        header
     }
 
     /// Creates a `TocHeader` from a raw `u64` value.
-    ///
-    /// This method assumes that the input value is in little-endian format
-    /// and does not perform any validation.
     ///
     /// # Arguments
     ///
@@ -195,23 +192,6 @@ mod tests {
         assert_eq!(header.get_block_count_bits(), 31);
         assert_eq!(header.get_decompressed_block_offset_bits(), 0);
         assert_eq!(header.get_padding_or_item_counts(), 0x03FF_FFFF_FFFF);
-    }
-
-    #[test]
-    fn is_little_endian() {
-        let header = TocHeader::new(
-            true,         // has_hash
-            10,           // string_pool_size_bits
-            20,           // file_count_bits
-            15,           // block_count_bits
-            8,            // decompressed_block_offset_bits
-            0x123456789A, // padding_or_item_counts
-        );
-
-        // The `new` converts once; we convert again here.
-        // This ensures that `new` did actually convert on big endian machines.
-        let le_header = TocHeader::from_raw(header.0);
-        assert_eq!(header.0, le_header.0);
     }
 
     #[test]

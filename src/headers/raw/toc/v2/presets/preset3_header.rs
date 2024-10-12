@@ -64,7 +64,7 @@ impl Preset3TocHeader {
     ///
     /// # Returns
     ///
-    /// A new `Preset3TocHeader` instance in little-endian format.
+    /// A new `Preset3TocHeader` instance.
     pub fn new(has_hash: bool, string_pool_size: u32, block_count: u16, file_count: u16) -> Self {
         let mut header = Preset3TocHeader(0);
         header.set_is_flexible_format(false);
@@ -74,13 +74,11 @@ impl Preset3TocHeader {
         header.set_block_count(block_count);
         header.set_file_count(file_count);
         header.set_padding(0); // Initialize padding to 0
-        header.to_le()
+        header
     }
 
     /// Creates a `Preset3TocHeader` from a raw `u64` value.
-    ///
-    /// This method assumes that the input value is in little-endian format
-    /// and does not perform any validation.
+    /// This method does not perform any validation.
     ///
     /// # Arguments
     ///
@@ -182,17 +180,6 @@ mod tests {
         assert_eq!(header.get_block_count(), 0);
         assert_eq!(header.get_file_count(), 0);
         assert_eq!(header.get_padding(), 0);
-    }
-
-    #[test]
-    fn is_little_endian() {
-        let header = Preset3TocHeader::new(
-            true, 0xABCDE, // string_pool_size (20 bits)
-            0x1234,  // block_count
-            0x5678,  // file_count
-        );
-        let le_header = header.to_le();
-        assert_eq!(header.0, le_header.0);
     }
 
     #[test]
