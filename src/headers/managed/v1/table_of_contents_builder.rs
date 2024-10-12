@@ -257,8 +257,7 @@ fn write_blocks(
         for x in 0..blocks.len() {
             let num_blocks = (*blocks.as_ptr().add(x)).compressed_size;
             let compression = *compressions.as_ptr().add(x);
-            let entry = NativeV1TocBlockEntry::new(num_blocks, compression);
-            lewriter.write(entry.0);
+            NativeV1TocBlockEntry::to_writer(num_blocks, compression, lewriter);
         }
     }
 

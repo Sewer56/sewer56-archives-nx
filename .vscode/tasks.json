@@ -20,6 +20,11 @@
         "reveal": "always"
       },
       "problemMatcher": [],
+      "options": {
+        "env": {
+          "RUST_BACKTRACE": "1"
+        }
+      }
     },
     {
       "label": "[64bit-bigendian]  Cargo Watch Test (Auto Test on Save)",
@@ -30,6 +35,11 @@
         "reveal": "always"
       },
       "problemMatcher": [],
+      "options": {
+        "env": {
+          "RUST_BACKTRACE": "1"
+        }
+      }
     },
     {
       "label": "Reloaded: Cargo Watch Tarpaulin (Auto Coverage on Save)",
