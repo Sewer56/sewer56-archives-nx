@@ -68,7 +68,7 @@ impl NativeTocHeader {
     /// * `block_count` - The number of blocks (18 bits).
     /// * `string_pool_size` - The size of the string pool (24 bits).
     /// * `version` - The version of the table of contents.
-    pub fn init(
+    pub fn new(
         file_count: u32,
         block_count: u32,
         string_pool_size: u32,
@@ -117,7 +117,7 @@ impl CanConvertToLittleEndian for NativeTocHeader {
 
 impl Default for NativeTocHeader {
     fn default() -> Self {
-        Self::init(0, 0, 0, TableOfContentsVersion::V0)
+        Self::new(0, 0, 0, TableOfContentsVersion::V0)
     }
 }
 
@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn can_init_max_values() {
-        let header = NativeTocHeader::init(0xFFFFF, 0x3FFFF, 0xFFFFFF, TableOfContentsVersion::V1);
+        let header = NativeTocHeader::new(0xFFFFF, 0x3FFFF, 0xFFFFFF, TableOfContentsVersion::V1);
         assert_eq!(header.file_count(), 0xFFFFF);
         assert_eq!(header.block_count(), 0x3FFFF);
         assert_eq!(header.string_pool_size(), 0xFFFFFF);
@@ -141,8 +141,7 @@ mod tests {
 
     #[test]
     fn values_correctly_overflow() {
-        let header =
-            NativeTocHeader::init(0x100000, 0x40000, 0x1000000, TableOfContentsVersion::V0);
+        let header = NativeTocHeader::new(0x100000, 0x40000, 0x1000000, TableOfContentsVersion::V0);
         assert_eq!(header.file_count(), 0);
         assert_eq!(header.block_count(), 0);
         assert_eq!(header.string_pool_size(), 0);
@@ -150,7 +149,7 @@ mod tests {
 
     #[test]
     fn is_little_endian() {
-        let header = NativeTocHeader::init(0xFFFFF, 0x3FFFF, 0xFFFFFF, TableOfContentsVersion::V1);
+        let header = NativeTocHeader::new(0xFFFFF, 0x3FFFF, 0xFFFFFF, TableOfContentsVersion::V1);
         let le_header = header.to_le();
         assert_eq!(header.0, le_header.0);
     }

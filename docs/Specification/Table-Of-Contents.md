@@ -4,134 +4,199 @@ This document describes the Table of Contents (TOC) format used in the archive f
 
 **Size**: 8 bytes
 
-- `u2`: Version (`0-3`)
-- Remaining bits are allocated differently depending on the version.
+- `u1`: IsFlexibleFormat
+- `u2`: Preset
+- Remaining bits are allocated differently depending on the preset.
 
-## Version `0`
+If the first bit is set, use [Flexible Entry Format 64 (FEF64)](#flexible-entry-format-64-fef64),
+otherwise use one of the presets.
 
-- **Summary**: 20-byte `FileEntry`. Suitable for 99.9% of mods.
-- **Purpose**: General archival/unarchival of larger mods.
-- **Limits:**
-    - **Max File Count**: 1M
-    - **Max Block Count**: 256K
-    - **Max Block Size**: 64MiB
-    - **Max Content Size**: 16,384 TiB
-    - **Max File Size**: 4GiB
+- `1XX` : [Flexible Entry Format 64 (FEF64)](#flexible-entry-format-64-fef64)
+- `000` : [Preset `0`](#preset-0)
+- `001` : [Preset `1`](#preset-1)
+- `010` : [Preset `2`](#preset-2)
+- `011` : [Preset `3`](#preset-3)
 
-Format:
+## Flexible Entry Format 64 (FEF64)
 
-- **TOC Header**:
-    - `u2`: Version (`0`)
-    - `u24`: [StringPoolSize]
-    - `u18`: [BlockCount]
-    - `u20`: [FileCount]
-- **FileEntry** (20 bytes):
-    - `u64`: FileHash (XXH3)
-    - `u32`: DecompressedSize
-    - `u26`: DecompressedBlockOffset
-    - `u20`: [FilePathIndex]
-    - `u18`: [FirstBlockIndex]
-- [Blocks[BlockCount]](#blocks)
-    - `u29` CompressedBlockSize
-    - `u3` [Compression]
-- [StringPool]
-    - `RawCompressedData...`
-
-## Version `1`
-
-- **Summary**: 24-byte `FileEntry`. For truly exceptional edge cases.
-- **Purpose**: Edge cases. Exceptionally huge archives.
-- **Limits:**
-    - **Max File Count**: 1M
-    - **Max Block Count**: 16,384 G
-    - **Max Block Size**: 64MiB
-    - **Max Content Size**: 1,073,741,824 TiB
-    - **Max File Size**: 256GiB
+- **Summary**: A series of sub-formats with 16-byte `FileEntry`, fits most small mods and update packages.
+- **Purpose**: Uploads/downloads of common mods to/from the internet.
+    - Allows including/excluding the `Hash` field and supporting SOLID-less archives.
+    - Most mods in practice will use this format.
 
 Format:
 
-- **TOC Header**:
-    - `u2`: Version (`1`)
-    - `u24`: [StringPoolSize]
-    - `u18`: [BlockCount]
-    - `u20`: [FileCount]
-- **FileEntry** (24 bytes):
-    - `u64`: FileHash (XXH3)
-    - `u38`: DecompressedSize
-    - `u26`: DecompressedBlockOffset
-    - `u20`: [FilePathIndex]
-    - `u44`: [FirstBlockIndex]
+- **TOC Header (8 Bytes)**:
+    - `u1`: IsFlexibleFormat (Always `1`)
+    - `u1`: HasHash
+    - `u5`: StringPoolSizeBits (num bits for [StringPoolSize] in `Item Counts` below.)
+    - `u5`: FileCountBits (num bits for [FileCount] in `Item Counts` below.)
+    - `u5`: BlockCountBits (num bits for [BlockCount] in `Item Counts` below.)
+    - `u5`: [DecompressedBlockOffset]Bits (num bits for [StringPoolSize] in `Item Counts` below.)
+    - `u42`: Padding (`align8`) OR ItemCounts (if fits in 42 bits)
+- [Optional: If Greater than 42 bits] **ItemCounts Struct (8 Bytes)**:
+    - `align8` (Padding)
+    - `u[StringPoolSizeBits]`: [StringPoolSize]
+    - `u[BlockCountBits]`: [BlockCount]
+    - `u[FileCountBits]`: [FileCount]
+- **FileEntry** (8/16 bytes):
+    - `u0` / `u64`: FileHash (XXH3) [Optional]
+    - `u[64 - DecompressedBlockOffsetBits - FileCountBits - BlockCountBits]`: DecompressedSize
+    - `u[DecompressedBlockOffsetBits]`: [DecompressedBlockOffset]
+    - `u[FileCountBits]`: [FilePathIndex]
+    - `u[BlockCountBits]`: [FirstBlockIndex]
 - [Blocks[BlockCount]](#blocks)
-    - `u29` CompressedBlockSize
-    - `u3` [Compression]
+    - `u30` CompressedBlockSize
+    - `u2` [Compression]
 - [StringPool]
     - `RawCompressedData...`
 
-## Version `2`
+Values stored in `StringPoolSizeBits`, `BlockCountBits` and`FileCountBits` are offset by 1.
+That means that if the stored value is `0`, we actually mean 1.
 
-- **Summary**: 12-byte `FileEntry`. Variant of [Version 0](#version-0), but with no hash, reduced file count and increased block count.
-- **Purpose**: When hashes are not needed. e.g. Read-only virtual filesystems.
-- **Limits:**
-    - **Max File Count**: 256K
-    - **Max Block Count**: 1M
-    - **Max Block Size**: 64MiB
-    - **Max Content Size**: 16,384 TiB
-    - **Max File Size**: 4GiB
-    - **Max Size for VFS:**: 64GiB (@ 64K Block Sizes)
-
-Format:
-
-- **TOC Header**:
-    - `u2`: Version (`2`)
-    - `u24`: [StringPoolSize]
-    - `u20`: [BlockCount]
-    - `u18`: [FileCount]
-- **FileEntry** (12 bytes):
-    - `u32`: DecompressedSize
-    - `u26`: DecompressedBlockOffset
-    - `u18`: [FilePathIndex]
-    - `u20`: [FirstBlockIndex]
-- [Blocks[BlockCount]](#blocks)
-    - `u29` CompressedBlockSize
-    - `u3` [Compression]
-- [StringPool]
-    - `RawCompressedData...`
-
-## Version `3`
-
-- **Summary**: 16-byte `FileEntry`, fits most small mods and update packages.
-- **Purpose**: Uploads/downloads to/from the internet.
-- **Limits:**
-    - **Max File Count**: 255
-    - **Max Block Count**: 255
-    - **Max Block Size**: 1MiB
-    - **Max Content Size**: 255MiB
-    - **Max File Size**: 255MiB
-
-Format:
-
-- **TOC Header**:
-    - `u2`: Version (`3`)
-    - `u29`: [StringPoolSize]
-    - `u8`: [BlockCount]
-    - `u8`: [FileCount]
-    - `u17`: Padding
-- **FileEntry** (16 bytes):
-    - `u64`: `FileHash` (XXH3)
-    - `u28`: DecompressedSize
-    - `u20`: DecompressedBlockOffset
-    - `u8`: [FilePathIndex]
-    - `u8`: [FirstBlockIndex]
-- [Blocks[BlockCount]](#blocks)
-    - `u29` CompressedBlockSize
-    - `u3` [Compression]
-- [StringPool]
-    - `RawCompressedData...`
+If ***StringPoolSizeBits + BlockCountBits + FileCountBits*** fit in the 42 bits of padding; then they
+are placed in the lower 42 bits. Otherwise we allocate 8 bytes for the ItemCounts struct.
 
 !!! note "Compressed pool data is ~4 bytes per entry usually."
 
-    This version works under the assumption of ~24 bytes per entry.
-    To reach the 4K size target, `4080 / 24 == 204` files.
+    This version works under the assumption of ~21 bytes per entry,
+    16 for entry, 5 for compressed file path. 4080 / 21 = 194.2 files.
+
+## Preset 0
+
+- **Summary**: 20-byte `FileEntry`. Suitable for 99.9% of mods.
+- **Purpose**: General archival/unarchival of mods.
+- **Limits:**
+    - **Max File Count**: 256K
+    - **Max Block Count**: 4M
+    - **Max SOLID Block Size**: 16MiB
+    - **Max File Size**: 4GiB
+    - **Max Block Size**: 1GiB
+- **Derived Limits**:
+    - **Max Guaranteed Content Size**: 1PiB (4M blocks * 1GiB size)
+    - **Max Size @64K Block Size**: 256GiB (4M blocks * 64KiB size)
+
+Format:
+
+- **TOC Header**:
+    - `u1`: IsFlexibleFormat (Always `0`)
+    - `u2`: Preset (Always `0`)
+    - `u21`: [StringPoolSize]
+    - `u22`: [BlockCount]
+    - `u18`: [FileCount]
+- **FileEntry** (20 bytes):
+    - `u64`: FileHash (XXH3)
+    - `u32`: DecompressedSize
+    - `u24`: [DecompressedBlockOffset]
+    - `u18`: [FilePathIndex]
+    - `u22`: [FirstBlockIndex]
+- [Blocks[BlockCount]](#blocks)
+    - `u30` CompressedBlockSize
+    - `u2` [Compression]
+- [StringPool]
+    - `RawCompressedData...`
+
+## Preset 1
+
+- **Summary**: 12-byte `FileEntry`. Variant of [Preset 0](#preset-0), but with no hash, reduced file count and increased block count.
+- **Purpose**: When hashes are not needed. e.g. Read-only virtual filesystems.
+- **Limits:**
+    - **Max File Count**: 256K
+    - **Max Block Count**: 4M
+    - **Max SOLID Block Size**: 16MiB
+    - **Max File Size**: 4GiB
+    - **Max Block Size**: 1GiB
+- **Derived Limits**:
+    - **Max Guaranteed Content Size**: 1PiB (4M blocks * 1GiB size)
+    - **Max Size @64K Block Size**: 256GiB (4M blocks * 64KiB size)
+
+Format:
+
+- **TOC Header**:
+    - `u1`: IsFlexibleFormat (Always `0`)
+    - `u2`: Preset (Always `1`)
+    - `u21`: [StringPoolSize]
+    - `u22`: [BlockCount]
+    - `u18`: [FileCount]
+- **FileEntry** (12 bytes):
+    - `u32`: DecompressedSize
+    - `u24`: [DecompressedBlockOffset]
+    - `u18`: [FilePathIndex]
+    - `u22`: [FirstBlockIndex]
+- [Blocks[BlockCount]](#blocks)
+    - `u30` CompressedBlockSize
+    - `u2` [Compression]
+- [StringPool]
+    - `RawCompressedData...`
+
+## Preset 2
+
+- **Summary**: 24-byte `FileEntry`. Variant of [Preset 0](#preset-0) with 64-bit file sizes.
+- **Purpose**: Edge cases. Exceptionally huge archives.
+- **Limits:**
+    - **Max File Count**: 256K
+    - **Max Block Count**: 4M
+    - **Max SOLID Block Size**: 64MiB
+    - **Max File Size**: 4GiB
+    - **Max Block Size**: 1GiB
+- **Derived Limits**:
+    - **Max Guaranteed Content Size**: 1PiB (4M blocks * 1GiB size)
+    - **Max Size @64K Block Size**: 256GiB (4M blocks * 64KiB size)
+    - **Max Size @1M Block Size**: 4TiB (4M blocks * 1MiB size)
+
+Format:
+
+- **TOC Header**:
+    - `u1`: IsFlexibleFormat (Always `0`)
+    - `u2`: Preset (Always `2`)
+    - `u21`: [StringPoolSize]
+    - `u22`: [BlockCount]
+    - `u18`: [FileCount]
+- **FileEntry** (20 bytes):
+    - `u64`: FileHash (XXH3)
+    - `u64`: DecompressedSize
+    - `u24`: [DecompressedBlockOffset]
+    - `u18`: [FilePathIndex]
+    - `u22`: [FirstBlockIndex]
+- [Blocks[BlockCount]](#blocks)
+    - `u30` CompressedBlockSize
+    - `u2` [Compression]
+- [StringPool]
+    - `RawCompressedData...`
+
+## Preset 3
+
+- **Summary**: 8/16-byte `FileEntry`, for services hosting SOLID-less mods.
+- **Purpose**: Uploads/downloads of mods with small files to the internet.
+- **Limits:**
+    - **Max File Count**: 64K
+    - **Max Block Count**: 64K
+    - **Max SOLID Block Size**: 0 MiB
+    - **Max File Size**: 4GiB
+    - **Max Block Size**: 1GiB
+- **Derived Limits**:
+    - **Max Guaranteed Content Size**: 64TiB (64K blocks * 1GiB block size)
+
+Format:
+
+- **TOC Header**:
+    - `u1`: IsFlexibleFormat (Always `0`)
+    - `u2`: Preset (Always `3`)
+    - `u1`: HasHash (Always `0`)
+    - `u20`: [StringPoolSize]
+    - `u16`: [BlockCount]
+    - `u16`: [FileCount]
+    - `u8`: Padding (Align to 8 bytes)
+- **FileEntry** (16 bytes):
+    - `u64`: `FileHash` (XXH3)
+    - `u32`: DecompressedSize
+    - `u16`: [FilePathIndex]
+    - `u16`: [FirstBlockIndex]
+- [Blocks[BlockCount]](#blocks)
+    - `u30` CompressedBlockSize
+    - `u2` [Compression]
+- [StringPool]
+    - `RawCompressedData...`
 
 ## Field Explanations
 
@@ -152,7 +217,7 @@ files with average path lengths.
 
 ### DecompressedBlockOffset
 
-!!! info "Offset of the decompressed block"
+!!! info "Offset of the start of the file in the decompressed block"
 
 ### FilePathIndex
 
@@ -166,7 +231,7 @@ files with average path lengths.
 
 ## File Entries
 
-Use known fixed size and are 4 byte aligned to improve parsing speed; size 20-24 bytes per item depending on variant.
+Use known fixed size and are word aligned to improve parsing speed; size 20-24 bytes per item depending on variant.
 
 ### Implicit Property: Chunk Count
 
@@ -196,12 +261,12 @@ Each entry contains raw size of the block; and compression used. This avoids us 
 
 ### Compression
 
-Size: `3 bits` (0-7)
+Size: `2 bits` (0-7)
 
 - `0`: Copy
 - `1`: ZStandard
 - `2`: LZ4
-- `3-7`: Reserved
+- `3`: Reserved
 
 !!! note "As we do not store the length of the decompressed data, this must be determined from the compressed block."
 
@@ -287,6 +352,21 @@ In practice, the 128K size can handle around 5000 files when using a 20-byte [Fi
 This is considered to be the 'upper limit' in terms of file counts for mod packages; therefore
 we do not have many variants beyond 20 bytes/entry. i.e. Beyond this limit, we don't aggressively optimize.
 
+### Selecting StringPoolSize in Version/Variants
+
+!!! tip "The [StringPoolSize] field size is proportional to the [FileCount]"
+
+Consider the following:
+
+- Game ***file names*** have a length of 16 bytes.
+- 12 bytes if we exclude the extension.
+- ***File paths*** are usually 5 bytes after compression.
+
+To compensate for games with highly varying file names, ***we'll assume that the average
+file path (after compression) is 8 bytes***.
+
+***As a direct result, the [StringPoolSize] field should use 3 more bits than the [FileCount] field.***
+
 [FileCount]: #filecount
 [StringPool]: #string-pool
 [Compression]: #compression
@@ -295,5 +375,7 @@ we do not have many variants beyond 20 bytes/entry. i.e. Beyond this limit, we d
 [StringPoolSize]: #stringpoolsize
 [fh-version]: ./File-Header.md#versionvariant
 [BlockCount]: #blockcount
+[DecompressedBlockOffset]: #decompressedblockoffset
 [FilePathIndex]: #filepathindex
 [FirstBlockIndex]: #firstblockindex
+[Variant]: #variants

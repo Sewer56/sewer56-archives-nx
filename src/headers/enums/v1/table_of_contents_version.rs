@@ -16,7 +16,8 @@ pub enum TableOfContentsVersion {
     /// - **Limits**:
     ///   - **Max File Count**: 1 million (20 bits)
     ///   - **Max Block Count**: 256 thousand (18 bits)
-    ///   - **Max Block Size**: 64 MiB
+    ///   - **Max SOLID Block Size**: 64 MiB
+    ///   - **Max Block Size**: 512 MiB
     ///   - **Max Content Size**: 128 TiB
     ///   - **Max File Size**: 4 GiB
     ///
@@ -42,7 +43,8 @@ pub enum TableOfContentsVersion {
     /// - **Limits**:
     ///   - **Max File Count**: 1 million (20 bits)
     ///   - **Max Block Count**: 256 thousand (18 bits)
-    ///   - **Max Block Size**: 64 MiB
+    ///   - **Max SOLID Block Size**: 64 MiB
+    ///   - **Max Block Size**: 512 MiB
     ///   - **Max Content Size**: 128 TiB
     ///   - **Max File Size**: 2^64 Bytes
     ///

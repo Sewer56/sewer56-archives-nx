@@ -206,7 +206,7 @@ pub unsafe fn serialize_table_of_contents(
     }
 
     let mut writer = LittleEndianWriter::new(data_ptr);
-    let header = NativeTocHeader::init(
+    let header = NativeTocHeader::new(
         entries.len() as u32,
         blocks.len() as u32,
         raw_string_pool_data.len() as u32,
@@ -257,7 +257,7 @@ fn write_blocks(
         for x in 0..blocks.len() {
             let num_blocks = (*blocks.as_ptr().add(x)).compressed_size;
             let compression = *compressions.as_ptr().add(x);
-            let entry = NativeTocBlockEntry::new(num_blocks, compression);
+            let entry = NativeV1TocBlockEntry::new(num_blocks, compression);
             writer.write(entry.0);
         }
     }
@@ -293,7 +293,7 @@ pub fn calculate_table_size(
     };
 
     current_size += num_entries * entry_size;
-    current_size += num_blocks * size_of::<NativeTocBlockEntry>();
+    current_size += num_blocks * size_of::<NativeV1TocBlockEntry>();
     current_size += pool_len;
 
     current_size

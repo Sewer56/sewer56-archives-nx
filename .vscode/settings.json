@@ -1,0 +1,16 @@
+{
+    "rust-analyzer.checkOnSave.command": "clippy",
+    "[rust]": {
+        "editor.formatOnSave": true
+    },
+    "coverage-gutters.coverageFileNames": [
+        "cobertura.xml"
+    ],
+    // Using 'Trigger Task on Save' Extension
+    "triggerTaskOnSave.tasks": {
+        "Strip Whitespace": [
+            "docs/**/*.md"
+        ],
+    },
+    "discord.enabled": true,
+}
