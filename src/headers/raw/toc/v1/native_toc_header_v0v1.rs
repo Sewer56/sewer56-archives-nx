@@ -1,5 +1,4 @@
 use crate::headers::enums::v1::*;
-use crate::headers::traits::can_convert_to_little_endian::CanConvertToLittleEndian;
 use bitfield::bitfield;
 
 /// Maximum possible size of the string pool.
@@ -93,12 +92,6 @@ impl NativeTocHeader {
     /// Gets the Version as TableOfContentsVersion enum.
     pub fn get_version_unchecked(&self) -> TableOfContentsVersion {
         unsafe { Self::get_version(self).unwrap_unchecked() }
-    }
-}
-
-impl CanConvertToLittleEndian for NativeTocHeader {
-    fn to_le(&self) -> Self {
-        Self(self.0.to_le())
     }
 }
 

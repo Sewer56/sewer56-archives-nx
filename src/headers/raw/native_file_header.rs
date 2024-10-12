@@ -1,4 +1,3 @@
-use crate::headers::traits::can_convert_to_little_endian::CanConvertToLittleEndian;
 use bitfield::bitfield;
 
 bitfield! {
@@ -116,21 +115,6 @@ impl NativeFileHeader {
     fn set_header_page_bytes(&mut self, value: u32) {
         self.header_data
             .set_header_page_count(value / Self::HEADER_PAGE_SIZE);
-    }
-}
-
-impl CanConvertToLittleEndian for NativeFileHeader {
-    fn to_le(&self) -> Self {
-        Self {
-            magic: self.magic.to_le(),
-            header_data: self.header_data.to_le(),
-        }
-    }
-}
-
-impl CanConvertToLittleEndian for HeaderData {
-    fn to_le(&self) -> Self {
-        HeaderData(self.0.to_le())
     }
 }
 

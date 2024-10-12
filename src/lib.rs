@@ -41,10 +41,8 @@ pub mod headers {
     /// This represents the unpacked 'managed' version of the headers.
     pub mod managed;
 
-    /// This contains reused traits in the Nx source tree.
-    pub mod traits {
-        pub mod can_convert_to_little_endian;
-    }
+    /// This contains reused traits associated with headers.
+    pub mod traits { }
 
     /// Various data types, usually nominally typed.
     pub mod types {
