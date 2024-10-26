@@ -29,7 +29,7 @@ pub(crate) struct TableOfContentsBuilderState<'a, LongAlloc: Allocator + Clone =
 }
 
 #[allow(dead_code)]
-impl<'a> TableOfContentsBuilderState<'a> {
+impl TableOfContentsBuilderState<'_> {
     /// Creates a new [TableOfContentsBuilderState] with uninitialized boxes.
     ///
     /// # Arguments

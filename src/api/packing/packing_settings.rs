@@ -49,6 +49,10 @@ pub struct PackingSettings<W: Write + Seek> {
     /// Must be greater than [`Self::block_size`].
     pub chunk_size: u32,
 
+    /// Set this to 'true' to store hashes in the ToC.
+    /// Without this, hashes will not be stored in the ToC.
+    pub store_hashes: bool,
+
     /// Compression level to use for SOLID data.
     ///
     /// # Range
@@ -94,6 +98,7 @@ impl<W: Write + Seek> PackingSettings<W> {
             chunked_file_algorithm: CompressionPreference::ZStandard,
             enable_chunked_deduplication: false,
             enable_solid_deduplication: true,
+            store_hashes: true,
         }
     }
 

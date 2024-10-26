@@ -1,13 +1,8 @@
-use core::hint::unreachable_unchecked;
-
 use bitfield::bitfield;
+use core::hint::unreachable_unchecked;
+use endian_writer::*;
 
-use crate::{
-    api::enums::*,
-    utilities::serialize::{
-        little_endian_reader::LittleEndianReader, little_endian_writer::LittleEndianWriter,
-    },
-};
+use crate::api::enums::*;
 
 bitfield! {
     /// Native 'block entry' in the 'Table of Contents'
@@ -35,12 +30,12 @@ impl NativeV1TocBlockEntry {
         header.set_compression(compression);
 
         // write as little endian
-        unsafe { lewriter.write(header.0) }
+        unsafe { lewriter.write_u32(header.0) }
     }
 
     /// Creates a new entry from the little endian reader
     pub fn from_reader(lereader: &mut LittleEndianReader) -> Self {
-        NativeV1TocBlockEntry(unsafe { lereader.read::<u32>() })
+        NativeV1TocBlockEntry(unsafe { lereader.read_u32() })
     }
 
     /// Get the compression preference

@@ -1,5 +1,9 @@
 use super::ItemCounts;
-use crate::{headers::types::xxh3sum::XXH3sum, utilities::math::ToBitmask};
+use crate::{
+    headers::{managed::FileEntry, types::xxh3sum::XXH3sum},
+    utilities::math::ToBitmask,
+};
+use endian_writer::*;
 
 /// Represents a 128-bit packed FileEntry using Flexible Entry Format (with hash).
 #[repr(C)]
@@ -59,6 +63,23 @@ impl FileEntry16 {
         FileEntry16 { hash, data }
     }
 
+    /// Creates a new [FileEntry16] from a managed [FileEntry].
+    ///
+    /// # Arguments
+    ///
+    /// * `item_counts` - The bit counts for the fields.
+    /// * `entry` - The managed representation of the file entry.
+    pub fn from_file_entry(item_counts: ItemCounts, entry: &FileEntry) -> Self {
+        Self::new(
+            item_counts,
+            entry.hash.into(),
+            entry.decompressed_size,
+            entry.decompressed_block_offset as u64,
+            entry.file_path_index as u64,
+            entry.first_block_index as u64,
+        )
+    }
+
     /// Returns the hash as a XXH3sum.
     pub fn hash(&self) -> XXH3sum {
         self.hash
@@ -89,6 +110,34 @@ impl FileEntry16 {
     /// Returns the first block index.
     pub fn first_block_index(&self, counts: &ItemCounts) -> u64 {
         self.data & counts.block_count_bits.to_bitmask()
+    }
+
+    /// Writes this file entry to the provided writer.
+    ///
+    /// # Arguments
+    ///
+    /// * `lewriter` - The writer to write to.
+    #[inline(always)]
+    pub fn to_writer(&self, lewriter: &mut LittleEndianWriter) {
+        unsafe {
+            lewriter.write_u64_at_offset(self.hash.0, 0);
+            lewriter.write_u64_at_offset(self.data, 8);
+            lewriter.seek(16);
+        }
+    }
+
+    /// Reads this managed file entry from data serialized as `NativeFileEntryV0`.
+    ///
+    /// # Arguments
+    ///
+    /// * `reader` - The reader to read from.
+    #[inline(always)]
+    pub fn from_reader(&mut self, lereader: &mut LittleEndianReader) {
+        unsafe {
+            self.hash = lereader.read_u64_at_offset(0).into();
+            self.data = lereader.read_u64_at_offset(8);
+            lereader.seek(16);
+        }
     }
 }
 

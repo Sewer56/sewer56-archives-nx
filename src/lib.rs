@@ -42,7 +42,7 @@ pub mod headers {
     pub mod managed;
 
     /// This contains reused traits associated with headers.
-    pub mod traits { }
+    pub mod traits {}
 
     /// Various data types, usually nominally typed.
     pub mod types {
@@ -84,14 +84,6 @@ pub mod utilities {
 
     /// This module contains APIs that abstract the supported compression algorithms.
     pub mod compression;
-
-    pub mod serialize {
-        /// This module contains utilities for reading unaligned data via pointer in little-endian format.
-        pub mod little_endian_reader;
-
-        /// This module contains utilities for writing unaligned data via pointer in little-endian format.
-        pub mod little_endian_writer;
-    }
 
     /// Exposes the system information.
     pub mod system_info;

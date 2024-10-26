@@ -1,5 +1,5 @@
 use super::*;
-use crate::headers::{managed::*, raw::toc::NativeFileEntry};
+use crate::headers::managed::*;
 use core::hash::Hash;
 #[cfg(test)]
 use fake::*;
@@ -56,27 +56,34 @@ impl NativeFileEntryP1 {
     }
 }
 
-impl NativeFileEntry for NativeFileEntryP1 {
-    fn copy_from(&mut self, entry: &FileEntry) {
-        self.decompressed_size = entry.decompressed_size as u32;
-        self.offset_path_index_tuple = CommonOffsetPathIndexTuple::new(
-            entry.decompressed_block_offset,
-            entry.file_path_index,
-            entry.first_block_index,
-        );
+impl From<FileEntry> for NativeFileEntryP1 {
+    fn from(entry: FileEntry) -> Self {
+        NativeFileEntryP1 {
+            decompressed_size: entry.decompressed_size as u32,
+            offset_path_index_tuple: CommonOffsetPathIndexTuple::new(
+                entry.decompressed_block_offset,
+                entry.file_path_index,
+                entry.first_block_index,
+            ),
+        }
     }
+}
 
-    fn copy_to(&self, entry: &mut FileEntry) {
-        entry.hash = 0;
-        entry.decompressed_size = self.decompressed_size as u64;
-        { self.offset_path_index_tuple }.copy_to(entry);
+impl From<NativeFileEntryP1> for FileEntry {
+    fn from(value: NativeFileEntryP1) -> Self {
+        FileEntry {
+            hash: 0,
+            decompressed_size: value.decompressed_size as u64,
+            decompressed_block_offset: value.decompressed_block_offset(),
+            file_path_index: value.file_path_index(),
+            first_block_index: value.first_block_index(),
+        }
     }
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use core::fmt::Debug;
     use rstest::rstest;
 
     #[test]
@@ -87,23 +94,9 @@ pub(crate) mod tests {
     #[rstest]
     #[case::random_entry(Faker.fake())]
     fn can_copy_to_from_managed_entry(#[case] entry: NativeFileEntryP1) {
-        test_copy_to_and_from_managed_entry(&entry);
-    }
-
-    pub(crate) fn test_copy_to_and_from_managed_entry<
-        T: NativeFileEntry + PartialEq + Default + Debug,
-    >(
-        entry: &T,
-    ) {
-        let mut new_entry = T::default();
-        let mut managed = FileEntry::default();
-
-        // Do a round trip copy, and compare new_entry with old_entry.
-        // If both are equal, the copy operation is successful.
-        entry.copy_to(&mut managed);
-        new_entry.copy_from(&managed);
-
-        assert_eq!(&new_entry, entry);
+        let managed: FileEntry = entry.into();
+        let new_entry: NativeFileEntryP1 = managed.into();
+        assert_eq!(new_entry, entry);
     }
 
     #[cfg(test)]

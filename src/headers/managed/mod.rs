@@ -1,4 +1,5 @@
 pub mod v1;
+pub mod v2;
 
 /// Represents the size of a compressed block following the header.
 pub mod block_size;

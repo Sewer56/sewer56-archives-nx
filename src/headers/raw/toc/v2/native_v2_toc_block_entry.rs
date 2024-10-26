@@ -1,13 +1,7 @@
-use core::hint::unreachable_unchecked;
-
+use crate::api::enums::*;
 use bitfield::bitfield;
-
-use crate::{
-    api::enums::*,
-    utilities::serialize::{
-        little_endian_reader::LittleEndianReader, little_endian_writer::LittleEndianWriter,
-    },
-};
+use core::hint::unreachable_unchecked;
+use endian_writer::*;
 
 bitfield! {
     /// Native 'block entry' in the 'Table of Contents'
@@ -36,13 +30,13 @@ impl NativeV2TocBlockEntry {
 
         // Convert to little endian
         unsafe {
-            lewriter.write(header.0);
+            lewriter.write_u32(header.0);
         }
     }
 
     /// Creates a new entry from the little endian reader
     pub fn from_reader(lereader: &mut LittleEndianReader) -> Self {
-        NativeV2TocBlockEntry(unsafe { lereader.read::<u32>() })
+        NativeV2TocBlockEntry(unsafe { lereader.read_u32() })
     }
 
     /// Get the compression preference
@@ -56,7 +50,7 @@ impl NativeV2TocBlockEntry {
     }
 
     /// Set the compression preference
-    fn set_compression(&mut self, pref: CompressionPreference) {
+    pub fn set_compression(&mut self, pref: CompressionPreference) {
         self.set_compression_raw(match pref {
             // All cases of 'no preference' should be overwritten with zstd by default.
             CompressionPreference::NoPreference => unsafe { unreachable_unchecked() },

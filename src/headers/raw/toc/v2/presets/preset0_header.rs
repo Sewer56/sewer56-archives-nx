@@ -6,6 +6,16 @@ pub const PRESET0_FILE_COUNT_MAX: u32 = (1 << 18) - 1; // u18
 pub const PRESET0_DECOMPRESSED_BLOCK_OFFSET_MAX: u32 = (1 << 24) - 1; // u24
 pub const PRESET0_MAX_FILE_SIZE: u32 = ((1_u64 << 32) - 1) as u32; // 4 GiB
 
+pub const PRESET1_STRING_POOL_SIZE_MAX: u32 = (1 << 21) - 1; // u21
+pub const PRESET1_BLOCK_COUNT_MAX: u32 = (1 << 22) - 1; // u22
+pub const PRESET1_FILE_COUNT_MAX: u32 = (1 << 18) - 1; // u18
+pub const PRESET1_MAX_FILE_SIZE: u32 = ((1_u64 << 32) - 1) as u32; // 4 GiB
+
+pub const PRESET2_STRING_POOL_SIZE_MAX: u32 = (1 << 21) - 1; // u21
+pub const PRESET2_BLOCK_COUNT_MAX: u32 = (1 << 22) - 1; // u22
+pub const PRESET2_FILE_COUNT_MAX: u32 = (1 << 18) - 1; // u18
+pub const PRESET2_MAX_FILE_SIZE: u64 = u64::MAX;
+
 bitfield! {
 
     /// Represents the TOC Header structure for Preset 0.
@@ -50,6 +60,7 @@ impl Preset0TocHeader {
     ///
     /// # Arguments
     ///
+    /// * `preset` - The specific preset (can be 0, 1 or 2).
     /// * `string_pool_size` - Size of the string pool (21 bits).
     /// * `block_count` - Number of blocks (22 bits).
     /// * `file_count` - Number of files (18 bits).
@@ -57,10 +68,10 @@ impl Preset0TocHeader {
     /// # Returns
     ///
     /// A new `Preset0TocHeader` instance.
-    pub fn new(string_pool_size: u32, block_count: u32, file_count: u32) -> Self {
+    pub fn new(preset: u8, string_pool_size: u32, block_count: u32, file_count: u32) -> Self {
         let mut header = Preset0TocHeader(0);
         header.set_is_flexible_format(false);
-        header.set_preset(0);
+        header.set_preset(preset);
         header.set_string_pool_size(string_pool_size);
         header.set_block_count(block_count);
         header.set_file_count(file_count);
@@ -114,7 +125,7 @@ impl Preset0TocHeader {
 
 impl Default for Preset0TocHeader {
     fn default() -> Self {
-        Self::new(0, 0, 0)
+        Self::new(0, 0, 0, 0)
     }
 }
 
@@ -131,7 +142,7 @@ mod tests {
     #[test]
     fn can_init_max_values() {
         let header = Preset0TocHeader::new(
-            0x1FFFFF, // Max 21 bits
+            0, 0x1FFFFF, // Max 21 bits
             0x3FFFFF, // Max 22 bits
             0x3FFFF,  // Max 18 bits
         );
@@ -146,7 +157,7 @@ mod tests {
     #[test]
     fn values_correctly_overflow() {
         let header = Preset0TocHeader::new(
-            0x2_00000,  // 22 bits, should truncate to 21 bits (0)
+            0, 0x2_00000,  // 22 bits, should truncate to 21 bits (0)
             0x4_000000, // 24 bits, should truncate to 22 bits (0)
             0x40000,    // 19 bits, should truncate to 18 bits (0)
         );

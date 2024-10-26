@@ -1,11 +1,7 @@
 use derive_new::new;
+use endian_writer::{EndianReader, EndianWriter, LittleEndianReader, LittleEndianWriter};
 
-use crate::{
-    headers::raw::toc::*,
-    utilities::serialize::{
-        little_endian_reader::LittleEndianReader, little_endian_writer::LittleEndianWriter,
-    },
-};
+use crate::headers::raw::toc::*;
 
 /// Entry for the individual file.
 #[derive(Default, Clone, Copy, PartialEq, Eq, Hash, Debug, new)]
@@ -58,9 +54,9 @@ impl FileEntry {
     #[inline(always)]
     pub fn write_as_v0(&self, lewriter: &mut LittleEndianWriter) {
         unsafe {
-            lewriter.write_at_offset::<u64>(self.hash, 0);
-            lewriter.write_at_offset::<u32>(self.decompressed_size as u32, 8);
-            lewriter.write_at_offset::<u64>(
+            lewriter.write_u64_at_offset(self.hash, 0);
+            lewriter.write_u32_at_offset(self.decompressed_size as u32, 8);
+            lewriter.write_u64_at_offset(
                 OffsetPathIndexTuple::new(
                     self.decompressed_block_offset,
                     self.file_path_index,
@@ -81,9 +77,9 @@ impl FileEntry {
     #[inline(always)]
     pub fn write_as_v1(&self, lewriter: &mut LittleEndianWriter) {
         unsafe {
-            lewriter.write_at_offset::<u64>(self.hash, 0);
-            lewriter.write_at_offset::<u64>(self.decompressed_size, 8);
-            lewriter.write_at_offset::<u64>(
+            lewriter.write_u64_at_offset(self.hash, 0);
+            lewriter.write_u64_at_offset(self.decompressed_size, 8);
+            lewriter.write_u64_at_offset(
                 OffsetPathIndexTuple::new(
                     self.decompressed_block_offset,
                     self.file_path_index,
@@ -104,9 +100,9 @@ impl FileEntry {
     #[inline(always)]
     pub fn from_reader_v0(&mut self, lereader: &mut LittleEndianReader) {
         unsafe {
-            self.hash = lereader.read_at_offset::<u64>(0);
-            self.decompressed_size = lereader.read_at_offset::<u32>(8) as u64;
-            let packed = OffsetPathIndexTuple::from_raw(lereader.read_at_offset::<u64>(12));
+            self.hash = lereader.read_u64_at_offset(0);
+            self.decompressed_size = lereader.read_u32_at_offset(8) as u64;
+            let packed = OffsetPathIndexTuple::from_raw(lereader.read_u64_at_offset(12));
             packed.copy_to(self);
             lereader.seek(NativeFileEntryV0::SIZE_BYTES as isize);
         }
@@ -120,9 +116,9 @@ impl FileEntry {
     #[inline(always)]
     pub fn from_reader_v1(&mut self, lereader: &mut LittleEndianReader) {
         unsafe {
-            self.hash = lereader.read_at_offset::<u64>(0);
-            self.decompressed_size = lereader.read_at_offset::<u64>(8);
-            let packed = OffsetPathIndexTuple::from_raw(lereader.read_at_offset::<u64>(16));
+            self.hash = lereader.read_u64_at_offset(0);
+            self.decompressed_size = lereader.read_u64_at_offset(8);
+            let packed = OffsetPathIndexTuple::from_raw(lereader.read_u64_at_offset(16));
             packed.copy_to(self);
             lereader.seek(NativeFileEntryV1::SIZE_BYTES as isize);
         }

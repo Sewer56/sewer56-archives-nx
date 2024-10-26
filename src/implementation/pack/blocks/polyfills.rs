@@ -12,11 +12,14 @@ where
     // Define necessary methods
     fn as_any(&self) -> &dyn Any;
 
-    /// Returns the size of the largest item in this block.
-    fn largest_item_size(&self) -> u64;
+    /// Appends files to a given vector.
+    fn append_items(&self, items: &mut Vec<Rc<T>>);
 
-    /// Returns true if this block can create chunks, false otherwise.
-    fn can_create_chunks(&self) -> bool;
+    /// For any block that's based on existing data in another Nx archive, this returns
+    /// the max DecompressedBlockOffset for any existing file entry within the block.
+    fn max_decompressed_block_offset(&self) -> u32 {
+        0
+    }
 }
 
 /// Represents an individual SOLID block packed by the Nx library.
@@ -55,12 +58,8 @@ where
         self
     }
 
-    fn largest_item_size(&self) -> u64 {
-        todo!()
-    }
-
-    fn can_create_chunks(&self) -> bool {
-        todo!()
+    fn append_items(&self, items: &mut Vec<Rc<T>>) {
+        items.extend(self.items.iter().cloned());
     }
 }
 
@@ -153,11 +152,7 @@ where
         self
     }
 
-    fn largest_item_size(&self) -> u64 {
-        todo!()
-    }
-
-    fn can_create_chunks(&self) -> bool {
-        todo!()
+    fn append_items(&self, items: &mut Vec<Rc<T>>) {
+        items.push(self.state.file.clone());
     }
 }

@@ -1,5 +1,6 @@
 use super::file_entry::FileEntry;
-use crate::{headers::raw::toc::*, utilities::serialize::little_endian_writer::LittleEndianWriter};
+use crate::headers::raw::toc::*;
+use endian_writer::{EndianWriter, LittleEndianWriter};
 
 pub(crate) fn write_entries_as_v0(lewriter: &mut LittleEndianWriter, entries: &[FileEntry]) {
     let mut index = 0;
@@ -49,9 +50,9 @@ pub(crate) fn write_two_as_v0(
 ) {
     unsafe {
         // First entry
-        lewriter.write_at_offset::<u64>(first_entry.hash, 0);
-        lewriter.write_at_offset::<u32>(first_entry.decompressed_size as u32, 8);
-        lewriter.write_at_offset::<u64>(
+        lewriter.write_u64_at_offset(first_entry.hash, 0);
+        lewriter.write_u32_at_offset(first_entry.decompressed_size as u32, 8);
+        lewriter.write_u64_at_offset(
             OffsetPathIndexTuple::new(
                 first_entry.decompressed_block_offset,
                 first_entry.file_path_index,
@@ -62,12 +63,12 @@ pub(crate) fn write_two_as_v0(
         );
 
         // Second entry (adjusted offset by size of one entry)
-        lewriter.write_at_offset::<u64>(second_entry.hash, NativeFileEntryV0::SIZE_BYTES as isize);
-        lewriter.write_at_offset::<u32>(
+        lewriter.write_u64_at_offset(second_entry.hash, NativeFileEntryV0::SIZE_BYTES as isize);
+        lewriter.write_u32_at_offset(
             second_entry.decompressed_size as u32,
             NativeFileEntryV0::SIZE_BYTES as isize + 8,
         );
-        lewriter.write_at_offset::<u64>(
+        lewriter.write_u64_at_offset(
             OffsetPathIndexTuple::new(
                 second_entry.decompressed_block_offset,
                 second_entry.file_path_index,
@@ -130,9 +131,9 @@ pub(crate) fn write_two_as_v1(
 ) {
     unsafe {
         // First entry
-        lewriter.write_at_offset::<u64>(first_entry.hash, 0);
-        lewriter.write_at_offset::<u64>(first_entry.decompressed_size, 8);
-        lewriter.write_at_offset::<u64>(
+        lewriter.write_u64_at_offset(first_entry.hash, 0);
+        lewriter.write_u64_at_offset(first_entry.decompressed_size, 8);
+        lewriter.write_u64_at_offset(
             OffsetPathIndexTuple::new(
                 first_entry.decompressed_block_offset,
                 first_entry.file_path_index,
@@ -143,12 +144,12 @@ pub(crate) fn write_two_as_v1(
         );
 
         // Second entry (adjusted offset by size of one entry)
-        lewriter.write_at_offset::<u64>(second_entry.hash, NativeFileEntryV1::SIZE_BYTES as isize);
-        lewriter.write_at_offset::<u64>(
+        lewriter.write_u64_at_offset(second_entry.hash, NativeFileEntryV1::SIZE_BYTES as isize);
+        lewriter.write_u64_at_offset(
             second_entry.decompressed_size,
             NativeFileEntryV1::SIZE_BYTES as isize + 8,
         );
-        lewriter.write_at_offset::<u64>(
+        lewriter.write_u64_at_offset(
             OffsetPathIndexTuple::new(
                 second_entry.decompressed_block_offset,
                 second_entry.file_path_index,

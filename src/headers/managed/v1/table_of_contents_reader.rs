@@ -1,10 +1,10 @@
+use endian_writer::{EndianReader, LittleEndianReader};
+
 use crate::{
     api::enums::compression_preference::CompressionPreference,
     headers::{enums::v1::*, managed::*, parser::*, raw::toc::*},
-    utilities::serialize::*,
 };
 use core::slice;
-use little_endian_reader::LittleEndianReader;
 use std::alloc::{Allocator, Global};
 
 impl TableOfContents {
@@ -52,7 +52,7 @@ where
         long_alloc: LongAlloc,
     ) -> Result<Self, DeserializeError> {
         let mut reader = LittleEndianReader::new(data_ptr);
-        let toc_header = NativeTocHeader::from_raw(reader.read::<u64>());
+        let toc_header = NativeTocHeader::from_raw(reader.read_u64());
 
         let toc_version = match toc_header.get_version() {
             Ok(x) => x,

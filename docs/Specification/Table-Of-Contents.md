@@ -13,8 +13,8 @@ otherwise use one of the presets.
 
 - `1XX` : [Flexible Entry Format 64 (FEF64)](#flexible-entry-format-64-fef64)
 - `000` : [Preset `0`](#preset-0)
-- `001` : [Preset `1`](#preset-1)
-- `010` : [Preset `2`](#preset-2)
+- `001` : [Preset `1`](#preset-1) [Preset0 w/o Hash]
+- `010` : [Preset `2`](#preset-2) [Preset0 w/ 64-bit file sizes]
 - `011` : [Preset `3`](#preset-3)
 
 ## Flexible Entry Format 64 (FEF64)
@@ -98,7 +98,7 @@ Format:
 
 ## Preset 1
 
-- **Summary**: 12-byte `FileEntry`. Variant of [Preset 0](#preset-0), but with no hash, reduced file count and increased block count.
+- **Summary**: 12-byte `FileEntry`. Variant of [Preset 0](#preset-0), but with no hash.
 - **Purpose**: When hashes are not needed. e.g. Read-only virtual filesystems.
 - **Limits:**
     - **Max File Count**: 256K

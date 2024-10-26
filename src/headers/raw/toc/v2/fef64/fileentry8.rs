@@ -1,5 +1,6 @@
 use super::ItemCounts;
-use crate::utilities::math::ToBitmask;
+use crate::{headers::managed::FileEntry, utilities::math::ToBitmask};
+use endian_writer::*;
 
 /// Represents a 64-bit packed FileEntry using the Flexible Entry Format (without hash).
 #[repr(C)]
@@ -58,6 +59,23 @@ impl FileEntry8 {
         FileEntry8 { data }
     }
 
+    /// Creates a new [FileEntry8] from a managed [FileEntry].
+    ///
+    /// # Arguments
+    ///
+    /// * `item_counts` - The bit counts for the fields.
+    /// * `entry` - The managed representation of the file entry.
+    #[inline]
+    pub fn from_file_entry(item_counts: ItemCounts, entry: &FileEntry) -> Self {
+        Self::new(
+            item_counts,
+            entry.decompressed_size,
+            entry.decompressed_block_offset as u64,
+            entry.file_path_index as u64,
+            entry.first_block_index as u64,
+        )
+    }
+
     /// Returns the packed data as a u64.
     pub fn to_u64(&self) -> u64 {
         self.data
@@ -83,6 +101,30 @@ impl FileEntry8 {
     /// Returns the first block index.
     pub fn first_block_index(&self, counts: &ItemCounts) -> u64 {
         self.data & counts.block_count_bits.to_bitmask()
+    }
+
+    /// Writes this file entry to the provided writer.
+    ///
+    /// # Arguments
+    ///
+    /// * `lewriter` - The writer to write to.
+    #[inline(always)]
+    pub fn to_writer(&self, lewriter: &mut LittleEndianWriter) {
+        unsafe {
+            lewriter.write_u64(self.data);
+        }
+    }
+
+    /// Reads this managed file entry from data serialized as `NativeFileEntryV0`.
+    ///
+    /// # Arguments
+    ///
+    /// * `reader` - The reader to read from.
+    #[inline(always)]
+    pub fn from_reader(&mut self, lereader: &mut LittleEndianReader) {
+        unsafe {
+            self.data = lereader.read_u64();
+        }
     }
 }
 
