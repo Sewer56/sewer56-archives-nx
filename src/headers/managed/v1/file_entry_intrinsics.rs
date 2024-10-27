@@ -1,4 +1,4 @@
-use super::file_entry::FileEntry;
+use super::super::file_entry::FileEntry;
 use crate::headers::raw::toc::*;
 use endian_writer::{EndianWriter, LittleEndianWriter};
 

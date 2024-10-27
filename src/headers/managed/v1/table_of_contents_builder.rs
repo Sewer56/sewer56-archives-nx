@@ -1,6 +1,4 @@
-use endian_writer::{EndianWriter, LittleEndianWriter};
-
-use super::super::file_entry_intrinsics::{write_entries_as_v0, write_entries_as_v1};
+use super::file_entry_intrinsics::{write_entries_as_v0, write_entries_as_v1};
 use crate::{
     api::{enums::compression_preference::CompressionPreference, traits::*},
     headers::{enums::v1::*, managed::*, parser::*, raw::toc::*},
@@ -8,6 +6,7 @@ use crate::{
         blocks::polyfills::Block, table_of_contents_builder_state::TableOfContentsBuilderState,
     },
 };
+use endian_writer::{EndianWriter, LittleEndianWriter};
 use std::alloc::Allocator;
 
 // Max values for V0 & V1 formats.
