@@ -120,8 +120,8 @@ impl FileEntry16 {
     #[inline(always)]
     pub fn to_writer(&self, lewriter: &mut LittleEndianWriter) {
         unsafe {
-            lewriter.write_u64_at_offset(self.hash.0, 0);
-            lewriter.write_u64_at_offset(self.data, 8);
+            lewriter.write_u64_at(self.hash.0, 0);
+            lewriter.write_u64_at(self.data, 8);
             lewriter.seek(16);
         }
     }
@@ -134,8 +134,8 @@ impl FileEntry16 {
     #[inline(always)]
     pub fn from_reader(&mut self, lereader: &mut LittleEndianReader) {
         unsafe {
-            self.hash = lereader.read_u64_at_offset(0).into();
-            self.data = lereader.read_u64_at_offset(8);
+            self.hash = lereader.read_u64_at(0).into();
+            self.data = lereader.read_u64_at(8);
             lereader.seek(16);
         }
     }
