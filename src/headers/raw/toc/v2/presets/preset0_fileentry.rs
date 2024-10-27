@@ -1,10 +1,8 @@
 use super::*;
-use crate::{
-    api::enums::CompressionPreference,
-    headers::{managed::*, types::xxh3sum::XXH3sum},
-};
+use crate::headers::{managed::*, types::xxh3sum::XXH3sum};
 use core::hash::Hash;
 use endian_writer::*;
+use endian_writer_derive::EndianWritable;
 #[cfg(test)]
 use fake::*;
 
@@ -13,7 +11,7 @@ use fake::*;
 ///
 /// See project documentation for more details.
 #[repr(C, packed(4))]
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default, EndianWritable)]
 pub struct NativeFileEntryP0 {
     /// [u64] Hash (XXH3) of the file described in this entry.
     pub hash: XXH3sum,
@@ -60,22 +58,6 @@ impl NativeFileEntryP0 {
         let mut tuple = self.offset_path_index_tuple;
         tuple.set_first_block_index(value);
         self.offset_path_index_tuple = tuple;
-    }
-
-    /// Write a new NativeTocBlockEntry to writer.
-    pub fn to_writer(
-        compressed_block_size: u32,
-        compression: CompressionPreference,
-        lewriter: &mut LittleEndianWriter,
-    ) {
-        let mut header = crate::headers::raw::toc::NativeV2TocBlockEntry(0);
-        header.set_compressed_block_size(compressed_block_size);
-        header.set_compression(compression);
-
-        // Convert to little endian
-        unsafe {
-            lewriter.write_u32(header.0);
-        }
     }
 }
 

@@ -1,5 +1,6 @@
 use crate::headers::managed::*;
 use core::hash::Hash;
+use endian_writer_derive::EndianWritable;
 #[cfg(test)]
 use fake::*;
 
@@ -9,7 +10,7 @@ use fake::*;
 ///
 /// See project documentation for more details.
 #[repr(C, packed(8))]
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default, EndianWritable)]
 pub struct NativeFileEntryP3NoHash {
     /// [u32] Size of the file after decompression.
     pub decompressed_size: u32,

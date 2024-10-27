@@ -1,6 +1,7 @@
 use super::*;
 use crate::headers::{managed::*, types::xxh3sum::XXH3sum};
 use core::hash::Hash;
+use endian_writer_derive::EndianWritable;
 #[cfg(test)]
 use fake::*;
 
@@ -9,7 +10,7 @@ use fake::*;
 ///
 /// See project documentation for more details.
 #[repr(C, packed(8))]
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default, EndianWritable)]
 pub struct NativeFileEntryP2 {
     /// [u64] Hash (XXH3) of the file described in this entry.
     pub hash: XXH3sum,

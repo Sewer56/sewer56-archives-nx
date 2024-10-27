@@ -1,5 +1,6 @@
 use crate::headers::managed::FileEntry;
 use bitfield::bitfield;
+use endian_writer::{EndianReadableAt, EndianWritableAt, EndianWriter, HasSize};
 
 bitfield! {
     /// A tuple consisting of:
@@ -60,6 +61,22 @@ impl CommonOffsetPathIndexTuple {
         entry.decompressed_block_offset = self.decompressed_block_offset();
         entry.file_path_index = self.file_path_index();
         entry.first_block_index = self.first_block_index();
+    }
+}
+
+impl HasSize for CommonOffsetPathIndexTuple {
+    const SIZE: usize = size_of::<CommonOffsetPathIndexTuple>();
+}
+
+impl EndianWritableAt for CommonOffsetPathIndexTuple {
+    unsafe fn write_at<W: EndianWriter>(&self, writer: &mut W, offset: isize) {
+        writer.write_u64_at(self.0, offset);
+    }
+}
+
+impl EndianReadableAt for CommonOffsetPathIndexTuple {
+    unsafe fn read_at<R: endian_writer::EndianReader>(reader: &mut R, offset: isize) -> Self {
+        CommonOffsetPathIndexTuple::from_raw(reader.read_u64_at(offset))
     }
 }
 

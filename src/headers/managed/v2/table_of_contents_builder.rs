@@ -1,12 +1,12 @@
 use crate::{
     api::{enums::compression_preference::CompressionPreference, traits::*},
-    headers::{enums::v1::*, managed::*, parser::*, raw::toc::*},
+    headers::{managed::*, parser::*, raw::toc::*},
     implementation::pack::{
         blocks::polyfills::Block, table_of_contents_builder_state::TableOfContentsBuilderState,
     },
 };
 use core::hint::unreachable_unchecked;
-use endian_writer::{EndianWriter, LittleEndianWriter};
+use endian_writer::{EndianWriter, EndianWriterExt, LittleEndianWriter};
 use nanokit::count_bits::BitsNeeded;
 use std::alloc::Allocator;
 use thiserror_no_std::Error;
@@ -342,11 +342,7 @@ unsafe fn serialize_table_of_contents_preset0<LongAlloc: Allocator + Clone>(
 
     // Serialize the entries.
     if preset_no == 0 {
-        for item in entries {
-            todo!()
-            //let entry16 = NativeFileEntryP0::to_writer(item);
-            //entry16.to_writer(&mut lewriter);
-        }
+        lewriter.write_entries_into_unroll_2::<NativeFileEntryP0, FileEntry>(entries);
     } else if preset_no == 1 {
     } else {
     }
@@ -408,40 +404,6 @@ fn write_blocks(
 ///
 /// # Arguments
 ///
-/// * `num_entries` - Number of file entries in the table.
-/// * `num_blocks` - Number of blocks in the table.
-/// * `pool_len` - Length of the string pool.
-/// * `version` - Version to serialize into.
-///
-/// # Returns
-///
-/// Size of the Table of Contents
-pub fn calculate_table_size(
-    num_entries: usize,
-    num_blocks: usize,
-    pool_len: usize,
-    version: TableOfContentsVersion,
-) -> usize {
-    const HEADER_SIZE: usize = 8;
-    let mut current_size = HEADER_SIZE;
-
-    let entry_size = match version {
-        TableOfContentsVersion::V0 => 20,
-        TableOfContentsVersion::V1 => 24,
-    };
-
-    current_size += num_entries * entry_size;
-    current_size += num_blocks * size_of::<NativeV1TocBlockEntry>();
-    current_size += pool_len;
-
-    current_size
-}
-
-/// Calculates the size of the table after serialization to binary.
-/// This is used for pre-allocating space needed for the table.
-///
-/// # Arguments
-///
 /// * `format` - The format the table will be serialized in.
 /// * `string_pool_len` - Length of the serialized string pool.
 /// * `block_count` - Number of blocks written to the file.
@@ -464,13 +426,13 @@ fn calculate_toc_size(
     }
 
     let entry_size = match format {
-        ToCFormat::Preset3NoHash => 8,
-        ToCFormat::FEF64NoHash => 8,
-        ToCFormat::Preset1NoHash => 12,
-        ToCFormat::Preset3 => 16,
-        ToCFormat::FEF64 => 16,
-        ToCFormat::Preset0 => 20,
-        ToCFormat::Preset2 => 24,
+        ToCFormat::Preset3NoHash => size_of::<NativeFileEntryP3NoHash>() as u32,
+        ToCFormat::FEF64NoHash => size_of::<FileEntry8>() as u32,
+        ToCFormat::Preset1NoHash => size_of::<NativeFileEntryP1>() as u32,
+        ToCFormat::Preset3 => size_of::<NativeFileEntryP3>() as u32,
+        ToCFormat::FEF64 => size_of::<FileEntry16>() as u32,
+        ToCFormat::Preset0 => size_of::<NativeFileEntryP0>() as u32,
+        ToCFormat::Preset2 => size_of::<NativeFileEntryP2>() as u32,
         ToCFormat::Error => 0,
     };
 
