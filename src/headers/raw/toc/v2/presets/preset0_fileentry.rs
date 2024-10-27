@@ -26,25 +26,6 @@ pub struct NativeFileEntryP0 {
 
 #[coverage(off)] // Impl without coverage
 impl NativeFileEntryP0 {
-    /// Creates a new [NativeFileEntryP0] by packing the provided fields, including the hash.
-    ///
-    /// # Arguments
-    ///
-    /// * `item_counts` - The bit counts for the fields.
-    /// * `entry` - The managed representation of the file entry.
-    #[inline]
-    pub fn from_file_entry(entry: &FileEntry) -> Self {
-        NativeFileEntryP0 {
-            hash: entry.hash.into(),
-            decompressed_size: entry.decompressed_size as u32,
-            offset_path_index_tuple: CommonOffsetPathIndexTuple::new(
-                entry.decompressed_block_offset,
-                entry.file_path_index,
-                entry.first_block_index,
-            ),
-        }
-    }
-
     /// `u24` Offset of the file inside the decompressed block.
     pub fn decompressed_block_offset(&self) -> u32 {
         { self.offset_path_index_tuple }.decompressed_block_offset()
