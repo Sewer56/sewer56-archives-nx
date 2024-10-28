@@ -223,33 +223,52 @@ pub unsafe fn serialize_table_of_contents<LongAlloc: Allocator + Clone>(
             data_ptr,
             false,
         )),
-        ToCFormat::Preset0 => Ok(serialize_table_of_contents_preset0(
+        ToCFormat::Preset0 => Ok(serialize_table_of_contents_preset(
             block_compressions,
             blocks,
             entries,
             info,
             data_ptr,
             0,
+            false,
         )),
-        ToCFormat::Preset1NoHash => Ok(serialize_table_of_contents_preset0(
+        ToCFormat::Preset1NoHash => Ok(serialize_table_of_contents_preset(
             block_compressions,
             blocks,
             entries,
             info,
             data_ptr,
             1,
+            false,
         )),
-        ToCFormat::Preset2 => Ok(serialize_table_of_contents_preset0(
+        ToCFormat::Preset2 => Ok(serialize_table_of_contents_preset(
             block_compressions,
             blocks,
             entries,
             info,
             data_ptr,
             2,
+            false,
         )),
-        ToCFormat::Preset3 => todo!(),
-        ToCFormat::Preset3NoHash => todo!(),
-        ToCFormat::Error => unreachable_unchecked(),
+        ToCFormat::Preset3 => Ok(serialize_table_of_contents_preset(
+            block_compressions,
+            blocks,
+            entries,
+            info,
+            data_ptr,
+            3,
+            true,
+        )),
+        ToCFormat::Preset3NoHash => Ok(serialize_table_of_contents_preset(
+            block_compressions,
+            blocks,
+            entries,
+            info,
+            data_ptr,
+            3,
+            false,
+        )),
+        ToCFormat::Error => Err(SerializeError::UnsupportedTocFormat),
     }
 }
 
@@ -321,13 +340,14 @@ unsafe fn serialize_table_of_contents_fef64<LongAlloc: Allocator + Clone>(
     lewriter.ptr as usize - data_ptr as usize
 }
 
-unsafe fn serialize_table_of_contents_preset0<LongAlloc: Allocator + Clone>(
+unsafe fn serialize_table_of_contents_preset<LongAlloc: Allocator + Clone>(
     block_compressions: &[CompressionPreference],
     blocks: &[BlockSize],
     entries: &[FileEntry],
     info: &BuilderInfo<LongAlloc>,
     data_ptr: *mut u8,
     preset_no: u8,
+    include_hash: bool,
 ) -> usize {
     let mut lewriter = LittleEndianWriter::new(data_ptr);
 
@@ -344,7 +364,18 @@ unsafe fn serialize_table_of_contents_preset0<LongAlloc: Allocator + Clone>(
     if preset_no == 0 {
         lewriter.write_entries_into_unroll_2::<NativeFileEntryP0, FileEntry>(entries);
     } else if preset_no == 1 {
+        lewriter.write_entries_into_unroll_2::<NativeFileEntryP1, FileEntry>(entries);
+    } else if preset_no == 2 {
+        lewriter.write_entries_into_unroll_2::<NativeFileEntryP2, FileEntry>(entries);
+    } else if preset_no == 3 {
+        if include_hash {
+            lewriter.write_entries_into_unroll_2::<NativeFileEntryP3, FileEntry>(entries);
+        } else {
+            lewriter.write_entries_into_unroll_2::<NativeFileEntryP3NoHash, FileEntry>(entries);
+        }
     } else {
+        // Unreachable by definition, since the preset_no is restricted by single caller to function.
+        unreachable_unchecked();
     }
 
     // Now write the blocks after the headers.
@@ -359,7 +390,10 @@ unsafe fn serialize_table_of_contents_preset0<LongAlloc: Allocator + Clone>(
 
 /// Errors that can occur when writing the binary table of contents.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
-pub enum SerializeError {}
+pub enum SerializeError {
+    /// The format of the table of contents used is not supported.
+    UnsupportedTocFormat,
+}
 
 /// Errors that can occur when initializing the creation of Table of Contents.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
@@ -441,457 +475,3 @@ fn calculate_toc_size(
     toc_size += string_pool_len;
     toc_size
 }
-
-/*
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::api::packing::packing_settings::MAX_BLOCK_SIZE;
-    use crate::utilities::tests::packer_file_for_testing::PackerFileForTesting;
-    use rstest::rstest;
-
-    #[rstest]
-    #[case(TableOfContentsVersion::V0)]
-    #[case(TableOfContentsVersion::V1)]
-    fn can_serialize_and_deserialize(#[case] version: TableOfContentsVersion) {
-        // Note: We're not testing the actual file/chunk creation logic, this data can be whatever.
-        let files = [
-            PackerFileForTesting::new_rc("dvdroot/textures/s01.txd", 113763968),
-            PackerFileForTesting::new_rc("dvdroot/textures/s12.txd", 62939496),
-            PackerFileForTesting::new_rc("ModConfig.json", 768),
-            PackerFileForTesting::new_rc("Readme.md", 3072),
-            PackerFileForTesting::new_rc("Changelog.md", 2048),
-        ];
-
-        // Generate dummy data for archived file.
-        let entries: Vec<FileEntry> = vec![
-            FileEntry::new(0xBBBBBBBBBBBBBBBB, 113763968, 0, 0, 0),
-            FileEntry::new(0xCCCCCCCCCCCCCCCC, 62939496, 0, 1, 2),
-            FileEntry::new(0xDDDDDDDDDDDDDDDD, 768, 0, 2, 4),
-            FileEntry::new(0xEEEEEEEEEEEEEEEE, 3072, 768, 3, 4),
-            FileEntry::new(0xFFFFFFFFFFFFFFFF, 2048, 3840, 4, 4),
-        ];
-
-        // Generate blocks with pre-calculated values.
-        let blocks: Vec<BlockSize> = vec![
-            BlockSize::new(113763968),
-            BlockSize::new(62939496),
-            BlockSize::new(768),
-            BlockSize::new(3072 + 2048),
-        ];
-
-        let block_compressions: Vec<CompressionPreference> = vec![
-            CompressionPreference::Copy,
-            CompressionPreference::ZStandard,
-            CompressionPreference::Lz4,
-            CompressionPreference::Copy,
-        ];
-
-        // Generate TOC.
-        let mut toc_builder =
-            unsafe { TableOfContentsBuilderState::new(blocks.len(), files.len()) };
-
-        // Emulate a write to entries by the packing operation.
-        for (x, entry) in entries.iter().enumerate() {
-            toc_builder.set_entry(x, *entry).unwrap();
-        }
-
-        for (x, block) in blocks.iter().enumerate() {
-            toc_builder.set_block(x, *block).unwrap();
-        }
-
-        for (x, compression) in block_compressions.iter().enumerate() {
-            toc_builder.set_block_compression(x, *compression).unwrap();
-        }
-
-        // Serialize
-        let data_size = calculate_table_size(
-            files.len(),
-            blocks.len(),
-            0, // Assuming string pool size is 0 for simplicity
-            version,
-        );
-        let mut data = vec![0u8; data_size];
-
-        unsafe {
-            let bytes_written = serialize_table_of_contents_from_state(
-                &toc_builder,
-                version,
-                data.as_mut_ptr(),
-                &[], // Empty string pool for simplicity
-            )
-            .unwrap();
-            assert_eq!(bytes_written, data_size);
-
-            // Deserialize
-            let new_table = TableOfContents::deserialize_v1xx(data.as_ptr()).unwrap();
-
-            // Compare deserialized data with original
-            assert_eq!(new_table.entries.len(), entries.len());
-            assert_eq!(new_table.blocks.len(), blocks.len());
-
-            // Check each file entry
-            for (x, original) in entries.iter().enumerate() {
-                let deserialized = &new_table.entries[x];
-                assert_file_entries_equal(original, deserialized, x);
-            }
-
-            // Check each block
-            for (original, deserialized) in blocks.iter().zip(new_table.blocks.iter()) {
-                assert_eq!(original.compressed_size, deserialized.compressed_size);
-            }
-
-            // Check block compressions
-            for (original, deserialized) in block_compressions
-                .iter()
-                .zip(new_table.block_compressions.iter())
-            {
-                assert_eq!(original, deserialized);
-            }
-        }
-    }
-
-    #[rstest]
-    #[case(TableOfContentsVersion::V0)]
-    #[case(TableOfContentsVersion::V1)]
-    #[cfg_attr(all(miri, not(feature = "miri_extra_checks")), ignore)]
-    fn can_serialize_maximum_file_count_v0_v1(#[case] version: TableOfContentsVersion) {
-        // Generate maximum number of dummy file entries
-        let entries: Vec<FileEntry> = generate_file_entries(MAX_FILE_COUNT_V0V1);
-
-        // Generate TOC
-        let mut toc_builder = unsafe { TableOfContentsBuilderState::new(1, entries.len()) };
-
-        // Populate the TOC builder
-        for (x, entry) in entries.iter().enumerate() {
-            toc_builder.set_entry(x, *entry).unwrap();
-        }
-
-        // Add a single dummy block
-        toc_builder
-            .set_block(0, BlockSize::new(MAX_BLOCK_SIZE))
-            .unwrap();
-        toc_builder
-            .set_block_compression(0, CompressionPreference::Copy)
-            .unwrap();
-
-        // Serialize
-        let data_size = calculate_table_size(
-            entries.len(),
-            1, // Single block
-            0, // Assuming string pool size is 0 for simplicity
-            version,
-        );
-        let mut data = vec![0u8; data_size];
-
-        unsafe {
-            let result = serialize_table_of_contents_from_state(
-                &toc_builder,
-                version,
-                data.as_mut_ptr(),
-                &[], // Empty string pool for simplicity
-            );
-
-            assert!(
-                result.is_ok(),
-                "Serialization failed for maximum file count"
-            );
-            let bytes_written = result.unwrap();
-            assert_eq!(
-                bytes_written, data_size,
-                "Incorrect number of bytes written"
-            );
-
-            // Deserialize to verify
-            let new_table = TableOfContents::deserialize_v1xx(data.as_ptr()).unwrap();
-
-            // Verify deserialized data
-            assert_eq!(new_table.entries.len(), MAX_FILE_COUNT_V0V1);
-
-            // Check each file entry
-            for (x, original) in entries.iter().enumerate() {
-                let deserialized = &new_table.entries[x];
-                assert_file_entries_equal(original, deserialized, x);
-            }
-        }
-    }
-
-    #[rstest]
-    #[case(TableOfContentsVersion::V0)]
-    #[case(TableOfContentsVersion::V1)]
-    #[cfg_attr(all(miri, not(feature = "miri_extra_checks")), ignore)]
-    fn throws_error_when_file_count_exceeds_maximum(#[case] version: TableOfContentsVersion) {
-        // Generate one more than the maximum number of dummy file entries
-        let entries: Vec<FileEntry> = generate_file_entries(MAX_FILE_COUNT_V0V1 + 1);
-
-        // Generate TOC
-        let mut toc_builder = unsafe { TableOfContentsBuilderState::new(1, entries.len()) };
-
-        // Populate the TOC builder
-        for (x, entry) in entries.iter().enumerate() {
-            toc_builder.set_entry(x, *entry).unwrap();
-        }
-
-        // Add a single dummy block
-        toc_builder
-            .set_block(0, BlockSize::new(MAX_BLOCK_SIZE))
-            .unwrap();
-        toc_builder
-            .set_block_compression(0, CompressionPreference::Copy)
-            .unwrap();
-
-        // Attempt to serialize
-        let data_size = calculate_table_size(entries.len(), 1, 0, version);
-        let mut data = vec![0u8; data_size];
-
-        unsafe {
-            let result = serialize_table_of_contents_from_state(
-                &toc_builder,
-                version,
-                data.as_mut_ptr(),
-                &[], // Empty string pool for simplicity
-            );
-
-            // Assert that the result is an error
-            assert!(
-                result.is_err(),
-                "Expected SerializeError, but serialization succeeded"
-            );
-
-            // Check that it's the correct error type
-            match result {
-                Err(SerializeError::TooManyFiles(count)) => {
-                    assert_eq!(
-                        count,
-                        MAX_FILE_COUNT_V0V1 + 1,
-                        "Incorrect file count in error"
-                    );
-                }
-                _ => panic!(
-                    "Expected SerializeError::TooManyFiles, but got a different error or success"
-                ),
-            }
-        }
-    }
-
-    #[rstest]
-    #[case(TableOfContentsVersion::V0)]
-    #[case(TableOfContentsVersion::V1)]
-    #[cfg_attr(all(miri, not(feature = "miri_extra_checks")), ignore)]
-    fn can_serialize_maximum_block_count(#[case] version: TableOfContentsVersion) {
-        let blocks = generate_blocks(MAX_BLOCK_COUNT_V0V1);
-        let block_compressions = generate_block_compressions(MAX_BLOCK_COUNT_V0V1);
-
-        // Generate a single dummy file entry
-        let entries = [FileEntry::new(0, 1024, 0, 0, 0)];
-
-        // Generate TOC
-        let mut toc_builder =
-            unsafe { TableOfContentsBuilderState::new(blocks.len(), entries.len()) };
-
-        // Populate the TOC builder
-        toc_builder.set_entry(0, entries[0]).unwrap();
-
-        for (x, block) in blocks.iter().enumerate() {
-            toc_builder.set_block(x, *block).unwrap();
-        }
-
-        for (x, compression) in block_compressions.iter().enumerate() {
-            toc_builder.set_block_compression(x, *compression).unwrap();
-        }
-
-        // Serialize
-        let data_size = calculate_table_size(
-            entries.len(),
-            blocks.len(),
-            0, // Assuming string pool size is 0 for simplicity
-            version,
-        );
-        let mut data = vec![0u8; data_size];
-
-        unsafe {
-            let result = serialize_table_of_contents_from_state(
-                &toc_builder,
-                version,
-                data.as_mut_ptr(),
-                &[], // Empty string pool for simplicity
-            );
-
-            assert!(
-                result.is_ok(),
-                "Serialization failed for maximum block count"
-            );
-            let bytes_written = result.unwrap();
-            assert_eq!(
-                bytes_written, data_size,
-                "Incorrect number of bytes written"
-            );
-
-            // Deserialize to verify
-            let new_table = TableOfContents::deserialize_v1xx(data.as_ptr()).unwrap();
-
-            // Verify deserialized data
-            assert_eq!(new_table.blocks.len(), MAX_BLOCK_COUNT_V0V1);
-            assert_eq!(new_table.block_compressions.len(), MAX_BLOCK_COUNT_V0V1);
-
-            // Verify all blocks
-            for (x, original) in blocks.iter().enumerate() {
-                let deserialized = &new_table.blocks[x];
-                assert_eq!(
-                    original.compressed_size, deserialized.compressed_size,
-                    "Mismatch in compressed_size for block {}",
-                    x
-                );
-                assert!(
-                    deserialized.compressed_size <= MAX_BLOCK_SIZE,
-                    "Block size exceeds MAX_BLOCK_SIZE for block {}",
-                    x
-                );
-            }
-
-            // Verify all block compressions
-            for (x, original) in block_compressions.iter().enumerate() {
-                let deserialized = &new_table.block_compressions[x];
-                assert_eq!(
-                    original, deserialized,
-                    "Mismatch in compression preference for block {}",
-                    x
-                );
-            }
-        }
-    }
-
-    #[rstest]
-    #[case(TableOfContentsVersion::V0)]
-    #[case(TableOfContentsVersion::V1)]
-    #[cfg_attr(all(miri, not(feature = "miri_extra_checks")), ignore)]
-    fn throws_error_when_block_count_exceeds_maximum(#[case] version: TableOfContentsVersion) {
-        let blocks = generate_blocks(MAX_BLOCK_COUNT_V0V1 + 1);
-        let block_compressions = generate_block_compressions(MAX_BLOCK_COUNT_V0V1 + 1);
-
-        // Generate a single dummy file entry
-        let entries = [FileEntry::new(0, 1024, 0, 0, 0)];
-
-        // Generate TOC
-        let mut toc_builder =
-            unsafe { TableOfContentsBuilderState::new(blocks.len(), entries.len()) };
-
-        // Populate the TOC builder
-        toc_builder.set_entry(0, entries[0]).unwrap();
-
-        for (x, block) in blocks.iter().enumerate() {
-            toc_builder.set_block(x, *block).unwrap();
-        }
-
-        for (x, compression) in block_compressions.iter().enumerate() {
-            toc_builder.set_block_compression(x, *compression).unwrap();
-        }
-
-        // Attempt to serialize
-        let data_size = calculate_table_size(
-            entries.len(),
-            blocks.len(),
-            0, // Assuming string pool size is 0 for simplicity
-            version,
-        );
-        let mut data = vec![0u8; data_size];
-
-        unsafe {
-            let result = serialize_table_of_contents_from_state(
-                &toc_builder,
-                version,
-                data.as_mut_ptr(),
-                &[], // Empty string pool for simplicity
-            );
-
-            // Assert that the result is an error
-            assert!(
-                result.is_err(),
-                "Expected SerializeError, but serialization succeeded"
-            );
-
-            // Check that it's the correct error type
-            match result {
-                Err(SerializeError::TooManyBlocks(count)) => {
-                    assert_eq!(
-                        count,
-                        MAX_BLOCK_COUNT_V0V1 + 1,
-                        "Incorrect block count in error"
-                    );
-                }
-                _ => panic!(
-                    "Expected SerializeError::TooManyBlocks, but got a different error or success"
-                ),
-            }
-        }
-    }
-
-    fn generate_file_entries(count: usize) -> Vec<FileEntry> {
-        (0..count)
-            .map(|x| {
-                FileEntry::new(
-                    // Using index as hash for simplicity
-                    x as u64,
-                    // All files are up to as big as block for simplicity
-                    ((x * 1024) % MAX_BLOCK_SIZE as usize) as u64,
-                    // Clamped offset calculation
-                    ((x * 1024) % MAX_BLOCK_SIZE as usize) as u32,
-                    x as u32,
-                    // All files in the first block
-                    0,
-                )
-            })
-            .collect()
-    }
-
-    fn assert_file_entries_equal(original: &FileEntry, deserialized: &FileEntry, index: usize) {
-        assert_eq!(
-            original.hash, deserialized.hash,
-            "Mismatch in hash for entry {}",
-            index
-        );
-        assert_eq!(
-            original.decompressed_size, deserialized.decompressed_size,
-            "Mismatch in decompressed_size for entry {}",
-            index
-        );
-        assert_eq!(
-            original.decompressed_block_offset, deserialized.decompressed_block_offset,
-            "Mismatch in decompressed_block_offset for entry {}",
-            index
-        );
-        assert_eq!(
-            original.file_path_index, deserialized.file_path_index,
-            "Mismatch in file_path_index for entry {}",
-            index
-        );
-        assert_eq!(
-            original.first_block_index, deserialized.first_block_index,
-            "Mismatch in first_block_index for entry {}",
-            index
-        );
-    }
-
-    fn generate_blocks(count: usize) -> Vec<BlockSize> {
-        (0..count)
-            .map(|x| {
-                let size = ((x * 1024) % MAX_BLOCK_SIZE as usize) as u64; // Vary block size, 1KB to 1MB
-                BlockSize::new((size.min(MAX_BLOCK_SIZE as u64)) as u32)
-            })
-            .collect()
-    }
-
-    // The generate_block_compressions function remains unchanged
-    fn generate_block_compressions(count: usize) -> Vec<CompressionPreference> {
-        (0..count)
-            .map(|x| {
-                if x % 2 == 0 {
-                    CompressionPreference::ZStandard
-                } else {
-                    CompressionPreference::Lz4
-                }
-            })
-            .collect()
-    }
-}
- */

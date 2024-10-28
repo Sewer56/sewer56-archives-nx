@@ -1,5 +1,7 @@
 use bitfield::bitfield;
 
+use super::can_fit_within_42_bits;
+
 bitfield! {
     /// Represents the TOC Header structure.
     ///
@@ -132,6 +134,16 @@ impl Fef64TocHeader {
     /// Gets the `PaddingOrItemCounts` field.
     pub fn get_padding_or_item_counts(&self) -> u64 {
         self.padding_or_item_counts()
+    }
+
+    /// Returns true if the header stores `PaddingOrItemCounts` in an extended
+    /// 8 byte header.
+    pub fn has_extended_header(&self) -> bool {
+        can_fit_within_42_bits(
+            self.string_pool_size_bits(),
+            self.block_count_bits(),
+            self.file_count_bits(),
+        )
     }
 }
 

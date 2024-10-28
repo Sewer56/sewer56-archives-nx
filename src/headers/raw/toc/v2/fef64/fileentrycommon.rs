@@ -1,3 +1,5 @@
+use super::Fef64TocHeader;
+
 /// Structure that holds the bit counts used for fetching data from file entries.
 /// This is used for easy reading of [FileEntry8] and [FileEntry16] structs.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -33,5 +35,15 @@ impl ItemCounts {
         self.decompressed_block_offset_bits as u32
             + self.file_count_bits as u32
             + self.block_count_bits as u32
+    }
+}
+
+impl From<Fef64TocHeader> for ItemCounts {
+    fn from(header: Fef64TocHeader) -> Self {
+        ItemCounts::new(
+            header.get_block_count_bits(),
+            header.get_file_count_bits(),
+            header.get_decompressed_block_offset_bits(),
+        )
     }
 }
