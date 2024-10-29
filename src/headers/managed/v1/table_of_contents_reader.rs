@@ -51,6 +51,7 @@ where
         short_alloc: ShortAlloc,
         long_alloc: LongAlloc,
     ) -> Result<Self, DeserializeError> {
+        // TODO: 'harden' this code against out of bounds reads.
         let mut reader = LittleEndianReader::new(data_ptr);
         let toc_header = NativeTocHeader::from_raw(reader.read_u64());
 

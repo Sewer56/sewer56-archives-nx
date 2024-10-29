@@ -317,15 +317,16 @@ unsafe fn serialize_table_of_contents_fef64<LongAlloc: Allocator + Clone>(
     }
 
     // Serialize the entries.
-    let item_counts = ItemCounts::new(string_pool_size_bits, file_count_bits, block_count_bits);
+    let fields_bits =
+        FileEntryFieldsBits::new(string_pool_size_bits, file_count_bits, block_count_bits);
     if include_hash {
         for item in entries {
-            let entry16 = FileEntry16::from_file_entry(item_counts, item);
+            let entry16 = FileEntry16::from_file_entry(fields_bits, item);
             entry16.to_writer(&mut lewriter);
         }
     } else {
         for item in entries {
-            let entry8 = FileEntry8::from_file_entry(item_counts, item);
+            let entry8 = FileEntry8::from_file_entry(fields_bits, item);
             entry8.to_writer(&mut lewriter);
         }
     }
@@ -374,7 +375,7 @@ unsafe fn serialize_table_of_contents_preset<LongAlloc: Allocator + Clone>(
             lewriter.write_entries_into_unroll_2::<NativeFileEntryP3NoHash, FileEntry>(entries);
         }
     } else {
-        // Unreachable by definition, since the preset_no is restricted by single caller to function.
+        // Unreachable by definition, since the preset_no is restricted to 2 bits.
         unreachable_unchecked();
     }
 

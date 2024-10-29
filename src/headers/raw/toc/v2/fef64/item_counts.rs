@@ -52,6 +52,35 @@ pub fn pack_item_counts(
     *packed = file_count_part | block_count_part | string_pool_size_part;
 }
 
+/// Static method to unpack counts from a [u64].
+///
+/// # Arguments
+///
+/// * `packed` - The packed [u64] containing the item counts.
+/// * `string_pool_size_bits` - Bits allocated for String Pool Size.
+/// * `block_count_bits` - Bits allocated for Block Count.
+/// * `file_count_bits` - Bits allocated for File Count.
+///
+/// # Returns
+///
+/// A tuple containing `string_pool_size`, `block_count`, and `file_count`.
+pub fn unpack_item_counts(
+    packed: u64,
+    string_pool_size_bits: u8,
+    block_count_bits: u8,
+    file_count_bits: u8,
+) -> (u64, u64, u64) {
+    let file_count_mask = (1u64 << file_count_bits) - 1;
+    let block_count_mask = (1u64 << block_count_bits) - 1;
+    let string_pool_size_mask = (1u64 << string_pool_size_bits) - 1;
+
+    let file_count = packed & file_count_mask;
+    let block_count = (packed >> file_count_bits) & block_count_mask;
+    let string_pool_size = (packed >> (file_count_bits + block_count_bits)) & string_pool_size_mask;
+
+    (string_pool_size, block_count, file_count)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -161,5 +190,94 @@ mod tests {
         // string_pool_size: 0xFF << 16
         let expected = 0x23 | (0x00 << 8) | (0xFF << 16);
         assert_eq!(packed, expected);
+    }
+
+    #[test]
+    fn can_unpack_item_counts_within_bounds() {
+        let string_pool_size_bits = 4;
+        let block_count_bits = 4;
+        let file_count_bits = 4;
+
+        let packed = 0xACF; // Packed value for example in pack test
+
+        let (string_pool_size, block_count, file_count) = unpack_item_counts(
+            packed,
+            string_pool_size_bits,
+            block_count_bits,
+            file_count_bits,
+        );
+
+        assert_eq!(string_pool_size, 0b1010); // 10
+        assert_eq!(block_count, 0b1100); // 12
+        assert_eq!(file_count, 0b1111); // 15
+    }
+
+    #[test]
+    fn can_unpack_item_counts_with_max_values() {
+        let string_pool_size_bits = 10;
+        let block_count_bits = 15;
+        let file_count_bits = 17;
+
+        let string_pool_size = 1023; // Max value for 10 bits
+        let block_count = 32767; // Max value for 15 bits
+        let file_count = 131071; // Max value for 17 bits
+
+        let mut packed = 0u64;
+        pack_item_counts(
+            string_pool_size,
+            string_pool_size_bits,
+            block_count,
+            block_count_bits,
+            file_count,
+            file_count_bits,
+            &mut packed,
+        );
+
+        let (unpacked_string_pool_size, unpacked_block_count, unpacked_file_count) =
+            unpack_item_counts(
+                packed,
+                string_pool_size_bits,
+                block_count_bits,
+                file_count_bits,
+            );
+
+        assert_eq!(unpacked_string_pool_size, string_pool_size);
+        assert_eq!(unpacked_block_count, block_count);
+        assert_eq!(unpacked_file_count, file_count);
+    }
+
+    #[test]
+    fn unpack_item_counts_with_overflow_values() {
+        let string_pool_size_bits = 8;
+        let block_count_bits = 8;
+        let file_count_bits = 8;
+
+        let string_pool_size = 0x1FF; // 9 bits, should be masked to 8 bits => 0xFF
+        let block_count = 0x200; // 9 bits, should be masked to 8 bits => 0x00
+        let file_count = 0x123; // 9 bits, should be masked to 8 bits => 0x23
+
+        let mut packed = 0u64;
+
+        pack_item_counts(
+            string_pool_size,
+            string_pool_size_bits,
+            block_count,
+            block_count_bits,
+            file_count,
+            file_count_bits,
+            &mut packed,
+        );
+
+        let (unpacked_string_pool_size, unpacked_block_count, unpacked_file_count) =
+            unpack_item_counts(
+                packed,
+                string_pool_size_bits,
+                block_count_bits,
+                file_count_bits,
+            );
+
+        assert_eq!(unpacked_string_pool_size, 0xFF);
+        assert_eq!(unpacked_block_count, 0x00);
+        assert_eq!(unpacked_file_count, 0x23);
     }
 }

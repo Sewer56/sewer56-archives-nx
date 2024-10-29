@@ -54,7 +54,6 @@ where
         }
     }
 
-    // TODO: Add 'V2' format.
     let version = if largest_file_size > u32::MAX as u64 {
         TableOfContentsVersion::V1
     } else {

@@ -2,9 +2,9 @@ use endian_writer::{EndianReader, EndianReaderExt, LittleEndianReader};
 
 use crate::{
     api::enums::compression_preference::CompressionPreference,
-    headers::{enums::v1::*, managed::*, parser::*, raw::toc::*},
+    headers::{managed::*, parser::*, raw::toc::*},
 };
-use core::slice;
+use core::{hint::unreachable_unchecked, slice};
 use std::alloc::{Allocator, Global};
 
 impl TableOfContents {
@@ -53,21 +53,26 @@ where
     ) -> Result<Self, DeserializeError> {
         let mut reader = LittleEndianReader::new(data_ptr);
 
-        // The first bit in all header formats is the FEF flag.
-        // The next two bits are the preset, and in Preset3 specifically,
-        // the next bit is the hash flag. Therefore we can use Preset3 header to
-        // read all of the necessary information here.
+        // The first bit in all V2 header formats is the FEF flag.
         let toc_header = Preset3TocHeader::from_raw(reader.read_u64());
-        let preset = toc_header.get_preset();
-        let has_hash = toc_header.has_hash();
 
         if toc_header.get_is_flexible_format() {
             let toc_header = Fef64TocHeader::from_raw(toc_header.0);
-            let is_extended = toc_header.has_extended_header();
-            if is_extended {}
-        } else if preset == 0 || preset == 1 || preset == 2 {
+            return deserialize_v2xx_fef64_entries(
+                &mut reader,
+                toc_header,
+                short_alloc,
+                long_alloc,
+            );
+        }
+
+        // The next two bits are the preset (in all presets), and in Preset3 specifically,
+        // the next bit is the hash flag. Therefore we can use Preset3 header to
+        // read all of the necessary information here.
+        let preset = toc_header.get_preset();
+        if preset == 0 || preset == 1 || preset == 2 {
             let toc_header = Preset0TocHeader::from_raw(toc_header.0);
-            return deserialize_v2xx_preset_entries(
+            deserialize_v2xx_preset_entries(
                 &mut reader,
                 toc_header.string_pool_size(),
                 toc_header.block_count(),
@@ -76,74 +81,23 @@ where
                 true,
                 short_alloc,
                 long_alloc,
-            );
+            )
         } else if preset == 3 {
             let toc_header = Preset3TocHeader::from_raw(toc_header.0);
-            return deserialize_v2xx_preset_entries(
+            deserialize_v2xx_preset_entries(
                 &mut reader,
                 toc_header.string_pool_size(),
                 toc_header.block_count() as u32,
                 toc_header.file_count() as u32,
                 preset,
-                has_hash,
+                toc_header.has_hash(),
                 short_alloc,
                 long_alloc,
-            );
+            )
+        } else {
+            // Unreachable by definition, since the preset_no is restricted to 2 bits.
+            unreachable_unchecked()
         }
-
-        todo!();
-        /*
-        let toc_version = match toc_header.get_version() {
-            Ok(x) => x,
-            Err(_) => return Err(DeserializeError::UnsupportedTocVersion),
-        };
-
-        // Init the vec and resize it to the correct length.
-        let mut entries: Box<[FileEntry], LongAlloc> =
-            Box::new_uninit_slice_in(toc_header.file_count() as usize, long_alloc.clone())
-                .assume_init();
-        let mut blocks: Box<[BlockSize], LongAlloc> =
-            Box::new_uninit_slice_in(toc_header.block_count() as usize, long_alloc.clone())
-                .assume_init();
-        let mut block_compressions: Box<[CompressionPreference], LongAlloc> =
-            Box::new_uninit_slice_in(toc_header.block_count() as usize, long_alloc.clone())
-                .assume_init();
-
-        // Read all of the ToC entries.
-        // Perf: Nothing gained here from unrolling.
-        if !entries.is_empty() {
-            match toc_version {
-                TableOfContentsVersion::V0 => {
-                    for entry in &mut entries {
-                        entry.from_reader_v0(&mut reader);
-                    }
-                }
-                TableOfContentsVersion::V1 => {
-                    for entry in &mut entries {
-                        entry.from_reader_v1(&mut reader);
-                    }
-                }
-            }
-        }
-
-        read_blocks_unrolled(&mut blocks, &mut block_compressions, &mut reader);
-
-        let pool = StringPool::unpack_v0_with_allocators(
-            slice::from_raw_parts(reader.ptr, toc_header.string_pool_size() as usize),
-            toc_header.file_count() as usize,
-            short_alloc.clone(),
-            long_alloc.clone(),
-            true,
-        )
-        .map_err(DeserializeError::StringPoolUnpackError)?;
-
-        Ok(TableOfContents {
-            block_compressions,
-            blocks,
-            entries,
-            pool,
-        })
-        */
     }
 }
 
@@ -169,7 +123,8 @@ where
 /// # Returns
 ///
 /// Result containing the deserialized table of contents or a [`DeserializeError`].
-pub unsafe fn deserialize_v2xx_preset_entries<ShortAlloc, LongAlloc>(
+#[allow(clippy::too_many_arguments)]
+unsafe fn deserialize_v2xx_preset_entries<ShortAlloc, LongAlloc>(
     reader: &mut LittleEndianReader,
     pool_size: u32,
     block_count: u32,
@@ -202,13 +157,13 @@ where
     }
 
     read_stuff_after_entries_and_return_toc(
-        block_count,
-        long_alloc,
         reader,
+        entries,
+        block_count,
         pool_size,
         file_count,
+        long_alloc,
         short_alloc,
-        entries,
     )
 }
 
@@ -221,24 +176,17 @@ where
 ///
 /// # Arguments
 ///
-/// * `reader` - Allows for reading table of contents.
-/// * `pool_size` - Size of the compressed string pool (bytes).
-/// * `block_count` - Number of blocks in the table of contents.
-/// * `file_count` - Number of files in the table of contents.
-/// * `preset` - Preset number.
-/// * `has_hash` - Whether the preset variant of table of contents has a hash.
-///                [Applies only to variants where hash is optional]
+/// * `reader` - Allows for reading table of contents. Should be seeked just past the 8 byte header.
+/// * `toc_header` - 8 byte table of contents header for flexible format.
 /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
 /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
 ///
 /// # Returns
 ///
 /// Result containing the deserialized table of contents or a [`DeserializeError`].
-pub unsafe fn deserialize_v2xx_fef64_entries<ShortAlloc, LongAlloc>(
+unsafe fn deserialize_v2xx_fef64_entries<ShortAlloc, LongAlloc>(
     reader: &mut LittleEndianReader,
-    pool_size: u32,
-    block_count: u32,
-    file_count: u32,
+    toc_header: Fef64TocHeader,
     short_alloc: ShortAlloc,
     long_alloc: LongAlloc,
 ) -> Result<TableOfContents<ShortAlloc, LongAlloc>, DeserializeError>
@@ -246,29 +194,58 @@ where
     ShortAlloc: Allocator + Clone,
     LongAlloc: Allocator + Clone,
 {
+    let is_extended = toc_header.has_extended_header();
+    let fields_bytes: FileEntryFieldsBits = toc_header.into();
+    let counts_raw_bytes = if is_extended {
+        toc_header.padding_or_item_counts()
+    } else {
+        reader.read_u64()
+    };
+    let (pool_size, block_count, file_count) = unpack_item_counts(
+        counts_raw_bytes,
+        toc_header.string_pool_size_bits(),
+        toc_header.block_count_bits(),
+        toc_header.file_count_bits(),
+    );
+
     // Read the entries.
     let mut entries: Box<[FileEntry], LongAlloc> =
         Box::new_uninit_slice_in(file_count as usize, long_alloc.clone()).assume_init();
 
+    let mut file_entry_ptr = entries.as_mut_ptr();
+    if toc_header.has_hash() {
+        for _idx in 0..file_count {
+            let entry16 = FileEntry16::from_reader(reader);
+            *file_entry_ptr = entry16.to_file_entry(fields_bytes);
+            file_entry_ptr = file_entry_ptr.add(1);
+        }
+    } else {
+        for _idx in 0..file_count {
+            let entry8 = FileEntry8::from_reader(reader);
+            *file_entry_ptr = entry8.to_file_entry(fields_bytes);
+            file_entry_ptr = file_entry_ptr.add(1);
+        }
+    }
+
     read_stuff_after_entries_and_return_toc(
-        block_count,
-        long_alloc,
         reader,
-        pool_size,
-        file_count,
-        short_alloc,
         entries,
+        block_count as u32,
+        pool_size as u32,
+        file_count as u32,
+        long_alloc,
+        short_alloc,
     )
 }
 
 unsafe fn read_stuff_after_entries_and_return_toc<ShortAlloc, LongAlloc>(
-    block_count: u32,
-    long_alloc: LongAlloc,
     reader: &mut LittleEndianReader,
+    entries: Box<[FileEntry], LongAlloc>,
+    block_count: u32,
     pool_size: u32,
     file_count: u32,
+    long_alloc: LongAlloc,
     short_alloc: ShortAlloc,
-    entries: Box<[FileEntry], LongAlloc>,
 ) -> Result<TableOfContents<ShortAlloc, LongAlloc>, DeserializeError>
 where
     ShortAlloc: Allocator + Clone,
@@ -288,8 +265,7 @@ where
         short_alloc.clone(),
         long_alloc.clone(),
         true,
-    )
-    .map_err(DeserializeError::StringPoolUnpackError)?;
+    )?;
 
     Ok(TableOfContents {
         block_compressions,
