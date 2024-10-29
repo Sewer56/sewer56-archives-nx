@@ -318,7 +318,7 @@ unsafe fn serialize_table_of_contents_fef64<LongAlloc: Allocator + Clone>(
 
     // Serialize the entries.
     let fields_bits =
-        FileEntryFieldsBits::new(string_pool_size_bits, file_count_bits, block_count_bits);
+        FileEntryFieldsBits::new(block_count_bits, file_count_bits, block_offset_bits);
     if include_hash {
         for item in entries {
             let entry16 = FileEntry16::from_file_entry(fields_bits, item);
@@ -353,13 +353,23 @@ unsafe fn serialize_table_of_contents_preset<LongAlloc: Allocator + Clone>(
     let mut lewriter = LittleEndianWriter::new(data_ptr);
 
     // Write the initial header.
-    let header = Preset0TocHeader::new(
-        preset_no,
-        info.string_pool.len() as u32,
-        blocks.len() as u32,
-        entries.len() as u32,
-    );
-    lewriter.write_u64(header.0);
+    if preset_no != 3 {
+        let header = Preset0TocHeader::new(
+            preset_no,
+            info.string_pool.len() as u32,
+            blocks.len() as u32,
+            entries.len() as u32,
+        );
+        lewriter.write_u64(header.0);
+    } else {
+        let header = Preset3TocHeader::new(
+            include_hash,
+            info.string_pool.len() as u32,
+            blocks.len() as u16,
+            entries.len() as u16,
+        );
+        lewriter.write_u64(header.0);
+    }
 
     // Serialize the entries.
     if preset_no == 0 {
@@ -453,7 +463,7 @@ fn calculate_toc_size(
     block_count: u32,
     file_count: u32,
 ) -> u32 {
-    let mut toc_size = 0;
+    let mut toc_size = 8; // size of all headers
     if (format == ToCFormat::FEF64 || format == ToCFormat::FEF64NoHash)
         && fef64_needs_extra_8bytes(string_pool_len, block_count, file_count)
     {
@@ -471,8 +481,161 @@ fn calculate_toc_size(
         ToCFormat::Error => 0,
     };
 
-    toc_size += entry_size * entry_size;
+    toc_size += entry_size * file_count;
     toc_size += block_count * size_of::<NativeV2TocBlockEntry>() as u32;
     toc_size += string_pool_len;
     toc_size
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::traits::*;
+    use crate::utilities::tests::packer_file_for_testing::PackerFileForTesting;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case::preset0(ToCFormat::Preset0)]
+    #[case::preset1_no_hash(ToCFormat::Preset1NoHash)]
+    #[case::preset2(ToCFormat::Preset2)]
+    #[case::preset3(ToCFormat::Preset3)]
+    #[case::preset3_no_hash(ToCFormat::Preset3NoHash)]
+    #[case::fef64(ToCFormat::FEF64)]
+    #[case::fef64_no_hash(ToCFormat::FEF64NoHash)]
+    fn can_serialize_and_deserialize(#[case] format: ToCFormat) {
+        // Generate dummy data for archived file
+        let mut toc_builder = unsafe { TableOfContentsBuilderState::new(4, 5) };
+
+        let has_hash = format != ToCFormat::FEF64NoHash
+            && format != ToCFormat::Preset1NoHash
+            && format != ToCFormat::Preset3NoHash;
+        let has_block_offset = format != ToCFormat::Preset3NoHash && format != ToCFormat::Preset3;
+
+        // Pretend 8MB blocks
+        let entries = [
+            FileEntry::new(0xBBBBBBBBBBBBBBBB, 16_777_215, 0, 0, 0), // Chunked file (2 chunks)
+            FileEntry::new(0xCCCCCCCCCCCCCCCC, 8_388_607, 0, 1, 2),  // Single chunk file
+            FileEntry::new(0xDDDDDDDDDDDDDDDD, 256, 0, 2, 3),        // 3rd block, SOLID
+            FileEntry::new(0xEEEEEEEEEEEEEEEE, 512, 256, 3, 3),
+            FileEntry::new(0xFFFFFFFFFFFFFFFF, 1024, 768, 4, 3), // Max offset: 1792
+        ];
+
+        // Generate blocks with pre-calculated values
+        let blocks = [
+            // copy compression
+            BlockSize::new(8_388_608), // File 1
+            BlockSize::new(8_388_607),
+            BlockSize::new(8_388_607), // File 2
+            BlockSize::new(1792),      // SOLID Block
+        ];
+
+        let block_compressions = [
+            CompressionPreference::Copy,
+            CompressionPreference::ZStandard,
+            CompressionPreference::Lz4,
+            CompressionPreference::Copy,
+        ];
+
+        // Emulate a write to entries by the packing operation
+        for (x, entry) in entries.iter().enumerate() {
+            toc_builder.set_entry(x, *entry).unwrap();
+        }
+
+        for (x, block) in blocks.iter().enumerate() {
+            toc_builder.set_block(x, *block).unwrap();
+        }
+
+        for (x, compression) in block_compressions.iter().enumerate() {
+            toc_builder.set_block_compression(x, *compression).unwrap();
+        }
+
+        // Create builder info
+        let builder_info = BuilderInfo {
+            format,
+            can_create_chunks: true,
+            table_size: calculate_toc_size(format, 0, blocks.len() as u32, entries.len() as u32),
+            max_decomp_block_offset: 4096,
+            string_pool: Vec::new(), // Empty string pool for test
+        };
+
+        // Serialize
+        let mut data = vec![0u8; builder_info.table_size as usize];
+
+        unsafe {
+            let bytes_written = serialize_table_of_contents_from_state(
+                &toc_builder,
+                &builder_info,
+                data.as_mut_ptr(),
+            )
+            .unwrap();
+            assert_eq!(bytes_written, builder_info.table_size as usize);
+
+            // Deserialize
+            let new_table = TableOfContents::deserialize_v2xx(data.as_ptr()).unwrap();
+
+            // Compare deserialized data with original
+            assert_eq!(new_table.entries.len(), entries.len());
+            assert_eq!(new_table.blocks.len(), blocks.len());
+
+            // Check each file entry
+            for (x, original) in entries.iter().enumerate() {
+                let deserialized = &new_table.entries[x];
+                assert_file_entries_equal(original, deserialized, x, has_hash, has_block_offset);
+            }
+
+            // Check each block
+            for (original, deserialized) in blocks.iter().zip(new_table.blocks.iter()) {
+                assert_eq!(original.compressed_size, deserialized.compressed_size);
+            }
+
+            // Check block compressions
+            for (original, deserialized) in block_compressions
+                .iter()
+                .zip(new_table.block_compressions.iter())
+            {
+                assert_eq!(original, deserialized);
+            }
+        }
+    }
+
+    fn assert_file_entries_equal(
+        original: &FileEntry,
+        deserialized: &FileEntry,
+        index: usize,
+        has_hash: bool,
+        has_block_offset: bool,
+    ) {
+        if has_hash {
+            assert_eq!(
+                original.hash, deserialized.hash,
+                "Mismatch in hash for entry {}",
+                index
+            );
+        }
+
+        assert_eq!(
+            original.decompressed_size, deserialized.decompressed_size,
+            "Mismatch in decompressed_size for entry {}",
+            index
+        );
+
+        if has_block_offset {
+            assert_eq!(
+                original.decompressed_block_offset, deserialized.decompressed_block_offset,
+                "Mismatch in decompressed_block_offset for entry {}",
+                index
+            );
+        }
+
+        assert_eq!(
+            original.file_path_index, deserialized.file_path_index,
+            "Mismatch in file_path_index for entry {}",
+            index
+        );
+        assert_eq!(
+            original.first_block_index, deserialized.first_block_index,
+            "Mismatch in first_block_index for entry {}",
+            index
+        );
+    }
 }
