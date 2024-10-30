@@ -1,4 +1,5 @@
 use crate::headers::managed::v2::*;
+use crate::headers::raw::toc;
 use crate::{
     api::enums::compression_preference::CompressionPreference,
     headers::{managed::*, parser::*, raw::toc::*},
@@ -269,19 +270,11 @@ where
     let mut entries: Box<[FileEntry], LongAlloc> =
         Box::new_uninit_slice_in(file_count as usize, long_alloc.clone()).assume_init();
 
-    let mut file_entry_ptr = entries.as_mut_ptr();
+    let file_entry_ptr = entries.as_mut_ptr();
     if toc_header.has_hash() {
-        for _idx in 0..file_count {
-            let entry16 = FileEntry16::from_reader(reader);
-            *file_entry_ptr = entry16.to_file_entry(fields_bytes);
-            file_entry_ptr = file_entry_ptr.add(1);
-        }
+        read_file_entries_with_hash(file_count, reader, file_entry_ptr, fields_bytes);
     } else {
-        for _idx in 0..file_count {
-            let entry8 = FileEntry8::from_reader(reader);
-            *file_entry_ptr = entry8.to_file_entry(fields_bytes);
-            file_entry_ptr = file_entry_ptr.add(1);
-        }
+        read_file_entries_without_hash(file_count, reader, file_entry_ptr, fields_bytes);
     }
 
     read_stuff_after_entries_and_return_toc(
@@ -293,6 +286,34 @@ where
         long_alloc,
         short_alloc,
     )
+}
+
+#[inline(never)] // better register allocation since FileEntryFieldsBits uses a lot of regs
+unsafe fn read_file_entries_with_hash(
+    file_count: u64,
+    reader: &mut LittleEndianReader,
+    mut file_entry_ptr: *mut FileEntry,
+    fields_bytes: FileEntryFieldsBits,
+) {
+    for _idx in 0..file_count {
+        let entry16 = FileEntry16::from_reader(reader);
+        *file_entry_ptr = entry16.to_file_entry(fields_bytes);
+        file_entry_ptr = file_entry_ptr.add(1);
+    }
+}
+
+#[inline(never)] // better register allocation since FileEntryFieldsBits uses a lot of regs
+unsafe fn read_file_entries_without_hash(
+    file_count: u64,
+    reader: &mut LittleEndianReader,
+    mut file_entry_ptr: *mut FileEntry,
+    fields_bytes: FileEntryFieldsBits,
+) {
+    for _idx in 0..file_count {
+        let entry8 = FileEntry8::from_reader(reader);
+        *file_entry_ptr = entry8.to_file_entry(fields_bytes);
+        file_entry_ptr = file_entry_ptr.add(1);
+    }
 }
 
 unsafe fn read_stuff_after_entries_and_return_toc<ShortAlloc, LongAlloc>(
