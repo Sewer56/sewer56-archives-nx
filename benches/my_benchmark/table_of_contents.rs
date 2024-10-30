@@ -5,7 +5,7 @@ use sewer56_archives_nx::{
 };
 use v1::*;
 
-fn generate_test_data(
+pub(crate) fn generate_test_data(
     file_count: usize,
     block_count: usize,
 ) -> (Vec<FileEntry>, Vec<BlockSize>, Vec<CompressionPreference>) {

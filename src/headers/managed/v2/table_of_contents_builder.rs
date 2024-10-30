@@ -457,7 +457,7 @@ fn write_blocks(
 /// # Returns
 ///
 /// Size of the Table of Contents
-pub(crate) fn calculate_toc_size(
+pub fn calculate_toc_size(
     format: ToCFormat,
     string_pool_len: u32,
     block_count: u32,
