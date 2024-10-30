@@ -320,15 +320,9 @@ unsafe fn serialize_table_of_contents_fef64<LongAlloc: Allocator + Clone>(
     let fields_bits =
         FileEntryFieldsBits::new(block_count_bits, file_count_bits, block_offset_bits);
     if include_hash {
-        for item in entries {
-            let entry16 = FileEntry16::from_file_entry(fields_bits, item);
-            entry16.to_writer(&mut lewriter);
-        }
+        write_file_entries_with_hash(entries, fields_bits, &mut lewriter);
     } else {
-        for item in entries {
-            let entry8 = FileEntry8::from_file_entry(fields_bits, item);
-            entry8.to_writer(&mut lewriter);
-        }
+        write_file_entries_without_hash(entries, fields_bits, &mut lewriter);
     }
 
     // Now write the blocks after the headers.
@@ -339,6 +333,30 @@ unsafe fn serialize_table_of_contents_fef64<LongAlloc: Allocator + Clone>(
     // Write the raw string pool data.
     lewriter.write_bytes(&info.string_pool);
     lewriter.ptr as usize - data_ptr as usize
+}
+
+#[inline(never)] // better register allocation since FileEntryFieldsBits uses a lot of regs
+fn write_file_entries_without_hash(
+    entries: &[FileEntry],
+    fields_bits: FileEntryFieldsBits,
+    lewriter: &mut LittleEndianWriter,
+) {
+    for item in entries {
+        let entry8 = FileEntry8::from_file_entry(fields_bits, item);
+        entry8.to_writer(lewriter);
+    }
+}
+
+#[inline(never)] // better register allocation since FileEntryFieldsBits uses a lot of regs
+fn write_file_entries_with_hash(
+    entries: &[FileEntry],
+    fields_bits: FileEntryFieldsBits,
+    lewriter: &mut LittleEndianWriter,
+) {
+    for item in entries {
+        let entry16 = FileEntry16::from_file_entry(fields_bits, item);
+        entry16.to_writer(lewriter);
+    }
 }
 
 unsafe fn serialize_table_of_contents_preset<LongAlloc: Allocator + Clone>(

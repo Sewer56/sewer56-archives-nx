@@ -1,8 +1,5 @@
 use super::FileEntryFieldsBits;
-use crate::{
-    headers::{managed::FileEntry, types::xxh3sum::XXH3sum},
-    utilities::math::ToBitmask,
-};
+use crate::headers::{managed::FileEntry, types::xxh3sum::XXH3sum};
 use endian_writer::*;
 
 /// Represents a 128-bit packed FileEntry using Flexible Entry Format (with hash).
@@ -33,32 +30,18 @@ impl FileEntry16 {
         first_block_index: u64,
     ) -> Self {
         // Validate bit allocations in debug builds
-        debug_assert!(item_counts.used_bits() < 64);
+        debug_assert!(decompressed_size <= item_counts.decompressed_size_mask);
+        debug_assert!(decompressed_block_offset <= item_counts.decompressed_block_offset_mask);
+        debug_assert!(file_path_index <= item_counts.file_count_mask);
+        debug_assert!(first_block_index <= item_counts.block_count_mask);
 
-        // Calculate bits allocated for decompressed_size
-        let decompressed_size_bits = item_counts.decompressed_size_bits();
-
-        // Validate that values fit within their bit allocations in debug builds
-        debug_assert!(decompressed_size < (1u64 << decompressed_size_bits),);
-        debug_assert!(
-            decompressed_block_offset < (1u64 << item_counts.decompressed_block_offset_bits),
-        );
-        debug_assert!(file_path_index < (1u64 << item_counts.file_count_bits),);
-        debug_assert!(first_block_index < (1u64 << item_counts.block_count_bits),);
-
-        // Create bitmasks using the ToBitmask trait
-        let decompressed_size_mask = decompressed_size_bits.to_bitmask();
-        let decompressed_block_offset_mask =
-            item_counts.decompressed_block_offset_bits.to_bitmask();
-        let file_path_index_mask = item_counts.file_count_bits.to_bitmask();
-        let first_block_index_mask = item_counts.block_count_bits.to_bitmask();
-
-        // Pack the fields into a single u64 with decompressed_size in upper bits
-        let data = (decompressed_size & decompressed_size_mask) << item_counts.used_bits()
-            | (decompressed_block_offset & decompressed_block_offset_mask)
-                << (item_counts.file_count_bits + item_counts.block_count_bits)
-            | (file_path_index & file_path_index_mask) << item_counts.block_count_bits
-            | (first_block_index & first_block_index_mask);
+        // Pack the fields using pre-calculated masks and shifts
+        let data = (decompressed_size & item_counts.decompressed_size_mask)
+            << item_counts.decompressed_size_shift
+            | (decompressed_block_offset & item_counts.decompressed_block_offset_mask)
+                << item_counts.decompressed_block_offset_shift
+            | (file_path_index & item_counts.file_count_mask) << item_counts.file_count_shift
+            | (first_block_index & item_counts.block_count_mask);
 
         FileEntry16 { hash, data }
     }
@@ -69,6 +52,7 @@ impl FileEntry16 {
     ///
     /// * `item_counts` - The bit counts for the fields.
     /// * `entry` - The managed representation of the file entry.
+    #[inline(always)]
     pub fn from_file_entry(item_counts: FileEntryFieldsBits, entry: &FileEntry) -> Self {
         Self::new(
             item_counts,
@@ -85,31 +69,25 @@ impl FileEntry16 {
         self.hash
     }
 
-    /// Returns the packed data as a u64.
-    pub fn data(&self) -> u64 {
-        self.data
-    }
-
-    /// Returns the decompressed size.
+    #[inline(always)]
     pub fn decompressed_size(&self, counts: FileEntryFieldsBits) -> u64 {
-        let decompressed_size_bits = counts.decompressed_size_bits();
-        (self.data >> counts.used_bits()) & decompressed_size_bits.to_bitmask()
+        (self.data >> counts.decompressed_size_shift) & counts.decompressed_size_mask
     }
 
-    /// Returns the decompressed block offset.
+    #[inline(always)]
     pub fn decompressed_block_offset(&self, counts: FileEntryFieldsBits) -> u64 {
-        (self.data >> (counts.file_count_bits + counts.block_count_bits))
-            & counts.decompressed_block_offset_bits.to_bitmask()
+        (self.data >> counts.decompressed_block_offset_shift)
+            & counts.decompressed_block_offset_mask
     }
 
-    /// Returns the file path index.
+    #[inline(always)]
     pub fn file_path_index(&self, counts: FileEntryFieldsBits) -> u64 {
-        (self.data >> counts.block_count_bits) & counts.file_count_bits.to_bitmask()
+        (self.data >> counts.file_count_shift) & counts.file_count_mask
     }
 
-    /// Returns the first block index.
+    #[inline(always)]
     pub fn first_block_index(&self, counts: FileEntryFieldsBits) -> u64 {
-        self.data & counts.block_count_bits.to_bitmask()
+        self.data & counts.block_count_mask
     }
 
     /// Writes this file entry to the provided writer.
@@ -177,11 +155,7 @@ mod tests {
 
     #[test]
     fn fileentry16_packs_correctly() {
-        let item_counts = FileEntryFieldsBits {
-            block_count_bits: 10,
-            file_count_bits: 10,
-            decompressed_block_offset_bits: 12,
-        };
+        let item_counts = FileEntryFieldsBits::new(10, 10, 12);
 
         let hash = XXH3sum(0xDEADBEEFDEADBEEF);
         let decompressed_size = 0xABCDE;
@@ -223,11 +197,7 @@ mod tests {
 
     #[test]
     fn fileentry16_to_fileentry_conversion_is_correct() {
-        let item_counts = FileEntryFieldsBits {
-            block_count_bits: 10,
-            file_count_bits: 10,
-            decompressed_block_offset_bits: 12,
-        };
+        let item_counts = FileEntryFieldsBits::new(10, 10, 12);
 
         let hash = XXH3sum(0xDEADBEEFDEADBEEF);
         let decompressed_size = 0xABCDE;
