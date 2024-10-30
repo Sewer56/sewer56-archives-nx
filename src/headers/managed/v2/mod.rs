@@ -6,4 +6,5 @@ pub mod table_of_contents_reader;
 
 /// Prelude
 pub use table_of_contents_builder::*;
+#[allow(unused_imports)]
 pub use table_of_contents_reader::*;

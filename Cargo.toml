@@ -8,7 +8,7 @@ license-file = "LICENSE"
 include = ["src/**/*"]
 
 [features]
-default = ["lz4", "detect_num_cores", "aggressive_unrolling"]
+default = ["lz4", "detect_num_cores", "aggressive_unrolling", "hardened"]
 # See README.md for more information on using Profile-Guided Optimization.
 pgo = []
 # Feature for enabling C library exports.
@@ -19,6 +19,10 @@ lz4 = []
 # In operations such as:
 # - Table of Contents (de/Serialization)
 aggressive_unrolling = []
+
+# Adds additional runtime checks against untrusted input.
+# This is useful if you receive NX2 files from the internet.
+hardened = []
 
 # Panics with full error text on unhandled ZStandard Errors.
 # Increases binary size in favour of better error messages.

@@ -457,7 +457,7 @@ fn write_blocks(
 /// # Returns
 ///
 /// Size of the Table of Contents
-fn calculate_toc_size(
+pub(crate) fn calculate_toc_size(
     format: ToCFormat,
     string_pool_len: u32,
     block_count: u32,
@@ -490,8 +490,6 @@ fn calculate_toc_size(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::traits::*;
-    use crate::utilities::tests::packer_file_for_testing::PackerFileForTesting;
     use rstest::rstest;
 
     #[rstest]
@@ -571,7 +569,8 @@ mod tests {
             assert_eq!(bytes_written, builder_info.table_size as usize);
 
             // Deserialize
-            let new_table = TableOfContents::deserialize_v2xx(data.as_ptr()).unwrap();
+            let new_table =
+                TableOfContents::deserialize_v2xx(data.as_ptr(), builder_info.table_size).unwrap();
 
             // Compare deserialized data with original
             assert_eq!(new_table.entries.len(), entries.len());

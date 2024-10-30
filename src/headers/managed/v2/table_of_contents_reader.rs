@@ -1,10 +1,10 @@
-use endian_writer::{EndianReader, EndianReaderExt, LittleEndianReader};
-
+use crate::headers::managed::v2::*;
 use crate::{
     api::enums::compression_preference::CompressionPreference,
     headers::{managed::*, parser::*, raw::toc::*},
 };
 use core::{hint::unreachable_unchecked, slice};
+use endian_writer::{EndianReader, EndianReaderExt, LittleEndianReader};
 use std::alloc::{Allocator, Global};
 
 impl TableOfContents {
@@ -17,14 +17,16 @@ impl TableOfContents {
     /// # Arguments
     ///
     /// * `data_ptr` - Pointer to the ToC.
-    /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
-    /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
+    /// * `avail_bytes` - Available number of bytes that can be read from data_ptr.
     ///
     /// # Returns
     ///
     /// Result containing the deserialized table of contents or a DeserializeError.
-    pub unsafe fn deserialize_v2xx(data_ptr: *const u8) -> Result<Self, DeserializeError> {
-        Self::deserialize_v2xx_with_allocator(data_ptr, Global, Global)
+    pub unsafe fn deserialize_v2xx(
+        data_ptr: *const u8,
+        avail_bytes: u32,
+    ) -> Result<Self, DeserializeError> {
+        Self::deserialize_v2xx_with_allocator(data_ptr, avail_bytes, Global, Global)
     }
 }
 
@@ -42,15 +44,25 @@ where
     /// # Arguments
     ///
     /// * `data_ptr` - Pointer to the ToC.
+    /// * `avail_bytes` - Available number of bytes that can be read from data_ptr.
+    /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
+    /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
     ///
     /// # Returns
     ///
     /// Result containing the deserialized table of contents or a [`DeserializeError`].
     pub unsafe fn deserialize_v2xx_with_allocator(
         data_ptr: *const u8,
+        avail_bytes: u32,
         short_alloc: ShortAlloc,
         long_alloc: LongAlloc,
     ) -> Result<Self, DeserializeError> {
+        // Validate we have enough bytes for the header
+        #[cfg(feature = "hardened")]
+        if avail_bytes < 8 {
+            return Err(InsufficientDataError::new(avail_bytes, 8).into());
+        }
+
         let mut reader = LittleEndianReader::new(data_ptr);
 
         // The first bit in all V2 header formats is the FEF flag.
@@ -60,6 +72,7 @@ where
             let toc_header = Fef64TocHeader::from_raw(toc_header.0);
             return deserialize_v2xx_fef64_entries(
                 &mut reader,
+                avail_bytes,
                 toc_header,
                 short_alloc,
                 long_alloc,
@@ -74,6 +87,7 @@ where
             let toc_header = Preset0TocHeader::from_raw(toc_header.0);
             deserialize_v2xx_preset_entries(
                 &mut reader,
+                avail_bytes,
                 toc_header.string_pool_size(),
                 toc_header.block_count(),
                 toc_header.file_count(),
@@ -86,6 +100,7 @@ where
             let toc_header = Preset3TocHeader::from_raw(toc_header.0);
             deserialize_v2xx_preset_entries(
                 &mut reader,
+                avail_bytes,
                 toc_header.string_pool_size(),
                 toc_header.block_count() as u32,
                 toc_header.file_count() as u32,
@@ -111,6 +126,7 @@ where
 /// # Arguments
 ///
 /// * `reader` - Allows for reading table of contents.
+/// * `avail_bytes` - Maximum number of available bytes that can be read by the reader.
 /// * `pool_size` - Size of the compressed string pool (bytes).
 /// * `block_count` - Number of blocks in the table of contents.
 /// * `file_count` - Number of files in the table of contents.
@@ -126,6 +142,7 @@ where
 #[allow(clippy::too_many_arguments)]
 unsafe fn deserialize_v2xx_preset_entries<ShortAlloc, LongAlloc>(
     reader: &mut LittleEndianReader,
+    avail_bytes: u32,
     pool_size: u32,
     block_count: u32,
     file_count: u32,
@@ -138,6 +155,16 @@ where
     ShortAlloc: Allocator + Clone,
     LongAlloc: Allocator + Clone,
 {
+    // Assert ToC is sufficiently big.
+    #[cfg(feature = "hardened")]
+    {
+        let format = get_preset_toc_format(preset, has_hash);
+        let required_size = calculate_toc_size(format, pool_size, block_count, file_count);
+        if avail_bytes < required_size {
+            return Err(InsufficientDataError::new(avail_bytes, required_size).into());
+        }
+    }
+
     // Read the entries.
     let mut entries: Box<[FileEntry], LongAlloc> =
         Box::new_uninit_slice_in(file_count as usize, long_alloc.clone()).assume_init();
@@ -177,6 +204,7 @@ where
 /// # Arguments
 ///
 /// * `reader` - Allows for reading table of contents. Should be seeked just past the 8 byte header.
+/// * `avail_bytes` - Number of available bytes that can be read by the reader.
 /// * `toc_header` - 8 byte table of contents header for flexible format.
 /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
 /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
@@ -186,6 +214,7 @@ where
 /// Result containing the deserialized table of contents or a [`DeserializeError`].
 unsafe fn deserialize_v2xx_fef64_entries<ShortAlloc, LongAlloc>(
     reader: &mut LittleEndianReader,
+    avail_bytes: u32,
     toc_header: Fef64TocHeader,
     short_alloc: ShortAlloc,
     long_alloc: LongAlloc,
@@ -195,6 +224,15 @@ where
     LongAlloc: Allocator + Clone,
 {
     let is_extended = toc_header.has_extended_header();
+
+    // Assert reading extended header is possible.
+    #[cfg(feature = "hardened")]
+    {
+        if avail_bytes < 16 {
+            return Err(InsufficientDataError::new(avail_bytes, 16).into());
+        }
+    }
+
     let fields_bytes: FileEntryFieldsBits = toc_header.into();
     let counts_raw_bytes = if is_extended {
         toc_header.padding_or_item_counts()
@@ -207,6 +245,25 @@ where
         toc_header.block_count_bits(),
         toc_header.file_count_bits(),
     );
+
+    // Assert rest of ToC is sufficiently big.
+    #[cfg(feature = "hardened")]
+    {
+        let format = if toc_header.has_hash() {
+            ToCFormat::FEF64
+        } else {
+            ToCFormat::FEF64NoHash
+        };
+        let required_size = calculate_toc_size(
+            format,
+            pool_size as u32,
+            block_count as u32,
+            file_count as u32,
+        );
+        if avail_bytes < required_size {
+            return Err(InsufficientDataError::new(avail_bytes, required_size).into());
+        }
+    }
 
     // Read the entries.
     let mut entries: Box<[FileEntry], LongAlloc> =
@@ -317,5 +374,24 @@ fn read_blocks_unrolled(
             *compressions_ptr.add(x) = value.compression();
             x += 1;
         }
+    }
+}
+
+unsafe fn get_preset_toc_format(preset: u8, has_hash: bool) -> ToCFormat {
+    if preset == 0 {
+        ToCFormat::Preset0
+    } else if preset == 1 {
+        ToCFormat::Preset1NoHash
+    } else if preset == 2 {
+        ToCFormat::Preset2
+    } else if preset == 3 {
+        if has_hash {
+            ToCFormat::Preset3
+        } else {
+            ToCFormat::Preset3NoHash
+        }
+    } else {
+        // Unreachable by definition, since the preset_no is restricted to 2 bits.
+        unreachable_unchecked();
     }
 }
