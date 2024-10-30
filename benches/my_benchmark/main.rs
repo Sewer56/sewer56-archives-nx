@@ -14,7 +14,7 @@ use table_of_contents::*;
 use table_of_contents_v2::*;
 
 fn criterion_benchmark(c: &mut Criterion) {
-    //benchmark_string_pool(c);
+    benchmark_string_pool(c);
     bench_serialize_toc(c);
     bench_deserialize_toc(c);
     bench_serialize_toc_v2(c);
