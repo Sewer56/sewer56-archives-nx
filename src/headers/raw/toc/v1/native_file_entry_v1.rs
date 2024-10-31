@@ -56,21 +56,29 @@ impl NativeFileEntryV1 {
     }
 }
 
-impl NativeFileEntry for NativeFileEntryV1 {
-    fn copy_from(&mut self, entry: &FileEntry) {
-        self.hash = entry.hash;
-        self.decompressed_size = entry.decompressed_size;
-        self.offset_path_index_tuple = OffsetPathIndexTuple::new(
-            entry.decompressed_block_offset,
-            entry.file_path_index,
-            entry.first_block_index,
-        );
+impl From<FileEntry> for NativeFileEntryV1 {
+    fn from(entry: FileEntry) -> Self {
+        NativeFileEntryV1 {
+            hash: entry.hash,
+            decompressed_size: entry.decompressed_size,
+            offset_path_index_tuple: OffsetPathIndexTuple::new(
+                entry.decompressed_block_offset,
+                entry.file_path_index,
+                entry.first_block_index,
+            ),
+        }
     }
+}
 
-    fn copy_to(&self, entry: &mut FileEntry) {
-        entry.hash = self.hash;
-        entry.decompressed_size = self.decompressed_size;
-        self.offset_path_index_tuple.copy_to(entry);
+impl From<NativeFileEntryV1> for FileEntry {
+    fn from(value: NativeFileEntryV1) -> Self {
+        FileEntry {
+            hash: value.hash,
+            decompressed_size: value.decompressed_size,
+            decompressed_block_offset: value.decompressed_block_offset(),
+            file_path_index: value.file_path_index(),
+            first_block_index: value.first_block_index(),
+        }
     }
 }
 
@@ -91,8 +99,9 @@ mod tests {
     #[rstest]
     #[case::random_entry(Faker.fake())]
     fn can_copy_to_from_managed_entry(#[case] entry: NativeFileEntryV1) {
-        use crate::headers::raw::toc::native_file_entry_v0::tests::test_copy_to_and_from_managed_entry;
-        test_copy_to_and_from_managed_entry(&entry);
+        let managed: FileEntry = entry.into();
+        let new_entry: NativeFileEntryV1 = managed.into();
+        assert_eq!(new_entry, entry);
     }
 
     impl Dummy<Faker> for NativeFileEntryV1 {

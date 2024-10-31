@@ -4,6 +4,26 @@ pub trait ToBitmask {
     fn to_bitmask(&self) -> u64;
 }
 
+impl ToBitmask for u8 {
+    fn to_bitmask(&self) -> u64 {
+        if *self == 64 {
+            u64::MAX
+        } else {
+            (1u64 << *self) - 1
+        }
+    }
+}
+
+impl ToBitmask for u16 {
+    fn to_bitmask(&self) -> u64 {
+        if *self == 64 {
+            u64::MAX
+        } else {
+            (1u64 << *self) - 1
+        }
+    }
+}
+
 impl ToBitmask for u32 {
     fn to_bitmask(&self) -> u64 {
         if *self == 64 {

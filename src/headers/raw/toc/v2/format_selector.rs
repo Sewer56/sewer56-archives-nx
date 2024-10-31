@@ -4,8 +4,9 @@ use nanokit::count_bits::BitsNeeded;
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum ToCFormat {
     FEF64,
+    FEF64NoHash,
     Preset0,
-    Preset1,
+    Preset1NoHash,
     Preset2,
     Preset3,
     Preset3NoHash,
@@ -50,7 +51,7 @@ pub fn determine_optimal_toc_format(
 
     // 1. Check FEF64 (no hash)
     if !hashes_required && supports_fef64 {
-        return ToCFormat::FEF64;
+        return ToCFormat::FEF64NoHash;
     }
 
     // 2. Check Preset1 [Nohash]
@@ -60,11 +61,11 @@ pub fn determine_optimal_toc_format(
         && file_count <= PRESET1_FILE_COUNT_MAX
         && max_file_size <= PRESET1_MAX_FILE_SIZE as u64
     {
-        return ToCFormat::Preset1;
+        return ToCFormat::Preset1NoHash;
     }
 
     // 3. Check Preset3 (with hash)
-    if supports_preset_3 && hashes_required {
+    if supports_preset_3 {
         return ToCFormat::Preset3;
     }
 
@@ -74,8 +75,7 @@ pub fn determine_optimal_toc_format(
     }
 
     // 5. Check Preset0 [first fallback]
-    if hashes_required
-        && string_pool_size <= PRESET0_STRING_POOL_SIZE_MAX
+    if string_pool_size <= PRESET0_STRING_POOL_SIZE_MAX
         && block_count <= PRESET0_BLOCK_COUNT_MAX
         && file_count <= PRESET0_FILE_COUNT_MAX
         && max_decompressed_block_offset <= PRESET0_DECOMPRESSED_BLOCK_OFFSET_MAX
@@ -85,8 +85,7 @@ pub fn determine_optimal_toc_format(
     }
 
     // 6. Check Preset2 [final fallback]
-    if hashes_required
-        && string_pool_size <= PRESET2_STRING_POOL_SIZE_MAX
+    if string_pool_size <= PRESET2_STRING_POOL_SIZE_MAX
         && block_count <= PRESET2_BLOCK_COUNT_MAX
         && file_count <= PRESET2_FILE_COUNT_MAX
         && max_file_size <= PRESET2_MAX_FILE_SIZE
@@ -107,33 +106,47 @@ pub(crate) fn can_use_fef64(
     max_file_size: u64,
 ) -> bool {
     // Calculate the number of bits needed for each field
-    let bits_needed_string_pool_size = string_pool_size.bits_needed_to_store();
-    let bits_needed_file_count = file_count.bits_needed_to_store();
-    let bits_needed_block_count = block_count.bits_needed_to_store();
-    let bits_needed_decompressed_block_offset =
-        max_decompressed_block_offset.bits_needed_to_store();
+    let string_pool_bits = string_pool_size.bits_needed_to_store();
+    let file_count_bits = file_count.bits_needed_to_store();
+    let block_count_bits = block_count.bits_needed_to_store();
+    let block_offset_bits = max_decompressed_block_offset.bits_needed_to_store();
 
     // Ensure that each field's bits do not exceed the 5-bit allocation in the header
     // u5 can represent up to 31 bits
-    if bits_needed_string_pool_size > 31
-        || bits_needed_file_count > 31
-        || bits_needed_block_count > 31
-        || bits_needed_decompressed_block_offset > 31
+    if string_pool_bits > 31
+        || file_count_bits > 31
+        || block_count_bits > 31
+        || block_offset_bits > 31
     {
         return false;
     }
 
     // Calculate bits remaining for DecompressedSize
-    let bits_remaining = 64
-        - bits_needed_decompressed_block_offset
-        - bits_needed_file_count
-        - bits_needed_block_count;
+    let bits_remaining = 64 - block_offset_bits - file_count_bits - block_count_bits;
 
     // Calculate bits needed to store max_file_size
     let bits_needed_file_size = max_file_size.bits_needed_to_store();
 
     // Ensure that the remaining bits can store the max_file_size
     bits_needed_file_size <= bits_remaining
+}
+
+/// Determines if the FEF64 format requires the extra 8 bytes
+/// to store its header information.
+pub(crate) fn fef64_needs_extra_8bytes(
+    string_pool_size: u32,
+    block_count: u32,
+    file_count: u32,
+) -> bool {
+    let file_count_bits = file_count.bits_needed_to_store();
+    let block_count_bits = block_count.bits_needed_to_store();
+    let string_pool_size_bits = string_pool_size.bits_needed_to_store();
+
+    !can_fit_within_42_bits(
+        string_pool_size_bits as u8,
+        block_count_bits as u8,
+        file_count_bits as u8,
+    )
 }
 
 #[cfg(test)]
@@ -171,7 +184,7 @@ mod tests {
             false,
             PRESET1_MAX_FILE_SIZE as u64,
         );
-        assert_eq!(toc, ToCFormat::Preset1);
+        assert_eq!(toc, ToCFormat::Preset1NoHash);
     }
 
     /// Tests that Preset3 is selected when:

@@ -1,5 +1,7 @@
 use bitfield::bitfield;
 
+use super::can_fit_within_42_bits;
+
 bitfield! {
     /// Represents the TOC Header structure.
     ///
@@ -15,7 +17,7 @@ bitfield! {
     /// | 46 - 42 | `DecompressedBlockOffsetBits`  | Number of bits for `DecompressedBlockOffset` in `Item Counts` |
     /// | 41 - 0  | `PaddingOrItemCounts`          | Padding (aligned to 8 bytes) or `ItemCounts` if it fits      |
     #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-    pub struct TocHeader(u64);
+    pub struct Fef64TocHeader(u64);
     impl Debug;
     u64;
 
@@ -42,7 +44,7 @@ bitfield! {
 
 }
 
-impl TocHeader {
+impl Fef64TocHeader {
     /// Maximum possible size of the TOC Header.
     pub const SIZE_BYTES: usize = 8;
 
@@ -61,7 +63,7 @@ impl TocHeader {
     ///
     /// # Returns
     ///
-    /// A new `TocHeader` instance in little-endian format.
+    /// A new `TocHeader` instance.
     pub fn new(
         has_hash: bool,
         string_pool_size_bits: u8,
@@ -70,7 +72,7 @@ impl TocHeader {
         decompressed_block_offset_bits: u8,
         padding_or_item_counts: u64,
     ) -> Self {
-        let mut header = TocHeader(0);
+        let mut header = Fef64TocHeader(0);
         header.set_is_flexible_format(true);
         header.set_has_hash(has_hash);
         header.set_string_pool_size_bits(string_pool_size_bits);
@@ -78,13 +80,10 @@ impl TocHeader {
         header.set_block_count_bits(block_count_bits);
         header.set_decompressed_block_offset_bits(decompressed_block_offset_bits);
         header.set_padding_or_item_counts(padding_or_item_counts);
-        header.to_le()
+        header
     }
 
     /// Creates a `TocHeader` from a raw `u64` value.
-    ///
-    /// This method assumes that the input value is in little-endian format
-    /// and does not perform any validation.
     ///
     /// # Arguments
     ///
@@ -94,12 +93,12 @@ impl TocHeader {
     ///
     /// A new `TocHeader` instance.
     pub fn from_raw(raw: u64) -> Self {
-        TocHeader(raw.to_le())
+        Fef64TocHeader(raw.to_le())
     }
 
     /// Converts the `TocHeader` to little-endian format.
     pub fn to_le(&self) -> Self {
-        TocHeader(self.0.to_le())
+        Fef64TocHeader(self.0.to_le())
     }
 
     /// Gets the `IsFlexibleFormat` field.
@@ -136,9 +135,19 @@ impl TocHeader {
     pub fn get_padding_or_item_counts(&self) -> u64 {
         self.padding_or_item_counts()
     }
+
+    /// Returns true if the header stores `PaddingOrItemCounts` in an extended
+    /// 8 byte header.
+    pub fn has_extended_header(&self) -> bool {
+        can_fit_within_42_bits(
+            self.string_pool_size_bits(),
+            self.block_count_bits(),
+            self.file_count_bits(),
+        )
+    }
 }
 
-impl Default for TocHeader {
+impl Default for Fef64TocHeader {
     fn default() -> Self {
         Self::new(false, 0, 0, 0, 0, 0)
     }
@@ -152,15 +161,15 @@ mod tests {
     #[test]
     fn header_size_is_correct() {
         assert_eq!(
-            size_of::<TocHeader>(),
-            TocHeader::SIZE_BYTES,
+            size_of::<Fef64TocHeader>(),
+            Fef64TocHeader::SIZE_BYTES,
             "TocHeader size should be 8 bytes"
         );
     }
 
     #[test]
     fn can_init_max_values() {
-        let header = TocHeader::new(
+        let header = Fef64TocHeader::new(
             true,             // has_hash
             31,               // string_pool_size_bits (5 bits max)
             31,               // file_count_bits (5 bits max)
@@ -180,7 +189,7 @@ mod tests {
 
     #[test]
     fn values_correctly_overflow() {
-        let header = TocHeader::new(
+        let header = Fef64TocHeader::new(
             true,
             0b1_00000,        // 32 (exceeds 5 bits, should truncate to 0)
             0x20,             // 32 (exceeds 5 bits, should wrap to 0)
@@ -198,25 +207,8 @@ mod tests {
     }
 
     #[test]
-    fn is_little_endian() {
-        let header = TocHeader::new(
-            true,         // has_hash
-            10,           // string_pool_size_bits
-            20,           // file_count_bits
-            15,           // block_count_bits
-            8,            // decompressed_block_offset_bits
-            0x123456789A, // padding_or_item_counts
-        );
-
-        // The `new` converts once; we convert again here.
-        // This ensures that `new` did actually convert on big endian machines.
-        let le_header = TocHeader::from_raw(header.0);
-        assert_eq!(header.0, le_header.0);
-    }
-
-    #[test]
     fn default_values_are_sane() {
-        let header = TocHeader::default();
+        let header = Fef64TocHeader::default();
         assert!(header.get_is_flexible_format());
         assert!(!header.get_has_hash());
         assert_eq!(header.get_string_pool_size_bits(), 0);

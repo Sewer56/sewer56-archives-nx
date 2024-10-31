@@ -41,10 +41,8 @@ pub mod headers {
     /// This represents the unpacked 'managed' version of the headers.
     pub mod managed;
 
-    /// This contains reused traits in the Nx source tree.
-    pub mod traits {
-        pub mod can_convert_to_little_endian;
-    }
+    /// This contains reused traits associated with headers.
+    pub mod traits {}
 
     /// Various data types, usually nominally typed.
     pub mod types {
@@ -86,14 +84,6 @@ pub mod utilities {
 
     /// This module contains APIs that abstract the supported compression algorithms.
     pub mod compression;
-
-    pub mod serialize {
-        /// This module contains utilities for reading unaligned data via pointer in little-endian format.
-        pub mod little_endian_reader;
-
-        /// This module contains utilities for writing unaligned data via pointer in little-endian format.
-        pub mod little_endian_writer;
-    }
 
     /// Exposes the system information.
     pub mod system_info;

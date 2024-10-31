@@ -1,8 +1,7 @@
-use core::hint::unreachable_unchecked;
-
+use crate::api::enums::*;
 use bitfield::bitfield;
-
-use crate::{api::enums::*, utilities::serialize::little_endian_reader::LittleEndianReader};
+use core::hint::unreachable_unchecked;
+use endian_writer::*;
 
 bitfield! {
     /// Native 'block entry' in the 'Table of Contents'
@@ -19,20 +18,25 @@ bitfield! {
 }
 
 impl NativeV2TocBlockEntry {
-    /// Create a new NativeTocBlockEntry
-    pub fn new(compressed_block_size: u32, compression: CompressionPreference) -> Self {
+    /// Write a new NativeTocBlockEntry to writer.
+    pub fn to_writer(
+        compressed_block_size: u32,
+        compression: CompressionPreference,
+        lewriter: &mut LittleEndianWriter,
+    ) {
         let mut header = NativeV2TocBlockEntry(0);
         header.set_compressed_block_size(compressed_block_size);
         header.set_compression(compression);
 
         // Convert to little endian
-        header.0 = header.0.to_le();
-        header
+        unsafe {
+            lewriter.write_u32(header.0);
+        }
     }
 
     /// Creates a new entry from the little endian reader
-    pub fn from_reader(reader: &mut LittleEndianReader) -> Self {
-        NativeV2TocBlockEntry(unsafe { reader.read::<u32>() })
+    pub fn from_reader(lereader: &mut LittleEndianReader) -> Self {
+        NativeV2TocBlockEntry(unsafe { lereader.read_u32() })
     }
 
     /// Get the compression preference
@@ -46,7 +50,7 @@ impl NativeV2TocBlockEntry {
     }
 
     /// Set the compression preference
-    fn set_compression(&mut self, pref: CompressionPreference) {
+    pub fn set_compression(&mut self, pref: CompressionPreference) {
         self.set_compression_raw(match pref {
             // All cases of 'no preference' should be overwritten with zstd by default.
             CompressionPreference::NoPreference => unsafe { unreachable_unchecked() },

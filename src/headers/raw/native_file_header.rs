@@ -1,4 +1,3 @@
-use crate::headers::traits::can_convert_to_little_endian::CanConvertToLittleEndian;
 use bitfield::bitfield;
 
 bitfield! {
@@ -19,17 +18,6 @@ bitfield! {
 }
 
 /// Structure that represents the native serialized file header.
-///
-/// This struct is read-only after initialization to ensure consistent endianness.
-/// Use the [Self::init] function to create and initialize a new instance.
-///
-/// ## Reading from External Source
-///
-/// When reading from a file from an external source, such as a pre-generated archive file,
-/// use the [to_le](crate::headers::traits::can_convert_to_little_endian::CanConvertToLittleEndian::to_le)
-/// method to ensure correct endianness.
-///
-/// It is assumed that [NativeFileHeader] is always little endian.
 #[repr(C, packed(4))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
 pub struct NativeFileHeader {
@@ -73,9 +61,7 @@ impl NativeFileHeader {
     }
 
     /// Initializes the header with given data.
-    ///
     /// This is the only way to create and modify a NativeFileHeader.
-    /// The returned header is in little-endian format.
     ///
     /// # Arguments
     ///
@@ -98,7 +84,7 @@ impl NativeFileHeader {
         header.set_header_page_bytes(
             header_page_count_bytes.next_multiple_of(Self::HEADER_PAGE_SIZE),
         );
-        header.to_le()
+        header
     }
 
     /// Sets the chunk size used to split large files by.
@@ -132,21 +118,6 @@ impl NativeFileHeader {
     }
 }
 
-impl CanConvertToLittleEndian for NativeFileHeader {
-    fn to_le(&self) -> Self {
-        Self {
-            magic: self.magic.to_le(),
-            header_data: self.header_data.to_le(),
-        }
-    }
-}
-
-impl CanConvertToLittleEndian for HeaderData {
-    fn to_le(&self) -> Self {
-        HeaderData(self.0.to_le())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -173,13 +144,6 @@ mod tests {
         let header = NativeFileHeader::init(1024, 8192);
         // Note: We can't modify feature_flags directly at the moment, so this test is just checking the initial value
         assert_eq!(header.header_data.feature_flags(), 0);
-    }
-
-    #[test]
-    fn is_little_endian() {
-        let header = NativeFileHeader::init(1024, 8192);
-        let le_header = header.to_le();
-        assert_eq!(header, le_header);
     }
 
     #[test]

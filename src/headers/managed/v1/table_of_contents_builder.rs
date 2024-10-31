@@ -1,12 +1,12 @@
-use super::super::file_entry_intrinsics::{write_entries_as_v0, write_entries_as_v1};
+use super::file_entry_intrinsics::{write_entries_as_v0, write_entries_as_v1};
 use crate::{
     api::{enums::compression_preference::CompressionPreference, traits::*},
     headers::{enums::v1::*, managed::*, parser::*, raw::toc::*},
     implementation::pack::{
         blocks::polyfills::Block, table_of_contents_builder_state::TableOfContentsBuilderState,
     },
-    utilities::serialize::little_endian_writer::LittleEndianWriter,
 };
+use endian_writer::{EndianWriter, LittleEndianWriter};
 use std::alloc::Allocator;
 
 // Max values for V0 & V1 formats.
@@ -31,25 +31,29 @@ const MAX_FILE_COUNT_V0V1: usize = 1048575; // 2^20 - 1
 /// # Type Parameters
 ///
 /// * `T`: Type of the items in the blocks, which must implement `HasFileSize`, `CanProvideFileData`, and `HasRelativePath`.
-pub fn determine_version<T>(blocks: &[Box<dyn Block<T>>]) -> VersionInfo
+pub fn determine_version<T>(blocks: &[Box<dyn Block<T>>], chunk_size: u32) -> VersionInfo
 where
     T: HasFileSize + CanProvideFileData + HasRelativePath,
 {
     let mut largest_file_size: u64 = 0;
     let mut can_create_chunks = false;
 
+    let mut files = Vec::new();
     for block in blocks {
-        let largest = block.largest_item_size();
-        if largest > largest_file_size {
-            largest_file_size = largest;
+        block.append_items(&mut files);
+    }
+
+    for file in files {
+        let file_size = file.file_size();
+        if file_size > largest_file_size {
+            largest_file_size = file_size;
         }
 
-        if block.can_create_chunks() {
+        if file_size > chunk_size as u64 {
             can_create_chunks = true;
         }
     }
 
-    // TODO: Add 'V2' format.
     let version = if largest_file_size > u32::MAX as u64 {
         TableOfContentsVersion::V1
     } else {
@@ -212,7 +216,7 @@ pub unsafe fn serialize_table_of_contents(
         raw_string_pool_data.len() as u32,
         version,
     );
-    writer.write(header.0);
+    writer.write_u64(header.0);
 
     // Write the entries into the ToC header.
     if !entries.is_empty() {
@@ -246,7 +250,7 @@ pub unsafe fn serialize_table_of_contents(
 fn write_blocks(
     blocks: &[BlockSize],
     compressions: &[CompressionPreference],
-    writer: &mut LittleEndianWriter,
+    lewriter: &mut LittleEndianWriter,
 ) {
     // This makes the bounds checker leave us alone.
     debug_assert!(blocks.len() == compressions.len());
@@ -257,8 +261,7 @@ fn write_blocks(
         for x in 0..blocks.len() {
             let num_blocks = (*blocks.as_ptr().add(x)).compressed_size;
             let compression = *compressions.as_ptr().add(x);
-            let entry = NativeV1TocBlockEntry::new(num_blocks, compression);
-            writer.write(entry.0);
+            NativeV1TocBlockEntry::to_writer(num_blocks, compression, lewriter);
         }
     }
 

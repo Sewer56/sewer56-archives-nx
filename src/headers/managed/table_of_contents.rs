@@ -1,3 +1,6 @@
+use derive_new::new;
+use thiserror_no_std::Error;
+
 use crate::{
     api::enums::compression_preference::CompressionPreference,
     headers::{managed::*, parser::*},
@@ -24,10 +27,20 @@ pub struct TableOfContents<
 }
 
 /// Errors that can occur when deserializing TableOfContents
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
 pub enum DeserializeError {
     /// Error unpacking the string pool
-    StringPoolUnpackError(StringPoolUnpackError),
+    StringPoolUnpackError(#[from] StringPoolUnpackError),
     /// Unsupported table of contents version
     UnsupportedTocVersion,
+    /// Error that occurs when there is insufficient data to deserialize the ToC
+    InsufficientData(#[from] InsufficientDataError),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Error, new)]
+pub struct InsufficientDataError {
+    /// Actual number of available bytes. (less than expected)
+    pub available: u32,
+    /// Expected minimum number of available bytes.
+    pub expected: u32,
 }
