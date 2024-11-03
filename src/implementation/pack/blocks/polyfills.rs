@@ -7,7 +7,7 @@ use core::any::Any;
 // Define the Block trait
 pub trait Block<T>
 where
-    T: HasFileSize + CanProvideFileData + HasRelativePath,
+    T: HasFileSize + CanProvideInputData + HasRelativePath,
 {
     // Define necessary methods
     fn as_any(&self) -> &dyn Any;
@@ -26,7 +26,7 @@ where
 #[allow(dead_code)]
 pub struct SolidBlock<T>
 where
-    T: HasFileSize + CanProvideFileData + HasRelativePath,
+    T: HasFileSize + CanProvideInputData + HasRelativePath,
 {
     pub(crate) items: Vec<Rc<T>>,
     pub(crate) compression_preference: CompressionPreference,
@@ -34,7 +34,7 @@ where
 
 impl<T> SolidBlock<T>
 where
-    T: HasFileSize + CanProvideFileData + HasRelativePath,
+    T: HasFileSize + CanProvideInputData + HasRelativePath,
 {
     /// Create a new SolidBlock
     ///
@@ -51,7 +51,7 @@ where
 
 impl<T> Block<T> for SolidBlock<T>
 where
-    T: HasFileSize + CanProvideFileData + HasRelativePath + 'static,
+    T: HasFileSize + CanProvideInputData + HasRelativePath + 'static,
 {
     // Implement necessary methods
     fn as_any(&self) -> &dyn Any {
@@ -84,7 +84,7 @@ pub struct ChunkedBlockState<T> {
 
 impl<T> ChunkedBlockState<T>
 where
-    T: HasFileSize + CanProvideFileData + HasRelativePath,
+    T: HasFileSize + CanProvideInputData + HasRelativePath,
 {
     /// Create a new ChunkedBlockState
     ///
@@ -105,7 +105,7 @@ where
 #[allow(dead_code)]
 pub struct ChunkedFileBlock<T>
 where
-    T: HasFileSize + CanProvideFileData + HasRelativePath,
+    T: HasFileSize + CanProvideInputData + HasRelativePath,
 {
     /// Starting offset of this block within the file.
     pub(crate) start_offset: u64,
@@ -119,7 +119,7 @@ where
 
 impl<T> ChunkedFileBlock<T>
 where
-    T: HasFileSize + CanProvideFileData + HasRelativePath,
+    T: HasFileSize + CanProvideInputData + HasRelativePath,
 {
     /// Creates a new ChunkedFileBlock
     ///
@@ -146,7 +146,7 @@ where
 
 impl<T> Block<T> for ChunkedFileBlock<T>
 where
-    T: HasFileSize + CanProvideFileData + HasRelativePath + 'static,
+    T: HasFileSize + CanProvideInputData + HasRelativePath + 'static,
 {
     fn as_any(&self) -> &dyn Any {
         self

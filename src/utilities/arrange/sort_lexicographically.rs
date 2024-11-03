@@ -9,7 +9,7 @@ use crate::api::traits::*;
 /// # Remarks
 ///
 /// It is assumed that the items passed to [sort_lexicographically] are partially sorted.
-/// This is because they are likely to come from
+/// This is because they are likely to come from disk/filesystem.
 pub fn sort_lexicographically<T: HasRelativePath>(items: &mut [T]) {
     items.sort_by(|a, b| a.relative_path().cmp(b.relative_path()));
 }

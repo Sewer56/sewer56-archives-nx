@@ -13,10 +13,8 @@ use hashbrown::HashMap;
 /// provided their extensions match, they should be grouped together.
 ///
 /// The Nx packing pipeline typically starts with the following steps:
-/// - Sort files ascending by size [`sort_lexicographically`]
+/// - Sort files ascending by size.
 /// - Group files by extension (👈 This function ‼️)
-///
-/// [`sort_lexicographically`]: crate::utilities::arrange::sort_lexicographically
 pub fn group_files<'a, T>(files: &'a Vec<Rc<T>>) -> HashMap<&'a str, Vec<Rc<T>>>
 where
     T: HasRelativePath + 'a,

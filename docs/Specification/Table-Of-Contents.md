@@ -136,7 +136,7 @@ Format:
 - **Limits:**
     - **Max File Count**: 256K
     - **Max Block Count**: 4M
-    - **Max SOLID Block Size**: 64MiB
+    - **Max SOLID Block Size**: 16MiB
     - **Max File Size**: 4GiB
     - **Max Block Size**: 1GiB
 - **Derived Limits**:

@@ -1,5 +1,5 @@
 use super::FileEntryFieldsBits;
-use crate::{headers::managed::FileEntry, utilities::math::ToBitmask};
+use crate::headers::managed::FileEntry;
 use endian_writer::*;
 
 /// Represents a 64-bit packed FileEntry using the Flexible Entry Format (without hash).
