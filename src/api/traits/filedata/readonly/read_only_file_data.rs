@@ -3,11 +3,11 @@
 ///
 /// # Remarks
 ///
-/// The [`FileData`] has a lifetime limited by the [`InputDataProvider`] instance where it was
+/// The [`ReadOnlyFileData`] has a lifetime limited by the [`InputDataProvider`] instance where it was
 /// created from. For more details, see the documentation for [`InputDataProvider`].
 ///
 /// [`InputDataProvider`]: crate::api::traits::filedata::input_data_provider::InputDataProvider
-pub trait FileData {
+pub trait ReadOnlyFileData {
     /// Returns a byte slice of the underlying file data.
     ///
     /// # Returns

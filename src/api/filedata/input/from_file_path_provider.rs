@@ -35,7 +35,7 @@ impl InputDataProvider for FromFilePathProvider {
         &'a self,
         start: u64,
         length: u64,
-    ) -> Result<Box<dyn FileData + 'a>, FileProviderError> {
+    ) -> Result<Box<dyn ReadOnlyFileData + 'a>, FileProviderError> {
         let mapping = ReadOnlyMmap::new(&self.file_handle, start, length as usize)?;
         Ok(Box::new(ReadOnlyMappedFileData::new(mapping)))
     }
@@ -53,7 +53,7 @@ impl<'a> ReadOnlyMappedFileData<'a> {
     }
 }
 
-impl<'a> FileData for ReadOnlyMappedFileData<'a> {
+impl<'a> ReadOnlyFileData for ReadOnlyMappedFileData<'a> {
     fn data(&self) -> &'a [u8] {
         self.mapping.as_slice()
     }

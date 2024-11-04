@@ -35,7 +35,7 @@ impl InputDataProvider for FromExistingNxBlock {
         &'a self,
         start: u64,
         length: u64,
-    ) -> Result<Box<dyn FileData + 'a>, FileProviderError> {
+    ) -> Result<Box<dyn ReadOnlyFileData + 'a>, FileProviderError> {
         debug_assert!(start == 0, "start must be 0");
         debug_assert!(
             length == self.file_size as u64,
@@ -63,7 +63,7 @@ impl<'a> DecompressedNxBlockFileData<'a> {
     }
 }
 
-impl FileData for DecompressedNxBlockFileData<'_> {
+impl ReadOnlyFileData for DecompressedNxBlockFileData<'_> {
     fn data(&self) -> &[u8] {
         self.data
     }

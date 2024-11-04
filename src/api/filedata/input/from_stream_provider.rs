@@ -21,7 +21,7 @@ impl<T: Read + Seek + Send> InputDataProvider for FromStreamProvider<T> {
         &'a self,
         start: u64,
         length: u64,
-    ) -> Result<Box<dyn FileData + 'a>, FileProviderError> {
+    ) -> Result<Box<dyn ReadOnlyFileData + 'a>, FileProviderError> {
         let mut stream = self
             .stream
             .lock()
@@ -47,7 +47,7 @@ pub struct StreamData {
     data: Box<[u8]>,
 }
 
-impl FileData for StreamData {
+impl ReadOnlyFileData for StreamData {
     fn data(&self) -> &[u8] {
         &self.data
     }

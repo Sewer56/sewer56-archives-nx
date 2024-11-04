@@ -1,7 +1,7 @@
-use super::{FileData, FileProviderError};
+use super::*;
 use alloc::boxed::Box;
 
-/// An interface for creating [`FileData`] instances.
+/// An interface for creating [`ReadOnlyFileData`] instances.
 /// Used for providing read access to data, such as reading files for packing.
 ///
 /// This provides the data (bytes) for an existing file, with a `start` parameter
@@ -25,7 +25,7 @@ use alloc::boxed::Box;
 /// For read operations where the entire file is not yet available (e.g., over a network),
 /// the provider should stall until it can provide enough data.
 ///
-/// [`FileData`]: crate::api::traits::filedata::file_data::FileData
+/// [`ReadOnlyFileData`]: crate::api::traits::filedata::readonly::read_only_file_data::ReadOnlyFileData
 pub trait InputDataProvider: Send + Sync {
     /// Gets the file data behind this provider.
     ///
@@ -36,7 +36,7 @@ pub trait InputDataProvider: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A boxed [`FileData`] instance to access the requested data.
+    /// A boxed [`ReadOnlyFileData`] instance to access the requested data.
     ///
     /// # Errors
     ///
@@ -45,5 +45,5 @@ pub trait InputDataProvider: Send + Sync {
         &'a self,
         start: u64,
         length: u64,
-    ) -> Result<Box<dyn FileData + 'a>, FileProviderError>;
+    ) -> Result<Box<dyn ReadOnlyFileData + 'a>, FileProviderError>;
 }

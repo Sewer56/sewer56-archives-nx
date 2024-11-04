@@ -18,7 +18,7 @@ impl InputDataProvider for FromArrayProvider {
         &'a self,
         start: u64,
         length: u64,
-    ) -> Result<Box<dyn FileData + 'a>, FileProviderError> {
+    ) -> Result<Box<dyn ReadOnlyFileData + 'a>, FileProviderError> {
         let start = start as usize;
         let length = length as usize;
 

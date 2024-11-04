@@ -1,6 +1,6 @@
-use crate::api::traits::FileData;
+use crate::api::traits::ReadOnlyFileData;
 
-/// Implementation of [`FileData`] backed by a byte slice.
+/// Implementation of [`ReadOnlyFileData`] backed by a byte slice.
 pub struct SliceFileData<'a> {
     data: &'a [u8],
 }
@@ -12,7 +12,7 @@ impl<'a> SliceFileData<'a> {
     }
 }
 
-impl<'a> FileData for SliceFileData<'a> {
+impl<'a> ReadOnlyFileData for SliceFileData<'a> {
     fn data(&self) -> &'a [u8] {
         self.data
     }

@@ -1,13 +1,16 @@
+use crate::utilities::compression::NxDecompressionError;
 use alloc::string::String;
 use lightweight_mmap::{handles::HandleOpenError, mmap::MmapError};
 use thiserror_no_std::Error;
-
-use crate::utilities::compression::NxDecompressionError;
 
 /// Represents errors that can occur when providing file data.
 ///
 /// This enum encapsulates various error types that might be encountered
 /// while accessing or providing file data.
+///
+/// These errors correspond to built-in implementations of the [`InputDataProvider`] trait.
+///
+/// [`InputDataProvider`]: crate::api::traits::filedata::InputDataProvider
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum FileProviderError {
     #[error("Failed to acquire a lock by a file provider that requires it.")]
