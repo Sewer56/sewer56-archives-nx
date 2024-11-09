@@ -1,5 +1,7 @@
+use super::*;
+
 /// Trait for items which can provide bytes corresponding to a file.
-pub trait CanProvideFileData {
+pub trait CanProvideInputData {
     // Item which provides file data to the user.
-    // fn file_data_provider(&self) -> &dyn IFileDataProvider;
+    fn input_data_provider(&self) -> &dyn InputDataProvider;
 }

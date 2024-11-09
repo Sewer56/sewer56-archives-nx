@@ -1,3 +1,7 @@
+#![allow(clippy::absurd_extreme_comparisons)]
+
+use static_assertions::const_assert;
+
 // STD ALERT!! However it's portable traits only.
 use crate::{api::enums::*, utilities::system_info::get_num_cores};
 use core::num::NonZeroU32;
@@ -7,7 +11,8 @@ use std::io::{Seek, Write};
 pub const MIN_BLOCK_SIZE: u32 = 4095;
 
 /// The maximum block size that the user is allowed to specify
-pub const MAX_BLOCK_SIZE: u32 = 67_108_863;
+pub const MAX_BLOCK_SIZE: u32 = 16_777_215;
+const_assert!(MAX_BLOCK_SIZE <= u32::MAX); // It's a breaking change to extend this beyond u32
 
 /// The minimum chunk size that the user is allowed to specify
 pub const MIN_CHUNK_SIZE: u32 = 32_768;

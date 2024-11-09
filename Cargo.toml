@@ -8,17 +8,16 @@ license-file = "LICENSE"
 include = ["src/**/*"]
 
 [features]
-default = ["lz4", "detect_num_cores", "aggressive_unrolling", "hardened"]
+default = ["lz4", "detect_num_cores", "hardened"]
+
 # See README.md for more information on using Profile-Guided Optimization.
 pgo = []
+
 # Feature for enabling C library exports.
-c-exports = []
+c_exports = []
+
 # Enables support for LZ4 compression/decompression
 lz4 = []
-# Aggressively unrolls loops for slightly (< 3%) better performance at expense of binary size.
-# In operations such as:
-# - Table of Contents (de/Serialization)
-aggressive_unrolling = []
 
 # Adds additional runtime checks against untrusted input.
 # This is useful if you receive NX2 files from the internet.
@@ -30,7 +29,7 @@ zstd_panic_on_unhandled_error = []
 
 # Avoids core::fmt to reduce binary size.
 # May reduce error message friendliness.
-no_format = []
+no_format = [ "lightweight-mmap/no-format" ]
 
 # Auto detects the number of cores on the system.
 # Disable this when targeting esoteric platforms; in which case defaults to 1.
@@ -55,6 +54,10 @@ derive-new = "0.7.0"
 ahash = "0.8.11"
 endian-writer = "2.1.2"
 endian-writer-derive = "0.1.0"
+memmap2 = "0.9.5"
+lightweight-mmap = { version = "0.4.0" }
+static_assertions = "1.1.0"
+o2o = "0.4.10"
 
 # C# Bindings
 [build-dependencies]
@@ -66,6 +69,7 @@ criterion = "0.5.1"
 rstest = "0.23.0"
 fake = { version = "2.10.0" }
 itertools = "0.13.0"
+tempfile = "3.13.0"
 
 [target.'cfg(unix)'.dev-dependencies]
 pprof = { version = "0.12", features = ["flamegraph", "criterion"] }

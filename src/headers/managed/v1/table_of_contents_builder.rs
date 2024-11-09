@@ -30,10 +30,10 @@ const MAX_FILE_COUNT_V0V1: usize = 1048575; // 2^20 - 1
 ///
 /// # Type Parameters
 ///
-/// * `T`: Type of the items in the blocks, which must implement `HasFileSize`, `CanProvideFileData`, and `HasRelativePath`.
+/// * `T`: Type of the items in the blocks, which must implement `HasFileSize`, `CanProvideInputData`, and `HasRelativePath`.
 pub fn determine_version<T>(blocks: &[Box<dyn Block<T>>], chunk_size: u32) -> VersionInfo
 where
-    T: HasFileSize + CanProvideFileData + HasRelativePath,
+    T: HasFileSize + CanProvideInputData + HasRelativePath,
 {
     let mut largest_file_size: u64 = 0;
     let mut can_create_chunks = false;

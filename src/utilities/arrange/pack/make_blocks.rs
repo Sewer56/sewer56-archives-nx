@@ -17,7 +17,7 @@ pub struct BlocksResult<T> {
 }
 
 /// This is a step of the .NX packing process that involves creating
-/// blocks from groups of files created by `group_files`.
+/// blocks from groups of files created by [`group_by_extension`].
 /// (In ascending size order)
 ///
 /// The input is a `HashMap` of file groups, where the key is the file extension.
@@ -38,7 +38,7 @@ pub struct BlocksResult<T> {
 /// This will create 3 (chunk) blocks of 32 KiB each, and 1 (chunk) block of 4 KiB.
 ///
 /// The Nx packing pipeline typically starts with the following steps:
-/// - Sort files ascending by size [`sort_lexicographically`]
+/// - Sort files ascending by size.
 /// - Group files by extension [`group_by_extension`]
 /// - Make blocks from file groups (this function)
 ///
@@ -64,7 +64,7 @@ pub struct BlocksResult<T> {
 /// - [`HasFileSize`]`HasFileSize`
 /// - [`HasSolidType`]
 /// - [`HasCompressionPreference`]
-/// - [`CanProvideFileData`]
+/// - [`CanProvideInputData`]
 /// - [`HasRelativePath`]
 /// - [`Clone`]
 ///
@@ -81,7 +81,7 @@ where
     T: HasFileSize
         + HasSolidType
         + HasCompressionPreference
-        + CanProvideFileData
+        + CanProvideInputData
         + HasRelativePath
         + Clone
         + 'static,
@@ -194,7 +194,7 @@ fn chunk_item<T>(
     T: HasFileSize
         + HasSolidType
         + HasCompressionPreference
-        + CanProvideFileData
+        + CanProvideInputData
         + HasRelativePath
         + Clone
         + 'static,
@@ -279,8 +279,11 @@ mod tests {
         }
     }
 
-    impl CanProvideFileData for PackerFileForTesting {
+    impl CanProvideInputData for PackerFileForTesting {
         // Implement necessary methods if required
+        fn input_data_provider(&self) -> &dyn InputDataProvider {
+            todo!()
+        }
     }
 
     /// Test that `make_blocks` correctly splits files into solid blocks when they fit within the block size.

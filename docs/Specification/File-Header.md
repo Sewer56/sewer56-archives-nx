@@ -62,7 +62,7 @@ The size of an individual [block](./Overview.md#terminology) is not standardized
 across an `Nx` archive. Blocks can have variable sizes, provided they are
 smaller than the [chunk size](#chunk-size).
 
-Currently, the size of SOLID blocks is limited to (`64MiB - 1`) as it is tied to
+Currently, the size of SOLID blocks is limited to (`16MiB - 1`) as it is tied to
 [the `DecompressedBlockOffset` field in Table of Contents](./Table-Of-Contents.md).
 
 ## Header Page Count

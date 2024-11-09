@@ -1,9 +1,9 @@
 use crate::api::{
     enums::*,
     traits::{
-        can_provide_file_data::CanProvideFileData,
+        can_provide_input_data::CanProvideInputData,
         has_compression_preference::HasCompressionPreference, has_file_size::HasFileSize,
-        has_relative_path::HasRelativePath, has_solid_type::HasSolidType,
+        has_relative_path::HasRelativePath, has_solid_type::HasSolidType, InputDataProvider,
     },
 };
 use alloc::rc::Rc;
@@ -55,4 +55,8 @@ impl HasCompressionPreference for PackerFileForTesting {
     }
 }
 
-impl CanProvideFileData for PackerFileForTesting {}
+impl CanProvideInputData for PackerFileForTesting {
+    fn input_data_provider(&self) -> &dyn InputDataProvider {
+        todo!()
+    }
+}

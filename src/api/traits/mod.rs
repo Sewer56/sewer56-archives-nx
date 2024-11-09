@@ -1,5 +1,7 @@
 /// Trait for items which can provide bytes corresponding to a file.
-pub mod can_provide_file_data;
+pub mod can_provide_input_data;
+/// Allows for specifying inputs and outputs for pack and extract operations.
+pub mod filedata;
 /// Used for items to with which format they would like to be compressed.
 pub mod has_compression_preference;
 /// Indicates the item has a file size. For data input into the packer.
@@ -10,7 +12,8 @@ pub mod has_relative_path;
 pub mod has_solid_type;
 
 /// Prelude with re-exports
-pub use can_provide_file_data::*;
+pub use can_provide_input_data::*;
+pub use filedata::*;
 pub use has_compression_preference::*;
 pub use has_file_size::*;
 pub use has_relative_path::*;

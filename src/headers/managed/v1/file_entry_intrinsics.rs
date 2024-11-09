@@ -5,24 +5,21 @@ use endian_writer::{EndianWriter, LittleEndianWriter};
 pub(crate) fn write_entries_as_v0(lewriter: &mut LittleEndianWriter, entries: &[FileEntry]) {
     let mut index = 0;
 
-    #[cfg(feature = "aggressive_unrolling")]
-    {
-        let ptr = entries.as_ptr(); // Get a raw pointer to the first element
+    let ptr = entries.as_ptr(); // Get a raw pointer to the first element
 
-        // Process the entries in chunks of 2 using unrolling
-        // SAFETY: We know that index + 2 <= entries.len()
-        // Process the entries in chunks of 2 using unrolling
-        while index + 2 <= entries.len() {
-            unsafe {
-                // Get raw references to two entries at a time using pointer arithmetic
-                let first_entry = &*ptr.add(index);
-                let second_entry = &*ptr.add(index + 1);
+    // Process the entries in chunks of 2 using unrolling
+    // SAFETY: We know that index + 2 <= entries.len()
+    // Process the entries in chunks of 2 using unrolling
+    while index + 2 <= entries.len() {
+        unsafe {
+            // Get raw references to two entries at a time using pointer arithmetic
+            let first_entry = &*ptr.add(index);
+            let second_entry = &*ptr.add(index + 1);
 
-                // Call `write_two_as_v0` with two separate parameters
-                write_two_as_v0(lewriter, first_entry, second_entry);
-            }
-            index += 2;
+            // Call `write_two_as_v0` with two separate parameters
+            write_two_as_v0(lewriter, first_entry, second_entry);
         }
+        index += 2;
     }
 
     // Write any remaining entries (fewer than 2)
@@ -88,22 +85,20 @@ pub(crate) fn write_entries_as_v1(writer: &mut LittleEndianWriter, entries: &[Fi
 
     // Process the entries in chunks of 2
     // SAFETY: We know that index + 2 <= entries.len()
-    #[cfg(feature = "aggressive_unrolling")]
-    {
-        let ptr = entries.as_ptr(); // Get a raw pointer to the first element
 
-        // Process the entries in chunks of 2 using unrolling
-        while index + 2 <= entries.len() {
-            unsafe {
-                // Get raw references to two entries at a time using pointer arithmetic
-                let first_entry = &*ptr.add(index);
-                let second_entry = &*ptr.add(index + 1);
+    let ptr = entries.as_ptr(); // Get a raw pointer to the first element
 
-                // Call `write_two_as_v1` with two separate parameters
-                write_two_as_v1(writer, first_entry, second_entry);
-            }
-            index += 2;
+    // Process the entries in chunks of 2 using unrolling
+    while index + 2 <= entries.len() {
+        unsafe {
+            // Get raw references to two entries at a time using pointer arithmetic
+            let first_entry = &*ptr.add(index);
+            let second_entry = &*ptr.add(index + 1);
+
+            // Call `write_two_as_v1` with two separate parameters
+            write_two_as_v1(writer, first_entry, second_entry);
         }
+        index += 2;
     }
 
     // Write any remaining entries (fewer than 2)

@@ -2,13 +2,17 @@
 //! Here's the crate documentation.
 #![feature(coverage_attribute)]
 #![feature(allocator_api)]
-#[cfg(feature = "c-exports")]
+#![feature(once_cell_try)]
+#[cfg(feature = "c_exports")]
 pub mod exports;
 extern crate alloc;
 
 /// Public High Level API
 pub mod api {
     pub mod enums;
+
+    /// Allows for specifying inputs and outputs for pack and extract operations.
+    pub mod filedata;
 
     /// Public APIs related to packing.
     pub mod packing {
