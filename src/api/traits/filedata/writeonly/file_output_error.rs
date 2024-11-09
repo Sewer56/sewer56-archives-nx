@@ -1,3 +1,4 @@
+use lightweight_mmap::handles::HandleOpenError;
 use std::alloc::AllocError;
 use thiserror_no_std::Error;
 
@@ -10,4 +11,8 @@ use thiserror_no_std::Error;
 pub enum FileOutputError {
     #[error(transparent)]
     AllocError(#[from] AllocError),
+
+    /// Failed to open file handle.
+    #[error(transparent)]
+    FileHandleOpenError(#[from] HandleOpenError),
 }
