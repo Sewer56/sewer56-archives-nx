@@ -16,6 +16,7 @@ pub mod api {
 
     /// Public APIs related to packing.
     pub mod packing {
+        pub mod packer_file;
         pub mod packing_settings;
     }
 
