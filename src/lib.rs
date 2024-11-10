@@ -96,6 +96,12 @@ pub mod utilities {
     /// Number related code.
     pub mod math;
 
+    /// Code related to I/O and disk operations
+    pub mod io {
+        /// Searches a given directory and converts it to a list of files.
+        pub mod file_finder;
+    }
+
     #[cfg(test)]
     pub mod tests {
         pub mod packer_file_for_testing;

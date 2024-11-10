@@ -1,6 +1,7 @@
 use crate::utilities::compression::NxDecompressionError;
 use alloc::string::String;
 use lightweight_mmap::{handles::HandleOpenError, mmap::MmapError};
+use std::io;
 use thiserror_no_std::Error;
 
 /// Represents errors that can occur when providing file data.
@@ -11,7 +12,7 @@ use thiserror_no_std::Error;
 /// These errors correspond to built-in implementations of the [`InputDataProvider`] trait.
 ///
 /// [`InputDataProvider`]: crate::api::traits::filedata::InputDataProvider
-#[derive(Debug, Error, PartialEq, Eq)]
+#[derive(Debug, Error)]
 pub enum FileProviderError {
     #[error("Failed to acquire a lock by a file provider that requires it.")]
     FailedToAcquireLock(),
@@ -37,4 +38,8 @@ pub enum FileProviderError {
     /// Failed to decompress Nx compressed data when sourcing from another Nx file.
     #[error("Failed to decompress Nx compressed data when sourcing from another Nx file.")]
     NxDecompressionError(#[from] NxDecompressionError),
+
+    /// Failed to memory map a given file.
+    #[error(transparent)]
+    IoError(#[from] io::Error),
 }
