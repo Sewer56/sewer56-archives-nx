@@ -13,7 +13,8 @@ use alloc::boxed::Box;
 ///
 /// An [`InputDataProvider`] may be accessed by multiple threads at any given time.
 /// This can happen for example when packing files in multiple chunks, the
-/// [`InputDataProvider::get_file_data`]  will be called in parallel from each chunk.
+/// [`InputDataProvider::get_file_data`] will be called in parallel from each chunk.
+/// Hence it is [`Send`] in addition to [`Sync`].
 ///
 /// Every returned value from the [`InputDataProvider::get_file_data`] however has its own
 /// life time and does not require thread safety. The only constraint is it cannot outlive

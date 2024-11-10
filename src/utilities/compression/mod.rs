@@ -1,5 +1,6 @@
 // Compression modules
 pub mod copy;
+pub mod dictionary;
 pub mod zstd;
 pub mod zstd_stream;
 
