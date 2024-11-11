@@ -1,7 +1,7 @@
 use crate::Args;
 use bytesize::ByteSize;
 use core::cmp::min;
-use hashbrown::HashMap;
+use hashbrown::{HashMap, HashTable};
 use rayon::prelude::*;
 use sewer56_archives_nx::{
     api::{
@@ -9,7 +9,7 @@ use sewer56_archives_nx::{
         packing::packer_file::PackerFile,
         traits::{CanProvideInputData, HasFileSize, HasSolidType},
     },
-    implementation::pack::blocks::polyfills::Block,
+    implementation::pack::blocks::polyfills::{Block, PtrEntry},
     utilities::{
         arrange::pack::{group_by_extension::*, make_blocks::*},
         compression::{
@@ -101,9 +101,12 @@ pub fn analyze_directory(args: &Args) -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
-fn read_block_data(block: &dyn Block<PackerFile>) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+fn read_block_data(
+    block: &dyn Block<PackerFile>,
+    seen: &mut HashTable<PtrEntry>,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let mut items = Vec::new();
-    block.append_items(&mut items);
+    block.append_items(&mut items, seen);
 
     let mut block_data = Vec::new();
     for item in items {
@@ -188,9 +191,10 @@ fn analyze_compression(
             .unwrap();
 
         // First read all block data
+        let mut seen = HashTable::with_capacity(blocks.len());
         let block_data: Vec<_> = blocks
             .iter()
-            .map(|block| read_block_data(block.as_ref()).unwrap())
+            .map(|block| read_block_data(block.as_ref(), &mut seen).unwrap())
             .collect();
 
         // Now parallelize the compression step

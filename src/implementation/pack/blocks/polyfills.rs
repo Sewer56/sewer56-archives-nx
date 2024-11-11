@@ -3,6 +3,14 @@ use crate::api::traits::*;
 use alloc::vec::Vec;
 use alloc::{rc::Rc, sync::Arc};
 use core::any::Any;
+use core::slice;
+use hashbrown::HashTable;
+
+// Simple table entry that just stores the pointer value
+#[derive(Debug)]
+pub struct PtrEntry {
+    key: u64,
+}
 
 // Define the Block trait
 pub trait Block<T>
@@ -12,8 +20,15 @@ where
     // Define necessary methods
     fn as_any(&self) -> &dyn Any;
 
-    /// Appends files to a given vector.
-    fn append_items(&self, items: &mut Vec<Rc<T>>);
+    /// Appends files to a given vector, using a [`HashTable`] to track duplicates.
+    ///
+    /// # Arguments
+    /// * `items` - The vector to append items to
+    /// * `seen` - HashSet tracking already added items
+    fn append_items(&self, items: &mut Vec<Rc<T>>, seen: &mut HashTable<PtrEntry>);
+
+    /// Returns a slice of references to all items in this block without allocation
+    fn items(&self) -> &[Rc<T>];
 
     /// For any block that's based on existing data in another Nx archive, this returns
     /// the max DecompressedBlockOffset for any existing file entry within the block.
@@ -69,8 +84,22 @@ where
         self
     }
 
-    fn append_items(&self, items: &mut Vec<Rc<T>>) {
-        items.extend(self.items.iter().cloned());
+    fn append_items(&self, items: &mut Vec<Rc<T>>, seen: &mut HashTable<PtrEntry>) {
+        for item in &self.items {
+            let ptr_value = Rc::as_ptr(item) as u64;
+
+            if seen
+                .find(ptr_value, |entry| entry.key == ptr_value)
+                .is_none()
+            {
+                seen.insert_unique(ptr_value, PtrEntry { key: ptr_value }, |entry| entry.key);
+                items.push(item.clone());
+            }
+        }
+    }
+
+    fn items(&self) -> &[Rc<T>] {
+        &self.items
     }
 
     fn dict_index(&self) -> u32 {
@@ -178,8 +207,21 @@ where
         self
     }
 
-    fn append_items(&self, items: &mut Vec<Rc<T>>) {
-        items.push(self.state.file.clone());
+    fn append_items(&self, items: &mut Vec<Rc<T>>, seen: &mut HashTable<PtrEntry>) {
+        let ptr_value = Rc::as_ptr(&self.state.file) as u64;
+
+        if seen
+            .find(ptr_value, |entry| entry.key == ptr_value)
+            .is_none()
+        {
+            seen.insert_unique(ptr_value, PtrEntry { key: ptr_value }, |entry| entry.key);
+            items.push(self.state.file.clone());
+        }
+    }
+
+    fn items(&self) -> &[Rc<T>] {
+        // Create a static slice containing just the single file reference
+        slice::from_ref(&self.state.file)
     }
 
     fn dict_index(&self) -> u32 {

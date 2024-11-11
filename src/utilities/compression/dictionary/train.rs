@@ -62,7 +62,6 @@ pub fn train_dictionary(
 
         // These params are copied from ZDICT_trainFromBuffer defaults
         cover_params.d = 8;
-        cover_params.k = 2048;
         cover_params.steps = 4;
         cover_params.nbThreads = get_num_cores().get() as c_uint;
 
