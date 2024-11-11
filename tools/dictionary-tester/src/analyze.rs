@@ -138,6 +138,8 @@ fn analyze_compression(
     let mut results_by_ext: HashMap<String, Vec<BlockAnalysis>> = HashMap::new();
     let mut total_improvement: i64 = 0;
     let mut total_original_size: u64 = 0;
+    let mut total_compressed_size: u64 = 0;
+    let mut total_compressed_with_dict_size: u64 = 0;
     let mut total_dict_size: u64 = 0;
 
     println!("\nAnalyzing compression by extension...");
@@ -285,6 +287,8 @@ fn analyze_compression(
 
         total_improvement += improvement;
         total_original_size += orig_size;
+        total_compressed_size += compressed_sum;
+        total_compressed_with_dict_size += compressed_with_dict_sum;
 
         let len = analyses.len() as f64;
         let avg_improvement = improvement as f64 / len;
@@ -316,6 +320,14 @@ fn analyze_compression(
     // Print total improvement
     println!("\nTotal Results:");
     println!("Total Original Size: {}", ByteSize(total_original_size));
+    println!(
+        "Total Compressed w/o Dict: {}",
+        ByteSize(total_compressed_size)
+    );
+    println!(
+        "Total Compressed with Dict: {}",
+        ByteSize(total_compressed_with_dict_size)
+    );
     if total_improvement < 0 {
         println!(
             "Total Improvement: -{}",
