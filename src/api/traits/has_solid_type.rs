@@ -4,4 +4,7 @@ use crate::api::enums::*;
 pub trait HasSolidType {
     /// Preference in terms of whether this item should be SOLID or not.
     fn solid_type(&self) -> SolidPreference;
+
+    /// Allows you to set whether this item should be SOLID or not
+    fn set_solid_type(&mut self, preference: SolidPreference);
 }

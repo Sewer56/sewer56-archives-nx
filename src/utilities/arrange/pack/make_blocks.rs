@@ -101,6 +101,7 @@ where
     }
 
     // Make the blocks
+    let mut dict_index = 0_u32;
     for (_key, values) in groups {
         for item in values {
             // If the item is too big, it's getting chunked, regardless of preference.
@@ -111,6 +112,7 @@ where
                     &mut chunked_blocks,
                     chunk_size,
                     chunked_block_algorithm,
+                    dict_index,
                 );
                 continue;
             }
@@ -123,6 +125,7 @@ where
                     Box::new(SolidBlock::new(
                         vec![item.clone()],
                         item.compression_preference(),
+                        dict_index,
                     )),
                 ));
                 continue;
@@ -140,7 +143,7 @@ where
                     let cloned = current_block.clone();
                     solid_blocks.push((
                         current_block_size,
-                        Box::new(SolidBlock::new(cloned, solid_block_algorithm)),
+                        Box::new(SolidBlock::new(cloned, solid_block_algorithm, dict_index)),
                     ));
                     current_block.clear();
                 }
@@ -148,6 +151,8 @@ where
                 current_block_size = item.file_size();
             }
         }
+
+        dict_index += 1;
     }
 
     // If we have any items left, make sure to append them
@@ -157,6 +162,7 @@ where
             Box::new(SolidBlock::new(
                 take(&mut current_block),
                 solid_block_algorithm,
+                dict_index,
             )),
         ));
     }
@@ -190,6 +196,7 @@ fn chunk_item<T>(
     blocks: &mut Vec<Box<dyn Block<T>>>,
     chunk_size: u32,
     mut chunked_block_algorithm: CompressionPreference,
+    dict_index: u32,
 ) where
     T: HasFileSize
         + HasSolidType
@@ -217,6 +224,7 @@ fn chunk_item<T>(
         chunked_block_algorithm,
         num_chunks,
         item.clone(),
+        dict_index,
     ));
 
     let mut current_offset = 0_u64;
@@ -270,6 +278,10 @@ mod tests {
     impl HasSolidType for PackerFileForTesting {
         fn solid_type(&self) -> SolidPreference {
             self.solid_type
+        }
+
+        fn set_solid_type(&mut self, preference: SolidPreference) {
+            self.solid_type = preference;
         }
     }
 

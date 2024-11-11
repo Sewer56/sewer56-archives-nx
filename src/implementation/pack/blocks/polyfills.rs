@@ -20,6 +20,10 @@ where
     fn max_decompressed_block_offset(&self) -> u32 {
         0
     }
+
+    /// Index of the dictionary for dictionary compression, if dictionary
+    /// compression is being used.
+    fn dict_index(&self) -> u32;
 }
 
 /// Represents an individual SOLID block packed by the Nx library.
@@ -30,6 +34,7 @@ where
 {
     pub(crate) items: Vec<Rc<T>>,
     pub(crate) compression_preference: CompressionPreference,
+    pub(crate) dict_index: u32,
 }
 
 impl<T> SolidBlock<T>
@@ -41,10 +46,16 @@ where
     /// # Arguments
     /// * `items` - The items in the block
     /// * `compression_preference` - The preferred compression algorithm
-    pub fn new(items: Vec<Rc<T>>, compression_preference: CompressionPreference) -> Self {
+    /// * `dict_index` - The index of the dictionary, if using dictionary compression.
+    pub fn new(
+        items: Vec<Rc<T>>,
+        compression_preference: CompressionPreference,
+        dict_index: u32,
+    ) -> Self {
         SolidBlock {
             items,
             compression_preference,
+            dict_index,
         }
     }
 }
@@ -60,6 +71,10 @@ where
 
     fn append_items(&self, items: &mut Vec<Rc<T>>) {
         items.extend(self.items.iter().cloned());
+    }
+
+    fn dict_index(&self) -> u32 {
+        self.dict_index
     }
 }
 
@@ -80,6 +95,10 @@ pub struct ChunkedBlockState<T> {
     /// Provides access to the file that's being compressed by
     /// this chunked item.
     pub(crate) file: Rc<T>,
+
+    /// Index of the dictionary for dictionary compression, if dictionary
+    /// compression is being used.
+    pub(crate) dict_index: u32,
 }
 
 impl<T> ChunkedBlockState<T>
@@ -92,11 +111,18 @@ where
     /// * `compression` - The preferred compression algorithm
     /// * `num_chunks` - The number of chunks
     /// * `file` - The file being compressed
-    pub fn new(compression: CompressionPreference, num_chunks: u32, file: Rc<T>) -> Self {
+    /// * `dict_index` - The index of the dictionary, if using dictionary compression.
+    pub fn new(
+        compression: CompressionPreference,
+        num_chunks: u32,
+        file: Rc<T>,
+        dict_index: u32,
+    ) -> Self {
         Self {
             compression,
             num_chunks,
             file,
+            dict_index,
         }
     }
 }
@@ -154,5 +180,9 @@ where
 
     fn append_items(&self, items: &mut Vec<Rc<T>>) {
         items.push(self.state.file.clone());
+    }
+
+    fn dict_index(&self) -> u32 {
+        self.state.dict_index
     }
 }
