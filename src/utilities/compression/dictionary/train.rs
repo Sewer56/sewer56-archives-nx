@@ -1,3 +1,5 @@
+use crate::utilities::system_info::get_num_cores;
+
 use super::super::NxCompressionError;
 use core::{
     ffi::{c_uint, c_void},
@@ -57,6 +59,12 @@ pub fn train_dictionary(
         // Set up fastCover parameters with defaults
         let mut cover_params = zeroed::<ZDICT_fastCover_params_t>();
         cover_params.zParams.compressionLevel = compression_level;
+
+        // These params are copied from ZDICT_trainFromBuffer defaults
+        cover_params.d = 8;
+        cover_params.k = 2048;
+        cover_params.steps = 4;
+        cover_params.nbThreads = get_num_cores().get() as c_uint;
 
         // Optimize the dictionary using fastCover
         let optimize_result = ZDICT_optimizeTrainFromBuffer_fastCover(

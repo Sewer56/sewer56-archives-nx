@@ -11,6 +11,9 @@ pub struct ZstdCompressionDict {
     dict_ptr: *mut ZSTD_CDict,
 }
 
+unsafe impl Send for ZstdCompressionDict {}
+unsafe impl Sync for ZstdCompressionDict {}
+
 impl ZstdCompressionDict {
     /// Creates a new ZStandard compression dictionary.
     ///
@@ -85,8 +88,6 @@ impl ZstdCompressionDict {
         Err(NxCompressionError::ZStandard(errcode))
     }
 }
-
-unsafe impl Send for ZstdCompressionDict {}
 
 impl Drop for ZstdCompressionDict {
     fn drop(&mut self) {

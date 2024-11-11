@@ -1,6 +1,8 @@
 use crate::Args;
 use bytesize::ByteSize;
+use core::cmp::min;
 use hashbrown::HashMap;
+use rayon::prelude::*;
 use sewer56_archives_nx::{
     api::{
         enums::{CompressionPreference, SolidPreference},
@@ -17,7 +19,7 @@ use sewer56_archives_nx::{
         io::file_finder::find_files,
     },
 };
-use std::rc::Rc;
+use std::{rc::Rc, time::Instant};
 
 #[derive(Debug)]
 struct AnalyzerStats {
@@ -36,7 +38,7 @@ struct BlockAnalysis {
     original_size: usize,
     ratio: f64,
     ratio_with_dict: f64,
-    improvement: ByteSize,
+    improvement: i64,
     compressed_size: usize,
     compressed_with_dict_size: usize,
 }
@@ -118,9 +120,11 @@ fn read_block_data(block: &dyn Block<PackerFile>) -> Result<Vec<u8>, Box<dyn std
     Ok(block_data)
 }
 
-fn read_file_data(file: &PackerFile) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+fn read_file_train_data(file: &PackerFile) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let provider = file.input_data_provider();
-    let file_data = provider.get_file_data(0, file.file_size()).unwrap();
+    let file_data = provider
+        .get_file_data(0, min(file.file_size(), 131072))
+        .unwrap();
     Ok(file_data.data().to_vec())
 }
 
@@ -129,7 +133,7 @@ fn analyze_compression(
     stats: &AnalyzerStats,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut results_by_ext: HashMap<String, Vec<BlockAnalysis>> = HashMap::new();
-    let mut total_improvement: u64 = 0;
+    let mut total_improvement: i64 = 0;
     let mut total_original_size: u64 = 0;
     let mut total_dict_size: u64 = 0;
 
@@ -140,7 +144,7 @@ fn analyze_compression(
         // First, collect all file samples for dictionary training
         let mut samples = Vec::new();
         for file in &group.files {
-            let file_data = read_file_data(file.as_ref())?;
+            let file_data = read_file_train_data(file.as_ref())?;
             samples.push(file_data);
         }
 
@@ -160,16 +164,22 @@ fn analyze_compression(
             continue;
         }
 
-        let mut analyses = Vec::new();
+        let start = Instant::now();
         let dict_data = if samples.len() >= 7 {
             let samples: Vec<&[u8]> = samples.iter().map(|v| v.as_slice()).collect();
-            Some(train_dictionary(&samples, args.dict_size, args.level).unwrap())
+            print!(
+                " Dict Content size {}",
+                ByteSize(samples.iter().map(|s| s.len() as u64).sum())
+            );
+            let dict_data_result = train_dictionary(&samples, args.dict_size, args.level).unwrap();
+            print!(" Complete in {:?}", start.elapsed());
+            Some(dict_data_result)
         } else {
             None
         };
 
         let dict_size = dict_data.as_ref().map(|d| d.len()).unwrap_or(0);
-        println!(" Dictionary size {}", ByteSize(dict_size as u64));
+        println!(" Dict size {}", ByteSize(dict_size as u64));
         total_dict_size += dict_size as u64;
         let dict = dict_data
             .as_ref()
@@ -177,46 +187,54 @@ fn analyze_compression(
             .transpose()
             .unwrap();
 
-        // Analyze each block
-        for block in &blocks {
-            let block_data = read_block_data(block.as_ref())?;
-            let original_size = block_data.len();
+        // First read all block data
+        let block_data: Vec<_> = blocks
+            .iter()
+            .map(|block| read_block_data(block.as_ref()).unwrap())
+            .collect();
 
-            // Test normal compression
-            let mut compressed = vec![0u8; max_alloc_for_compress_size(original_size)];
-            let mut used_copy = false;
-            let compressed_size =
-                compress(args.level, &block_data, &mut compressed, &mut used_copy).unwrap();
+        // Now parallelize the compression step
+        let analyses: Vec<BlockAnalysis> = block_data
+            .par_iter()
+            .map(|block_data| {
+                let original_size = block_data.len();
 
-            // Test compression with dictionary if available
-            let compressed_with_dict_size = if let Some(dict) = dict.as_ref() {
-                let mut compressed_with_dict =
-                    vec![0u8; max_alloc_for_compress_size(original_size)];
+                // Test normal compression
+                let mut compressed = vec![0u8; max_alloc_for_compress_size(original_size)];
                 let mut used_copy = false;
-                compress_with_dictionary(
-                    dict,
-                    &block_data,
-                    &mut compressed_with_dict,
-                    &mut used_copy,
-                )
-                .unwrap()
-            } else {
-                compressed_size
-            };
+                let compressed_size =
+                    compress(args.level, block_data, &mut compressed, &mut used_copy).unwrap();
 
-            let ratio = compressed_size as f64 / original_size as f64;
-            let ratio_with_dict = compressed_with_dict_size as f64 / original_size as f64;
-            let improvement = ByteSize(compressed_size as u64 - compressed_with_dict_size as u64);
+                // Test compression with dictionary if available
+                let compressed_with_dict_size = if let Some(dict) = dict.as_ref() {
+                    let mut compressed_with_dict =
+                        vec![0u8; max_alloc_for_compress_size(original_size)];
+                    let mut used_copy = false;
+                    compress_with_dictionary(
+                        dict,
+                        block_data,
+                        &mut compressed_with_dict,
+                        &mut used_copy,
+                    )
+                    .unwrap()
+                } else {
+                    compressed_size
+                };
 
-            analyses.push(BlockAnalysis {
-                original_size,
-                ratio,
-                ratio_with_dict,
-                improvement,
-                compressed_size,
-                compressed_with_dict_size,
-            });
-        }
+                let ratio = compressed_size as f64 / original_size as f64;
+                let ratio_with_dict = compressed_with_dict_size as f64 / original_size as f64;
+                let improvement = compressed_size as i64 - compressed_with_dict_size as i64;
+
+                BlockAnalysis {
+                    original_size,
+                    ratio,
+                    ratio_with_dict,
+                    improvement,
+                    compressed_size,
+                    compressed_with_dict_size,
+                }
+            })
+            .collect();
 
         // Store results
         results_by_ext.insert(group.extension.clone(), analyses);
@@ -240,7 +258,7 @@ fn analyze_compression(
             compressed_sum,
             compressed_with_dict_sum,
         ) = analyses.iter().fold(
-            (0u64, 0.0f64, 0.0f64, 0u64, 0u64, 0u64),
+            (0i64, 0.0f64, 0.0f64, 0u64, 0u64, 0u64),
             |(
                 imp,
                 ratio_sum,
@@ -251,7 +269,7 @@ fn analyze_compression(
             ),
              a| {
                 (
-                    imp + a.improvement.0,
+                    imp + a.improvement,
                     ratio_sum + a.ratio,
                     ratio_dict_sum + a.ratio_with_dict,
                     orig_size_sum + a.original_size as u64,
@@ -275,7 +293,11 @@ fn analyze_compression(
             "Compressed with Dict: {}",
             ByteSize(compressed_with_dict_sum)
         );
-        println!("Improvement: {}", ByteSize(improvement));
+        if improvement < 0 {
+            println!("Improvement: -{}", ByteSize(-improvement as u64));
+        } else {
+            println!("Improvement: {}", ByteSize(improvement as u64));
+        }
         println!("Average compression ratio: {:.2}%", avg_ratio * 100.0);
         println!(
             "Average compression ratio with dictionary: {:.2}%",
@@ -290,7 +312,14 @@ fn analyze_compression(
     // Print total improvement
     println!("\nTotal Results:");
     println!("Total Original Size: {}", ByteSize(total_original_size));
-    println!("Total Improvement: {}", ByteSize(total_improvement));
+    if total_improvement < 0 {
+        println!(
+            "Total Improvement: -{}",
+            ByteSize(-total_improvement as u64)
+        );
+    } else {
+        println!("Total Improvement: {}", ByteSize(total_improvement as u64));
+    }
     println!("Total Dict Size: {}", ByteSize(total_dict_size));
     println!(
         "Overall Improvement Percentage: {:.2}%",

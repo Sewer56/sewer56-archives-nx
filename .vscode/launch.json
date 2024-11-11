@@ -54,7 +54,7 @@
                     "kind": "bin"
                 }
             },
-            "args": [ "--input", "/home/sewer/Tools/fasm" ],
+            "args": [ "--input", "/home/sewer/Downloads/smim", "--dict-size", "65536", "--no-solid-blocks"],
             "cwd": "${workspaceFolder}"
         },
         {
