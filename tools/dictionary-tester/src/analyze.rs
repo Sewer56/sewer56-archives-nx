@@ -116,7 +116,7 @@ fn read_block_data(
             continue;
         }
         // BUG: Zero sized files will abort because of invalid ptr
-        let file_data = provider.get_file_data(0, item.file_size()).unwrap();
+        let file_data = provider.get_file_data(0, file_size).unwrap();
         block_data.extend_from_slice(file_data.data());
     }
 
