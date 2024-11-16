@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import os
 import glob
 import shutil
@@ -106,7 +107,7 @@ def train_dictionary(blocks_dir, target_size):
         print(f"Error training dictionary: {e.stderr}")
         raise
 
-def compress_blocks(blocks_dir, dictionary_path=None, level=19):
+def compress_blocks(blocks_dir, dictionary_path=None, level=16):
     """Compress blocks with or without dictionary."""
     compressed_dir = blocks_dir / "compressed" / ("with_dict" if dictionary_path else "no_dict")
     compressed_dir.mkdir(parents=True, exist_ok=True)
