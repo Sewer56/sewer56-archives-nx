@@ -71,3 +71,6 @@ nav:
       - Optional Sections:
           - User Data: Specification/User-Data.md
       - Algorithm Implementation: Specification/Implementation-Details.md
+  - Research:
+      - Decode Speed: Research/DecodeSpeed.md
+      - Dictionary Compression: Research/DictionaryCompression.md

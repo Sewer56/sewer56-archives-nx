@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 import os
-import glob
-import shutil
-import subprocess
 from pathlib import Path
 from typing import NamedTuple, Dict, Optional
-from collections import defaultdict
+from common import *
 
 class BlockStats(NamedTuple):
     original_size: int
@@ -31,112 +28,6 @@ class CompressionStats(NamedTuple):
 def get_directory_size(directory: Path) -> int:
     """Calculate total size of all files in directory."""
     return sum(f.stat().st_size for f in directory.glob('**/*') if f.is_file())
-
-def get_blocks_dir(input_file):
-    """Create directory for blocks based on input filename."""
-    input_path = Path(input_file)
-    blocks_dir = input_path.parent / f"{input_path.stem}_blocks"
-    
-    # Remove directory completely if it exists
-    if blocks_dir.exists():
-        shutil.rmtree(blocks_dir)
-    
-    blocks_dir.mkdir(exist_ok=True)
-    return blocks_dir
-
-def split_file_into_blocks(input_file, block_size_kib=128):
-    """Split a file into blocks of specified size in KiB."""
-    block_size = block_size_kib * 1024  # Convert KiB to bytes
-    input_path = Path(input_file)
-    
-    if not input_path.exists():
-        raise FileNotFoundError(f"Input file {input_file} not found")
-    
-    # Create directory for blocks
-    blocks_dir = get_blocks_dir(input_file)
-    
-    # Read and split the file
-    with open(input_file, 'rb') as f:
-        block_num = 0
-        while True:
-            block_data = f.read(block_size)
-            if not block_data:
-                break
-                
-            block_file = blocks_dir / f"block_{block_num:04d}"
-            with open(block_file, 'wb') as block_f:
-                block_f.write(block_data)
-            block_num += 1
-    
-    return blocks_dir
-
-def train_dictionary(blocks_dir, target_size):
-    """Train a ZSTD dictionary using explicit block files list."""
-    if not blocks_dir.exists():
-        raise ValueError(f"Blocks directory {blocks_dir} not found")
-    
-    # Get sorted list of block files
-    block_files = sorted(glob.glob(str(blocks_dir / "block_*")))
-    if not block_files:
-        raise ValueError("No block files found")
-        
-    output_dict = blocks_dir / "trained_dict"
-    
-    # Prepare zstd command with exact dictionary size
-    cmd = [
-        'zstd', '--train',
-        *block_files,  # Expand list of files
-        '-o', str(output_dict),
-        '--maxdict', str(target_size),
-        '--dictID', '1'
-    ]
-    
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        print(f"Dictionary training successful")
-        
-        # Compress the dictionary itself
-        subprocess.run(['zstd', '-19', '-q', str(output_dict), '-o', str(output_dict) + '.zst'], check=True)
-        
-        actual_size = os.path.getsize(output_dict)
-        if actual_size != target_size:
-            print(f"Note: Dictionary size ({actual_size:,} bytes) differs from target ({target_size:,} bytes)")
-        
-        return output_dict
-    except subprocess.CalledProcessError as e:
-        print(f"Error training dictionary: {e.stderr}")
-        raise
-
-def compress_blocks(blocks_dir, dictionary_path=None, level=16):
-    """Compress blocks with or without dictionary."""
-    compressed_dir = blocks_dir / "compressed" / ("with_dict" if dictionary_path else "no_dict")
-    compressed_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Clean existing compressed files
-    for f in compressed_dir.glob("*.zst"):
-        f.unlink()
-    
-    block_files = sorted(blocks_dir.glob("block_*"))
-    
-    for block_file in block_files:
-        output_file = compressed_dir / f"{block_file.name}.zst"
-        
-        cmd = ['zstd', '-q', f'-{level}']
-        if dictionary_path:
-            cmd.extend(['-D', str(dictionary_path)])
-        cmd.extend(['-o', str(output_file), str(block_file)])
-        
-        subprocess.run(cmd, check=True)
-    
-    return compressed_dir
-
-def format_size(size):
-    """Format size in bytes to human readable format."""
-    for unit in ['B', 'KiB', 'MiB', 'GiB']:
-        if size < 1024.0:
-            return f"{size:.2f} {unit}"
-        size /= 1024.0
-    return f"{size:.2f} TiB"
 
 def format_size_diff(size, ref_size):
     """Format size with difference percentage from reference."""
@@ -259,17 +150,6 @@ def print_block_stats_summary(stats: CompressionStats):
     print(f"    With dict: {format_size(worst_block[1].compressed_with_dict)} ({worst_block[1].savings_with_dict:.2f}% saved)")
     print(f"    Advantage: {worst_block[1].advantage:.2f}%")
     print(f"    Bytes saved: {format_size(worst_block[1].bytes_saved)}")
-
-def get_dictionary_size(file_size: int, fixed_size: bool = False, manual_size: Optional[int] = None) -> tuple[int, str]:
-    """Determine dictionary size and description based on input parameters."""
-    if manual_size is not None:
-        return manual_size, f"{format_size(manual_size)} (manual)"
-    elif fixed_size:
-        dict_size = 110 * 1024  # 110 KiB
-        return dict_size, "110 KiB (fixed)"
-    else:
-        dict_size = file_size // 100  # Exactly 1/100th of input size
-        return dict_size, "1/100 of input"
 
 def main(input_file, fixed_dict_size=None, block_size_kib=128, manual_dict_size=None):
     """Main function to handle the complete process."""
