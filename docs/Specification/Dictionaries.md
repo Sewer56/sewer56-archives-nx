@@ -82,6 +82,7 @@ authority over their index, location, etc.
 
 [BlockMapping]: #blockmapping
 [DictionarySizes]: #dictionarysizes
+[DictionaryHashes]: #dictionaryhashes
 [BlockType]: #BlockType
 [BlockDictionaryIndex]: #blockdictionaryindex
 [Research: Dictionaries]: ../Research/DictionaryCompression.md
