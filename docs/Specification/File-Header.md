@@ -134,11 +134,11 @@ This section is reserved and currently unused.
 
 Size: `4 bits` (flags)
 
-Bits are laid out in order `X000`.
+Bits are laid out in order `XY00`.
 
-| BitFlag | Name                          |
-|---------|-------------------------------|
-| X       | [HasUserData](./User-Data.md) |
-| 0       | Reserved                      |
-| 0       | Reserved                      |
-| 0       | Reserved                      |
+| BitFlag | Name                                 |
+| ------- | ------------------------------------ |
+| X       | [HasUserData](./User-Data.md)        |
+| Y       | [HasDictionaries](./Dictionaries.md) |
+| 0       | Reserved                             |
+| 0       | Reserved                             |
