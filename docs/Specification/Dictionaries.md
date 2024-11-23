@@ -26,6 +26,8 @@
 - [BlockMapping][NumMappings]
 - `align32`
 - [DictionarySizes][NumDictionaries]
+- `align64`
+- [DictionaryHashes][NumDictionaries]
 - RawDictionaryData
 
 !!! info "Dictionary index `255` is reserved for 'no dictionary'"
@@ -56,9 +58,27 @@
 
 !!! info "This is raw dictionary data, length of each segment is extracted from [DictionarySizes]"
 
+#### DictionaryHashes
+
+!!! info "These are [XXH3] hashes of the dictionary content."
+
 ## Reference Numbers
 
 !!! info "For reference numbers, see [Research: Dictionaries] and [Research: Decode Speed]"
+
+## Future Work
+
+In the future there will be efforts to add `'standard'` dictionaries; that is, dictionaries which are
+standardized across all Nx archives.
+
+Plan is as follows:
+
+- Allow user to specify a custom dictionary for a given extension/file group via API.
+- That dictionary is embedded inside the Nx archive as normal.
+- On load, dictionaries are hashed and deduplicated in memory in order to save RAM and improve caching efficiency.
+
+This way, 'standardized' dictionaries can be used, without having any sort of centralized
+authority over their index, location, etc.
 
 [BlockMapping]: #blockmapping
 [DictionarySizes]: #dictionarysizes
@@ -66,3 +86,4 @@
 [BlockDictionaryIndex]: #blockdictionaryindex
 [Research: Dictionaries]: ../Research/DictionaryCompression.md
 [Research: Decode Speed]: ../Research/DecodeSpeed.md
+[XXH3]: https://xxhash.com/
