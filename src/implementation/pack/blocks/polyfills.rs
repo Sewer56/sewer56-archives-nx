@@ -6,6 +6,9 @@ use core::any::Any;
 use core::slice;
 use hashbrown::HashTable;
 
+/// The value that indicates no dictionary is used.
+pub const NO_DICTIONARY: u8 = u8::MAX;
+
 // Simple table entry that just stores the pointer value
 #[derive(Debug)]
 pub struct PtrEntry {
