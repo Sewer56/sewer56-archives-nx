@@ -115,6 +115,11 @@ Table of Contents:
 - [Blocks[BlockCount]][Blocks]: 4
 - [StringPool][StringPool]: 4
 
+Dictionary Info:
+
+- `align8`: 0-7
+- [Dictionary Header][Dictionary Header]: 8
+
 User Data:
 
 - `align8`: 0-7
@@ -150,9 +155,14 @@ Example use cases:
 - Storing update information for a mod package if Nx is used to power a package manager.
 - Storing file metadata (read/write timestamps, file permissions, etc.)
 
-#### Implementation of Per-Extension Dictionaries
+#### Support for Dictionary Compression
 
-See: [Per-Group Dictionary Experiment](https://github.com/Sewer56/sewer56-archives-nx/issues/1)
+See [Dictionaries]. The Nx format now supports the usage of zstd dictionaries to compress
+data within the archive. Some extra info can be found in [Research: Dictionaries] and [Research: Decode Speed].
+
+You can now opt in to train data on small files included within the archive, and use
+that same dictionary to compress said files. The dictionary will be stored in the header of the
+archive.
 
 #### Hashing Algorithm Change
 
@@ -243,3 +253,6 @@ The [Table of Contents][ToC Header] has also received its own proper
 [File Header]: ./File-Header.md
 [User Data Header]: ./User-Data.md
 [VPrefix Pool Benchmark Numbers]: https://github.com/Sewer56/sewer56-archives-nx/issues/3#issuecomment-2347143581
+[Dictionaries]: ./Dictionaries.md
+[Research: Dictionaries]: ../Research/DictionaryCompression.md
+[Research: Decode Speed]: ../Research/DecodeSpeed.md

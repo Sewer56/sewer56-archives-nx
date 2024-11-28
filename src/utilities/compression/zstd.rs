@@ -1,6 +1,8 @@
+use super::dictionary::ZstdCompressionDict;
 use super::{CompressionResult, DecompressionResult, NxCompressionError, NxDecompressionError};
 use crate::api::enums::*;
 use core::ffi::c_void;
+use core::ptr::NonNull;
 use zstd_sys::ZSTD_ErrorCode::*;
 use zstd_sys::*;
 
@@ -106,6 +108,51 @@ pub fn compress_no_copy_fallback(
 
     #[cfg(not(feature = "zstd_panic_on_unhandled_error"))]
     Err(NxCompressionError::ZStandard(errcode))
+}
+
+/// Compresses data using a ZStandard dictionary.
+///
+/// This function allows for compression using a pre-trained dictionary to potentially
+/// achieve better compression ratios for similar data.
+///
+/// # Parameters
+///
+/// * `dict`: The ZStandard compression dictionary to use.
+/// * `source`: Source data to compress.
+/// * `destination`: Destination buffer for compressed data.
+/// * `used_copy`: If this is true, Copy compression was used, due to uncompressible data.
+///
+/// # Returns
+///
+/// The number of bytes written to the destination.
+pub fn compress_with_dictionary(
+    dict: &ZstdCompressionDict,
+    source: &[u8],
+    destination: &mut [u8],
+    used_copy: &mut bool,
+) -> CompressionResult {
+    unsafe {
+        // Create a compression context
+        let cctx_ptr = ZSTD_createCCtx();
+        if cctx_ptr.is_null() {
+            return Err(NxCompressionError::ZStandard(
+                ZSTD_ErrorCode::ZSTD_error_memory_allocation,
+            ));
+        }
+
+        // Compress using the dictionary
+        let result = dict.compress(
+            source,
+            destination,
+            used_copy,
+            NonNull::new_unchecked(cctx_ptr),
+        );
+
+        // Free the context and return result
+        ZSTD_freeCCtx(cctx_ptr);
+
+        result
+    }
 }
 
 /// Decompresses data with ZStandard
@@ -229,6 +276,8 @@ pub enum GetDecompressedSizeError {
 
 #[cfg(test)]
 mod tests {
+    use crate::utilities::compression::dictionary::train_dictionary;
+
     use super::*;
     use alloc::vec;
 
@@ -310,6 +359,39 @@ mod tests {
         assert_eq!(
             result.unwrap_err(),
             GetDecompressedSizeError::UnknownErrorOccurred
+        );
+    }
+
+    #[test]
+    fn can_compress_with_dictionary() {
+        // Create a simple dictionary from sample data
+        let samples: [&[u8]; 7] = [
+            b"this is a test string",
+            b"this is another test string",
+            b"yet another test string",
+            b"one more test string",
+            b"fifth test string",
+            b"sixth test string",
+            b"seventh test string",
+        ];
+
+        let dict_data = train_dictionary(&samples, 4096, 15).unwrap();
+        let dict = ZstdCompressionDict::new(&dict_data, 15).unwrap();
+
+        // Test data that's similar to dictionary content
+        let test_data = b"this is a test string of the fifth order";
+        let mut compressed = vec![0u8; max_alloc_for_compress_size(test_data.len())];
+        let mut used_copy = false;
+
+        // Compress with dictionary
+        let compressed_size =
+            compress_with_dictionary(&dict, test_data, &mut compressed, &mut used_copy).unwrap();
+
+        assert!(!used_copy, "Should not fall back to copy compression");
+        assert!(compressed_size > 0, "Should produce compressed output");
+        assert!(
+            compressed_size < test_data.len(),
+            "Should achieve some compression"
         );
     }
 }

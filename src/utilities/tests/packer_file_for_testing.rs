@@ -47,6 +47,10 @@ impl HasSolidType for PackerFileForTesting {
     fn solid_type(&self) -> SolidPreference {
         self.solid_preference
     }
+
+    fn set_solid_type(&mut self, preference: SolidPreference) {
+        self.solid_preference = preference;
+    }
 }
 
 impl HasCompressionPreference for PackerFileForTesting {

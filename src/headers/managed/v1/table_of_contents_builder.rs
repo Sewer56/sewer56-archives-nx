@@ -38,19 +38,17 @@ where
     let mut largest_file_size: u64 = 0;
     let mut can_create_chunks = false;
 
-    let mut files = Vec::new();
     for block in blocks {
-        block.append_items(&mut files);
-    }
+        // Note: Some items will be counted multiple times due to chunked blocks.
+        for item in block.items() {
+            let file_size = item.file_size();
+            if file_size > largest_file_size {
+                largest_file_size = file_size;
+            }
 
-    for file in files {
-        let file_size = file.file_size();
-        if file_size > largest_file_size {
-            largest_file_size = file_size;
-        }
-
-        if file_size > chunk_size as u64 {
-            can_create_chunks = true;
+            if file_size > chunk_size as u64 {
+                can_create_chunks = true;
+            }
         }
     }
 

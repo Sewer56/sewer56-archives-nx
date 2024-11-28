@@ -20,6 +20,18 @@ pub struct PackerFile {
     solid_preference: SolidPreference,
 }
 
+/// Manual implementation of Debug, to skip InputDataProvider
+impl std::fmt::Debug for PackerFile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PackerFile")
+            .field("relative_path", &self.relative_path)
+            .field("file_size", &self.file_size)
+            .field("compression_preference", &self.compression_preference)
+            .field("solid_preference", &self.solid_preference)
+            .finish()
+    }
+}
+
 impl PackerFile {
     /// Creates a new PackerFile instance.
     ///
@@ -96,6 +108,10 @@ impl HasCompressionPreference for PackerFile {
 impl HasSolidType for PackerFile {
     fn solid_type(&self) -> SolidPreference {
         self.solid_preference
+    }
+
+    fn set_solid_type(&mut self, preference: SolidPreference) {
+        self.solid_preference = preference;
     }
 }
 

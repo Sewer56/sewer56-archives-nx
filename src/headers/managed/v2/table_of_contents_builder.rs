@@ -2,11 +2,13 @@ use crate::{
     api::{enums::compression_preference::CompressionPreference, traits::*},
     headers::{managed::*, parser::*, raw::toc::*},
     implementation::pack::{
-        blocks::polyfills::Block, table_of_contents_builder_state::TableOfContentsBuilderState,
+        blocks::polyfills::{Block, PtrEntry},
+        table_of_contents_builder_state::TableOfContentsBuilderState,
     },
 };
 use core::hint::unreachable_unchecked;
 use endian_writer::{EndianWriter, EndianWriterExt, LittleEndianWriter};
+use hashbrown::HashTable;
 use nanokit::count_bits::BitsNeeded;
 use std::alloc::Allocator;
 use thiserror_no_std::Error;
@@ -63,11 +65,12 @@ pub fn init_toc_creation<
 ) -> Result<BuilderInfo<LongAlloc>, InitError> {
     let mut largest_file_size: u64 = 0;
     let mut can_create_chunks = false;
-    let mut files = Vec::new();
+    let mut files = Vec::with_capacity(blocks.len());
+    let mut seenfiles: HashTable<PtrEntry> = HashTable::with_capacity(blocks.len());
 
     // Gather all files from blocks.
     for block in blocks {
-        block.append_items(&mut files);
+        block.append_items(&mut files, &mut seenfiles);
 
         let max_decomp_block_offset = block.max_decompressed_block_offset();
         if max_decomp_block_offset > max_decomp_block_size {

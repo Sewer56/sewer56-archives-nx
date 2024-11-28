@@ -69,5 +69,10 @@ nav:
       - Header: Specification/File-Header.md
       - Table of Contents (TOC): Specification/Table-Of-Contents.md
       - Optional Sections:
+          - Dictionaries: Specification/Dictionaries.md
           - User Data: Specification/User-Data.md
       - Algorithm Implementation: Specification/Implementation-Details.md
+  - Research:
+      - Decode Speed: Research/DecodeSpeed.md
+      - Dictionary Compression: Research/DictionaryCompression.md
+      - Hash Algorithms: Research/HashAlgorithms.md

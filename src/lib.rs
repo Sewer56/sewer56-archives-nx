@@ -104,6 +104,7 @@ pub mod utilities {
 
     #[cfg(test)]
     pub mod tests {
+        pub mod mock_block;
         pub mod packer_file_for_testing;
         pub mod packing_test_helpers;
         pub mod permutations;
