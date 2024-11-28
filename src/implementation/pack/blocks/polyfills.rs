@@ -7,7 +7,7 @@ use core::slice;
 use hashbrown::HashTable;
 
 /// The value that indicates no dictionary is used.
-pub const NO_DICTIONARY: u8 = u8::MAX;
+pub const NO_DICTIONARY_INDEX: u8 = u8::MAX;
 
 // Simple table entry that just stores the pointer value
 #[derive(Debug)]
@@ -16,7 +16,7 @@ pub struct PtrEntry {
 }
 
 // Define the Block trait
-pub trait Block<T>
+pub trait Block<T>: HasDictIndex
 where
     T: HasFileSize + CanProvideInputData + HasRelativePath,
 {
@@ -38,10 +38,6 @@ where
     fn max_decompressed_block_offset(&self) -> u32 {
         0
     }
-
-    /// Index of the dictionary for dictionary compression, if dictionary
-    /// compression is being used.
-    fn dict_index(&self) -> u32;
 }
 
 /// Represents an individual SOLID block packed by the Nx library.
@@ -105,6 +101,12 @@ where
         &self.items
     }
 
+    fn max_decompressed_block_offset(&self) -> u32 {
+        0
+    }
+}
+
+impl<T: HasFileSize + CanProvideInputData + HasRelativePath> HasDictIndex for SolidBlock<T> {
     fn dict_index(&self) -> u32 {
         self.dict_index
     }
@@ -226,8 +228,20 @@ where
         // Create a static slice containing just the single file reference
         slice::from_ref(&self.state.file)
     }
+}
 
+impl<T: CanProvideInputData + HasFileSize + HasRelativePath> HasDictIndex for ChunkedFileBlock<T> {
     fn dict_index(&self) -> u32 {
         self.state.dict_index
+    }
+}
+
+// Blanket implmementation
+impl<T> HasDictIndex for Box<dyn Block<T>>
+where
+    T: HasFileSize + CanProvideInputData + HasRelativePath,
+{
+    fn dict_index(&self) -> u32 {
+        (**self).dict_index()
     }
 }

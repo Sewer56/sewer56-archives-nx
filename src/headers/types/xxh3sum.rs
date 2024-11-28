@@ -1,8 +1,16 @@
 use endian_writer::*;
+use twox_hash::XxHash3_64;
 
 /// A nominally typed xxHash3 checksum.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
 pub struct XXH3sum(pub u64);
+
+impl XXH3sum {
+    /// Computes the checksum of a slice of bytes.
+    pub fn create(input: &[u8]) -> XXH3sum {
+        XXH3sum(XxHash3_64::oneshot(input))
+    }
+}
 
 impl From<u64> for XXH3sum {
     fn from(val: u64) -> Self {

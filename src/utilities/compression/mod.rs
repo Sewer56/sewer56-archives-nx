@@ -19,8 +19,11 @@ pub type CompressionResult = Result<usize, NxCompressionError>;
 /// Represents an error returned from the Nx compression APIs.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
 pub enum NxCompressionError {
+    #[error(transparent)]
     Copy(#[from] CopyCompressionError),
+    #[error("ZStandard Error: {0:?}")]
     ZStandard(#[from] ZSTD_ErrorCode),
+    #[error(transparent)]
     Lz4(#[from] Lz4CompressionError),
 }
 

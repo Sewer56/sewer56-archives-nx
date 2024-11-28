@@ -1,19 +1,22 @@
 use super::{CompressionResult, DecompressionResult};
 use crate::api::enums::*;
+use thiserror_no_std::Error;
 
 /// Represents an error specific to LZ4 compression operations.
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
 pub enum Lz4CompressionError {
     /// Compression has failed.
     /// LZ4 doesn't provide an error code here, just returns 0
+    #[error("LZ4 Compression Failed")]
     CompressionFailed,
 }
 
 /// Represents an error specific to LZ4 compression operations.
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
 pub enum Lz4DecompressionError {
     /// Decompression has failed.
     /// LZ4 doesn't provide an error code here, just returns 0
+    #[error("LZ4 Decompression Failed")]
     DecompressionFailed,
 }
 

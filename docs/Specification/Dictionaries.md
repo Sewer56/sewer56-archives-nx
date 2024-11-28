@@ -18,17 +18,22 @@
 
 ### Payload
 
-!!! info "`NumBlocks` is the number of blocks in the Nx file."
+- **Payload Header (8 bytes)**:
+    - `u11`: Unused
+    - `u1`: HasHashes
+    - `u8`: NumDictionaries (up to 254)
+    - `u22`: NumMappings
+    - `u22`: LastBlockIndexWithDictionary
 
-- `u8`: NumDictionaries (up to 254)
-- `u8`: NumMappings
-- [BlockDictionaryIndex][NumMappings]
-- [BlockMapping][NumMappings]
-- `align32`
-- [DictionarySizes][NumDictionaries]
-- `align64`
-- [DictionaryHashes][NumDictionaries]
-- RawDictionaryData
+- **Payload Data (Variable Size)**:
+    - [BlockDictionaryIndex][NumMappings]
+    - [BlockDictionaryLength][NumMappings]
+    - `align32`
+    - [DictionarySizes][NumDictionaries]
+    - `if HasHashes == true`
+        - `align64`
+        - [DictionaryHashes][NumDictionaries]
+    - RawDictionaryData
 
 !!! info "Dictionary index `255` is reserved for 'no dictionary'"
 
@@ -36,9 +41,11 @@
 
 !!! info "Assigns the index of the dictionary for this block mapping"
 
+    This is an index into the dictionary sizes, dictionary hashes and raw dictionary data.
+
 - `u8` DictionaryIndex
 
-#### BlockMapping
+#### BlockDictionaryLength
 
 !!! info "This represents the number of blocks corresponding to each [BlockDictionaryIndex]"
 
@@ -62,6 +69,18 @@
 
 !!! info "These are [XXH3] hashes of the dictionary content."
 
+## Runtime Usage
+
+The information will be used at runtime in the following manner:
+
+1. Create an array where `block index` (u32) -> `dictionary index` (u8) is stored.
+   So dictionary for block 0 is at index 0.
+2. This array terminates at last block index where a dictionary is used.
+3. If requested block index is out of range, assume no dictionary was used.
+
+Because during packing files are usually sorted in size ascending order, and big files are usually
+not using dictionaries, this means we will get fairly efficient memory usage.
+
 ## Reference Numbers
 
 !!! info "For reference numbers, see [Research: Dictionaries] and [Research: Decode Speed]"
@@ -80,7 +99,7 @@ Plan is as follows:
 This way, 'standardized' dictionaries can be used, without having any sort of centralized
 authority over their index, location, etc.
 
-[BlockMapping]: #blockmapping
+[BlockDictionaryLength]: #blockdictionarylength
 [DictionarySizes]: #dictionarysizes
 [DictionaryHashes]: #dictionaryhashes
 [BlockType]: #BlockType
