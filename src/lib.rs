@@ -23,6 +23,9 @@ pub mod api {
     /// This contains traits that are implementable by outside entities
     /// that wish to integrate with the library.
     pub mod traits;
+
+    /// Public API for starting a packing operation.
+    pub mod packer_builder;
 }
 
 /// This module contains all of the data structures that you'll

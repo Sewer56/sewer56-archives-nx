@@ -28,6 +28,11 @@ impl FromFilePathProvider {
 
         Self::new(&path)
     }
+
+    /// Returns the size of the file behind the provider
+    pub fn file_size(&self) -> Result<i64, FileProviderError> {
+        self.file_handle.size().map_err(|op| op.into())
+    }
 }
 
 impl InputDataProvider for FromFilePathProvider {

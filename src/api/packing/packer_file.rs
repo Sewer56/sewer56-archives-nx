@@ -1,9 +1,7 @@
 use crate::api::{enums::*, filedata::*, traits::*};
-use alloc::sync::Arc;
 
 /// Represents a file that will be packed into an Nx archive.
-#[derive(Clone)]
-pub struct PackerFile {
+pub struct PackerFile<'a> {
     /// Relative path within the archive
     relative_path: String,
 
@@ -11,7 +9,7 @@ pub struct PackerFile {
     file_size: u64,
 
     /// Provider for accessing the file's contents
-    data_provider: Arc<dyn InputDataProvider + Send + Sync>,
+    data_provider: Box<dyn InputDataProvider + Send + Sync + 'a>,
 
     /// How this file should be compressed
     compression_preference: CompressionPreference,
@@ -21,7 +19,7 @@ pub struct PackerFile {
 }
 
 /// Manual implementation of Debug, to skip InputDataProvider
-impl std::fmt::Debug for PackerFile {
+impl std::fmt::Debug for PackerFile<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PackerFile")
             .field("relative_path", &self.relative_path)
@@ -32,7 +30,7 @@ impl std::fmt::Debug for PackerFile {
     }
 }
 
-impl PackerFile {
+impl<'a> PackerFile<'a> {
     /// Creates a new PackerFile instance.
     ///
     /// # Arguments
@@ -43,7 +41,7 @@ impl PackerFile {
     pub fn new(
         relative_path: String,
         file_size: u64,
-        provider: Arc<dyn InputDataProvider + Send + Sync>,
+        provider: Box<dyn InputDataProvider + Send + Sync + 'a>,
     ) -> Self {
         Self {
             relative_path,
@@ -70,8 +68,30 @@ impl PackerFile {
         relative_path: String,
         file_size: u64,
     ) -> Result<Self, FileProviderError> {
-        let provider = Arc::new(FromFilePathProvider::new(source_path)?);
+        let provider = Box::new(FromFilePathProvider::new(source_path)?);
         Ok(Self::new(relative_path, file_size, provider))
+    }
+
+    /// Creates a new PackerFile from a path, automatically creating the provider.
+    ///
+    /// # Arguments
+    ///
+    /// * `source_path` - Path to the file on disk
+    /// * `relative_path` - Path the file should have within the archive
+    ///
+    /// # Returns
+    ///
+    /// A Result containing either the new PackerFile or an error if the provider couldn't be created
+    pub fn from_file_path_with_unknown_size(
+        source_path: &str,
+        relative_path: String,
+    ) -> Result<Self, FileProviderError> {
+        let provider = Box::new(FromFilePathProvider::new(source_path)?);
+        Ok(Self::new(
+            relative_path,
+            provider.file_size()? as u64,
+            provider,
+        ))
     }
 
     /// Sets the compression preference for this file
@@ -87,25 +107,25 @@ impl PackerFile {
     }
 }
 
-impl HasFileSize for PackerFile {
+impl HasFileSize for PackerFile<'_> {
     fn file_size(&self) -> u64 {
         self.file_size
     }
 }
 
-impl HasRelativePath for PackerFile {
+impl HasRelativePath for PackerFile<'_> {
     fn relative_path(&self) -> &str {
         &self.relative_path
     }
 }
 
-impl HasCompressionPreference for PackerFile {
+impl HasCompressionPreference for PackerFile<'_> {
     fn compression_preference(&self) -> CompressionPreference {
         self.compression_preference
     }
 }
 
-impl HasSolidType for PackerFile {
+impl HasSolidType for PackerFile<'_> {
     fn solid_type(&self) -> SolidPreference {
         self.solid_preference
     }
@@ -115,7 +135,7 @@ impl HasSolidType for PackerFile {
     }
 }
 
-impl CanProvideInputData for PackerFile {
+impl CanProvideInputData for PackerFile<'_> {
     fn input_data_provider(&self) -> &dyn InputDataProvider {
         &*self.data_provider
     }

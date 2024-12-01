@@ -1,5 +1,7 @@
 #![allow(clippy::absurd_extreme_comparisons)]
 
+use core::hint::unreachable_unchecked;
+
 use static_assertions::const_assert;
 
 // STD ALERT!! However it's portable traits only.
@@ -82,8 +84,8 @@ impl PackingSettings {
         PackingSettings {
             block_size: 1_048_575,
             chunk_size: 1_048_576,
-            solid_compression_level: 16,
-            chunked_compression_level: 9,
+            solid_compression_level: 12,
+            chunked_compression_level: 12,
             solid_block_algorithm: CompressionPreference::ZStandard,
             chunked_file_algorithm: CompressionPreference::ZStandard,
             enable_chunked_deduplication: false,
@@ -94,6 +96,15 @@ impl PackingSettings {
 
     /// Sanitizes settings to acceptable values if they are out of range or undefined.
     pub fn sanitize(&mut self) {
+        // If no compression preference is set, default to zstd
+        if self.solid_block_algorithm == CompressionPreference::NoPreference {
+            self.solid_block_algorithm = CompressionPreference::ZStandard;
+        }
+
+        if self.chunked_file_algorithm == CompressionPreference::NoPreference {
+            self.chunked_file_algorithm = CompressionPreference::ZStandard;
+        }
+
         // Note: BlockSize is minus one, see spec.
         self.block_size = self.block_size.clamp(MIN_BLOCK_SIZE, MAX_BLOCK_SIZE);
         // 1GiB because larger chunks cause problems with LZ4 and the likes
@@ -118,7 +129,7 @@ impl PackingSettings {
             CompressionPreference::Copy => 1,
             CompressionPreference::ZStandard => level.clamp(-5, 22),
             CompressionPreference::Lz4 => level.clamp(1, 12),
-            CompressionPreference::NoPreference => 1,
+            CompressionPreference::NoPreference => unsafe { unreachable_unchecked() },
         }
     }
 }
