@@ -47,7 +47,7 @@ no-panic = "0.1.31"
 int-enum = "1.1.2"
 thiserror-no-std = "2.0.2"
 memchr = "2.7.4"
-hashbrown = { version = "0.15.1", features = ["nightly"] }
+hashbrown = { version = "0.15.2", features = ["nightly"] }
 nanokit = "0.2.0"
 num_cpus = { version = "1.16.0", optional = true }
 derive-new = "0.7.0"
@@ -60,6 +60,7 @@ static_assertions = "1.1.0"
 o2o = "0.4.11"
 twox-hash = "2.0.1"
 safe-allocator-api = { version = "0.3.0", features = ["nightly"] }
+identity-hash = "0.1.0"
 
 # C# Bindings
 [build-dependencies]

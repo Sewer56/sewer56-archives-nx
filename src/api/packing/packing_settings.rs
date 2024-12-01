@@ -3,9 +3,7 @@
 use static_assertions::const_assert;
 
 // STD ALERT!! However it's portable traits only.
-use crate::{api::enums::*, utilities::system_info::get_num_cores};
-use core::num::NonZeroU32;
-use std::io::{Seek, Write};
+use crate::api::enums::*;
 
 /// The minimum block size that the user is allowed to specify
 pub const MIN_BLOCK_SIZE: u32 = 4095;
@@ -27,18 +25,7 @@ pub const MAX_CHUNK_SIZE: u32 = 1_073_741_824;
 /// This struct contains settings that determine how the packing process
 /// will be performed, including block and chunk sizes, compression levels,
 /// and compression algorithms.
-pub struct PackingSettings<W: Write + Seek> {
-    /// The stream to which data is output to.
-    /// This stream must support seeking.
-    ///
-    /// # Remarks
-    /// This assumes the stream starts at offset 0.
-    /// If you need the ability to write to a middle of an existing stream, raise a PR.
-    pub output: W,
-
-    /// Maximum number of threads allowed.
-    pub max_num_threads: NonZeroU32,
-
+pub struct PackingSettings {
     /// Size of SOLID blocks.\
     /// Range is MIN_BLOCK_SIZE to 67108863 (64 MiB).\
     /// Values are powers of 2, minus 1.\
@@ -89,12 +76,10 @@ pub struct PackingSettings<W: Write + Seek> {
     pub enable_solid_deduplication: bool,
 }
 
-impl<W: Write + Seek> PackingSettings<W> {
+impl PackingSettings {
     /// Creates a new `PackingSettings` with default values.
-    pub fn new(output: W) -> Self {
+    pub fn new() -> Self {
         PackingSettings {
-            output,
-            max_num_threads: get_num_cores(),
             block_size: 1_048_575,
             chunk_size: 1_048_576,
             solid_compression_level: 16,
@@ -125,9 +110,6 @@ impl<W: Write + Seek> PackingSettings<W> {
             self.clamp_compression(self.solid_compression_level, &self.solid_block_algorithm);
         self.chunked_compression_level =
             self.clamp_compression(self.chunked_compression_level, &self.chunked_file_algorithm);
-        self.max_num_threads = self
-            .max_num_threads
-            .clamp(unsafe { NonZeroU32::new_unchecked(1) }, NonZeroU32::MAX);
     }
 
     /// Retrieves the compression level for the specified algorithm.
@@ -141,12 +123,17 @@ impl<W: Write + Seek> PackingSettings<W> {
     }
 }
 
+impl Default for PackingSettings {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // Unit tests using rstest
 #[cfg(test)]
 mod tests {
     use super::*;
     use rstest::rstest;
-    use std::io::Cursor;
 
     #[rstest(chunk_size, expected,
         case(1_073_741_825u32, MAX_CHUNK_SIZE), // Exceeds max chunk size, clamped down
@@ -154,8 +141,7 @@ mod tests {
         case(0u32, MIN_CHUNK_SIZE)              // Zero value, adjusted to min chunk size
     )]
     fn chunk_size_is_clamped(chunk_size: u32, expected: u32) {
-        let output = Cursor::new(Vec::new());
-        let mut settings = PackingSettings::new(output);
+        let mut settings = PackingSettings::new();
         settings.chunk_size = chunk_size;
         settings.block_size = MIN_BLOCK_SIZE; // Set block_size to minimum to avoid influencing chunk_size
         settings.sanitize();
@@ -169,8 +155,7 @@ mod tests {
         case(0u32, MIN_BLOCK_SIZE)                // Zero value, adjusted to min block size
     )]
     fn block_size_is_clamped(value: u32, expected: u32) {
-        let output = Cursor::new(Vec::new());
-        let mut settings = PackingSettings::new(output);
+        let mut settings = PackingSettings::new();
         settings.block_size = value;
         settings.sanitize();
         assert_eq!(settings.block_size, expected);
@@ -189,8 +174,7 @@ mod tests {
         case(MAX_BLOCK_SIZE, 67_108_862u32) // Block size one more than chunk size
     )]
     fn chunk_size_must_be_greater_than_block_size(block_size: u32, chunk_size: u32) {
-        let output = Cursor::new(Vec::new());
-        let mut settings = PackingSettings::new(output);
+        let mut settings = PackingSettings::new();
         settings.block_size = block_size;
         settings.chunk_size = chunk_size;
         settings.sanitize();
@@ -204,8 +188,7 @@ mod tests {
         case(i32::MIN, -5)   // Below min ZStandard level, clamped to -5
     )]
     fn zstandard_level_is_clamped(value: i32, expected: i32) {
-        let output = Cursor::new(Vec::new());
-        let mut settings = PackingSettings::new(output);
+        let mut settings = PackingSettings::new();
         settings.solid_compression_level = value;
         settings.solid_block_algorithm = CompressionPreference::ZStandard;
         settings.sanitize();
@@ -219,32 +202,16 @@ mod tests {
         case(i32::MIN, 1)    // Below min LZ4 level, clamped to 1
     )]
     fn lz4_level_is_clamped(value: i32, expected: i32) {
-        let output = Cursor::new(Vec::new());
-        let mut settings = PackingSettings::new(output);
+        let mut settings = PackingSettings::new();
         settings.chunked_file_algorithm = CompressionPreference::Lz4;
         settings.chunked_compression_level = value;
         settings.sanitize();
         assert_eq!(settings.chunked_compression_level, expected);
     }
 
-    #[rstest(value, expected,
-        case(NonZeroU32::MAX, NonZeroU32::MAX), // Max number of threads, remains unchanged
-        // Stays at min value
-        case(unsafe { NonZeroU32::new_unchecked(1) } , unsafe { NonZeroU32::new_unchecked(1) })
-        // Negative values are not possible for usize
-    )]
-    fn max_num_threads_is_clamped(value: NonZeroU32, expected: NonZeroU32) {
-        let output = Cursor::new(Vec::new());
-        let mut settings = PackingSettings::new(output);
-        settings.max_num_threads = value;
-        settings.sanitize();
-        assert_eq!(settings.max_num_threads, expected);
-    }
-
     #[test]
     fn deduplication_flags_default_values() {
-        let output = Cursor::new(Vec::new());
-        let settings = PackingSettings::new(output);
+        let settings = PackingSettings::new();
         assert!(!settings.enable_chunked_deduplication);
         assert!(settings.enable_solid_deduplication);
     }

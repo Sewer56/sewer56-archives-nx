@@ -68,6 +68,17 @@ pub mod implementation {
         /// Stores the current state of the table of contents as it is
         /// built by the individual blocks.
         pub mod table_of_contents_builder_state;
+
+        pub mod state {
+            /// Stores state belonging to a running packing operation
+            pub mod pack_state;
+
+            /// Stores the state used to deduplicate chunked blocks
+            pub mod chunked_deduplication_state;
+
+            /// Stores the state used to deduplicate solid blocks
+            pub mod solid_deduplication_state;
+        }
     }
 }
 
