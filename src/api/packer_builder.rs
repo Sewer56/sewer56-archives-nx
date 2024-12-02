@@ -271,6 +271,166 @@ impl<'a> NxPackerBuilder<'a> {
         self.settings.enable_solid_deduplication = enable;
         self
     }
+
+    /// Sets the compression level for SOLID block data.
+    ///
+    /// This controls how aggressively SOLID blocks are compressed. Higher levels generally
+    /// provide better compression at the cost of increased compression time.
+    ///
+    /// # Arguments
+    ///
+    /// * `level` - Compression level to use. The valid range depends on the algorithm:
+    ///   - For ZStandard: -5 to 22
+    ///   - For LZ4: 1 to 12
+    ///
+    /// # Returns
+    ///
+    /// Returns self for method chaining.
+    pub fn with_solid_compression_level(mut self, level: i32) -> Self {
+        self.settings.solid_compression_level = level;
+        self
+    }
+
+    /// Sets the compression level for chunked file data.
+    ///
+    /// This controls how aggressively individual chunks are compressed. Higher levels generally
+    /// provide better compression at the cost of increased compression time.
+    ///
+    /// # Arguments
+    ///
+    /// * `level` - Compression level to use. The valid range depends on the algorithm:
+    ///   - For ZStandard: -5 to 22
+    ///   - For LZ4: 1 to 12
+    ///
+    /// # Returns
+    ///
+    /// Returns self for method chaining.
+    pub fn with_chunked_compression_level(mut self, level: i32) -> Self {
+        self.settings.chunked_compression_level = level;
+        self
+    }
+
+    /// Sets the compression algorithm used for SOLID blocks.
+    ///
+    /// # Arguments
+    ///
+    /// * `algorithm` - The compression algorithm to use for SOLID blocks.
+    ///
+    /// # Returns
+    ///
+    /// Returns self for method chaining.
+    pub fn with_solid_block_algorithm(mut self, algorithm: CompressionPreference) -> Self {
+        self.settings.solid_block_algorithm = algorithm;
+        self
+    }
+
+    /// Sets the compression algorithm used for chunked files.
+    ///
+    /// # Arguments
+    ///
+    /// * `algorithm` - The compression algorithm to use for chunked files.
+    ///
+    /// # Returns
+    ///
+    /// Returns self for method chaining.
+    pub fn with_chunked_file_algorithm(mut self, algorithm: CompressionPreference) -> Self {
+        self.settings.chunked_file_algorithm = algorithm;
+        self
+    }
+
+    /// Controls whether per-extension dictionary compression is enabled.
+    ///
+    /// When enabled, the packer will create and use separate dictionaries for each file extension,
+    /// which can improve compression ratios for files of similar types.
+    ///
+    /// # Arguments
+    ///
+    /// * `enable` - Whether to enable per-extension dictionary compression.
+    ///
+    /// # Returns
+    ///
+    /// Returns self for method chaining.
+    pub fn with_per_extension_dictionary(mut self, enable: bool) -> Self {
+        self.settings.enable_per_extension_dictionary = enable;
+        self
+    }
+
+    /// Creates a new builder instance with a specified preset applied.
+    /// This is a convenience method that combines [`NxPackerBuilder::new`] and [`NxPackerBuilder::with_preset`].
+    ///
+    /// # Arguments
+    ///
+    /// * `preset` - The preset to apply to the new builder.
+    ///
+    /// # Returns
+    ///
+    /// Returns a new [NxPackerBuilder] instance with the specified preset applied.
+    pub fn new_with_preset(preset: PackerPreset) -> Self {
+        Self::new().with_preset(preset)
+    }
+
+    /// Applies a compression preset to the builder.
+    ///
+    /// Presets provide predefined combinations of compression settings optimized
+    /// for specific use cases.
+    ///
+    /// # Arguments
+    ///
+    /// * `preset` - The preset to apply.
+    ///
+    /// # Returns
+    ///
+    /// Returns self for method chaining.
+    pub fn with_preset(mut self, preset: PackerPreset) -> Self {
+        match preset {
+            PackerPreset::Archival => {
+                self.settings.block_size = 16777215; // 16MiB
+                self.settings.chunk_size = 1073741824; // 1GiB
+                self.settings.solid_compression_level = 16;
+                self.settings.chunked_compression_level = 16;
+                self.settings.solid_block_algorithm = CompressionPreference::ZStandard;
+                self.settings.chunked_file_algorithm = CompressionPreference::ZStandard;
+                self.settings.enable_per_extension_dictionary = true;
+            }
+            PackerPreset::Archival32BitTarget => {
+                self.settings.block_size = 16777215; // 16MiB
+                self.settings.chunk_size = 16777216; // 16MiB
+                self.settings.solid_compression_level = 16;
+                self.settings.chunked_compression_level = 16;
+                self.settings.solid_block_algorithm = CompressionPreference::ZStandard;
+                self.settings.chunked_file_algorithm = CompressionPreference::ZStandard;
+                self.settings.enable_per_extension_dictionary = true;
+            }
+            PackerPreset::GameBulkLoad => {
+                self.settings.block_size = 16777215; // 16MiB
+                self.settings.chunk_size = 1073741824; // 1GiB
+                self.settings.solid_compression_level = 12;
+                self.settings.chunked_compression_level = 12;
+                self.settings.solid_block_algorithm = CompressionPreference::ZStandard;
+                self.settings.chunked_file_algorithm = CompressionPreference::ZStandard;
+                self.settings.enable_per_extension_dictionary = true;
+            }
+            PackerPreset::GameBulkLoad32BitTarget => {
+                self.settings.block_size = 16777215; // 16MiB
+                self.settings.chunk_size = 16777216; // 16MiB
+                self.settings.solid_compression_level = 12;
+                self.settings.chunked_compression_level = 12;
+                self.settings.solid_block_algorithm = CompressionPreference::ZStandard;
+                self.settings.chunked_file_algorithm = CompressionPreference::ZStandard;
+                self.settings.enable_per_extension_dictionary = true;
+            }
+            PackerPreset::LowLatencyVFS => {
+                self.settings.block_size = 0; // No SOLID Blocks
+                self.settings.chunk_size = 131072; // 128KiB
+                self.settings.solid_compression_level = 12;
+                self.settings.chunked_compression_level = 12;
+                self.settings.solid_block_algorithm = CompressionPreference::ZStandard;
+                self.settings.chunked_file_algorithm = CompressionPreference::ZStandard;
+                self.settings.enable_per_extension_dictionary = true;
+            }
+        }
+        self
+    }
 }
 
 impl Default for NxPackerBuilder<'_> {
@@ -339,6 +499,68 @@ impl AddFileParams {
             solid_type,
         }
     }
+}
+
+/// Represents predefined combinations of compression settings optimized for
+/// specific use cases.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PackerPreset {
+    /// Optimized for longer term storage and extracting whole archive at once.
+    /// Basically use in place of .zip.
+    ///
+    /// # Settings
+    ///
+    /// Uses a profile equal or similar to:
+    /// - 16MiB SOLID Blocks
+    /// - 1GiB File Chunks
+    /// - ZStd Compression (Level 16)
+    /// - Per extension dictionary compression
+    Archival,
+
+    /// Same as [`PackerPreset::Archival`] but with 16MiB File Chunks to avoid
+    /// running out of address space.
+    Archival32BitTarget,
+
+    /// Optimizes for a use case where files are loaded from a single directory in bulk.
+    ///
+    /// This is a variation of [`PackerPreset::Archival`], but we use level 12 to optimize for
+    /// decompression speed.
+    ///
+    /// # Remarks
+    ///
+    /// You would use this for something like loading a level in a game, where the level's
+    /// files are split into multiple files.
+    ///
+    /// This profile is only effective if you either issue a bulk load (multiple files at once),
+    /// or schedule multiple loads asynchronously. If you can only load a single file at a time,
+    /// (for example, when hooking a game and the old game's existing code only loads 1 file at once),
+    /// then you should use the [`PackerPreset::LowLatencyVFS`] preset to allow parallelism.
+    ///
+    /// # Settings
+    ///
+    /// Uses a profile equal or similar to:
+    /// - 16MiB SOLID Blocks
+    /// - 1GiB File Chunks
+    /// - ZStd Compression (Level 12)
+    /// - Per extension dictionary compression
+    GameBulkLoad,
+
+    /// Same as [`PackerPreset::GameBulkLoad`] but with 16MiB File Chunks to avoid
+    /// running out of address space.
+    GameBulkLoad32BitTarget,
+
+    /// Optimizes for low latency access of unknown data.
+    /// Files use 128KiB blocks.
+    /// Files under 128KiB are stored in their own blocks and use dictionary compression.
+    ///
+    /// # Settings
+    ///
+    /// Uses a profile equal or similar to:
+    /// - No SOLID Blocks
+    /// - 128KiB File Chunks
+    /// - ZStd Compression (Level 12)
+    /// - Per extension dictionary compression
+    LowLatencyVFS,
 }
 
 #[cfg(test)]
@@ -427,6 +649,77 @@ mod tests {
         let file = &builder.files[0];
         assert_eq!(file.relative_path(), "test.txt");
         assert_eq!(file.file_size(), 13);
+    }
+
+    #[test]
+    fn can_configure_compression_levels() {
+        let builder = NxPackerBuilder::new()
+            .with_solid_compression_level(16)
+            .with_chunked_compression_level(9);
+
+        assert_eq!(builder.settings.solid_compression_level, 16);
+        assert_eq!(builder.settings.chunked_compression_level, 9);
+    }
+
+    #[test]
+    fn can_configure_compression_algorithms() {
+        let builder = NxPackerBuilder::new()
+            .with_solid_block_algorithm(CompressionPreference::ZStandard)
+            .with_chunked_file_algorithm(CompressionPreference::Lz4);
+
+        assert!(matches!(
+            builder.settings.solid_block_algorithm,
+            CompressionPreference::ZStandard
+        ));
+        assert!(matches!(
+            builder.settings.chunked_file_algorithm,
+            CompressionPreference::Lz4
+        ));
+    }
+
+    #[test]
+    fn can_enable_per_extension_dictionary() {
+        let builder = NxPackerBuilder::new().with_per_extension_dictionary(true);
+
+        assert!(builder.settings.enable_per_extension_dictionary);
+    }
+
+    #[test]
+    fn archival_preset_sets_correct_values() {
+        let builder = NxPackerBuilder::new().with_preset(PackerPreset::Archival);
+
+        assert_eq!(builder.settings.block_size, 16777215);
+        assert_eq!(builder.settings.chunk_size, 1073741824);
+        assert_eq!(builder.settings.solid_compression_level, 16);
+        assert_eq!(builder.settings.chunked_compression_level, 16);
+        assert!(matches!(
+            builder.settings.solid_block_algorithm,
+            CompressionPreference::ZStandard
+        ));
+        assert!(matches!(
+            builder.settings.chunked_file_algorithm,
+            CompressionPreference::ZStandard
+        ));
+        assert!(builder.settings.enable_per_extension_dictionary);
+    }
+
+    #[test]
+    fn low_latency_vfs_preset_sets_correct_values() {
+        let builder = NxPackerBuilder::new().with_preset(PackerPreset::LowLatencyVFS);
+
+        assert_eq!(builder.settings.block_size, 0);
+        assert_eq!(builder.settings.chunk_size, 131072);
+        assert_eq!(builder.settings.solid_compression_level, 12);
+        assert_eq!(builder.settings.chunked_compression_level, 12);
+        assert!(matches!(
+            builder.settings.solid_block_algorithm,
+            CompressionPreference::ZStandard
+        ));
+        assert!(matches!(
+            builder.settings.chunked_file_algorithm,
+            CompressionPreference::ZStandard
+        ));
+        assert!(builder.settings.enable_per_extension_dictionary);
     }
 }
 

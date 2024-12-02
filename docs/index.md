@@ -42,33 +42,68 @@ the `.nx` format bridges the gap; reaping most of the benefits from both worlds.
 
 Nx aims to be a simple format, appropriate for both local storage of mods and for downloading from the web.
 
-## Motivations
+## Characteristics
 
-!!! question "Why does Nx exist?"
+!!! info "What can you expect from Nx?"
 
-- For ***Fast Random Access***
+- High Performance (constrained by RAM speeds, bottlenecks any NVMe)
+- File Sizes between `.zip` and `.7z`.
+- Lightweight Dependencies
+- Dictionary Compression
+- Self Contained Format
+    - e.g. Copy of Dictionaries used always available in archive if not available.
+- Low Latency File Access
+- Partial Downloads
+- Optimized for Fast Parsing (Whole Header in Front, with Chunk Size)
+- Hardened for Server Usage (by default)
+    - Passes [miri] (memory safety & no undefined behaviour).
+    - Tests cover all known possible invalid memory acceeses.
+    - Can disable client side via feature if you trust the data for parsing speedups.
 
-Nx uses ***small*** SOLID blocks, for grouping ***small*** files where SOLID compression matters the ***most***.<br/>
-Large files can be split up into multiple blocks, with parallel decompression.
+## Ways to use Nx
 
-Combine with single core [LZ4] and [ZStandard] algorithms for *decent* random access speeds.
+!!! info "These are available as 'presets' in the Nx API"
 
-- For ***Reducing Storage Sizes***
+### For ***Archiving*** Mods
 
-For longer term archival; Nx is designed to bring top of the line compression to filesystems that don't support it.<br/>
-Wouldn't it be cool to store your mods compressed? I think so.
+For storage of mods:
 
-- For ***File Downloads***
+- Use standard 16MiB SOLID Blocks to save space by grouping small files together.
+- Chunk large files using >128MiB blocks where compression efficiency deficit is negligible.
+- Use Dictionary Compression for small SOLID blocks.
 
-This format allows us to do partial downloads of mods.
-If only a few files in a mod were updated; why should you need to download the entire thing again?
+This basically turns the format into a ZStandard based archive with per-file multithreading
+& per-chunk for huge files.
 
-!!! nexus "In the [Nexus Mods App]"
+### For ***Read Only File Systems***
+
+- Use dictionary compression for instant access to files.
+- Use no SOLID blocks
+- Use small chunks (128KiB) for large files.
+
+This gets you multithreaded decompression for files of any size, and minimal latency for tiny files.
+
+### For ***Hosting*** Mod Downloads
+
+For hosting mod downloads:
+
+- Use non-SOLID blocks
+- Nx blocks can be deduplicated server side, avoiding duplicate data between mod versions in CDN.
+- No dictionary compression (unless standardised).
+
+With Nx, users can perform partial file downloads, only downloading the actual files which have
+changed between the current version of the archive and the last version of the archive.
+
+## Where is Nx used?
+
+!!! nexus "Original C# version, in the [Nexus Mods App]"
 
     Nx was originally designed by me for the [Nexus Mods App]; to allow
     recompressing of legacy uploaded mods for faster deployment and re-deployment.
 
-And of course, for the community ❤️ 😺.
+!!! info "In [Reloaded3] for mod packaging"
+
+    For distributing mods on mod websites, either as Nx directly, or Nx wrapped in a `.zip` container.
 
 ## Why Rust?
 
@@ -106,3 +141,5 @@ Happy Hacking ❤️
 [Sewer56]: https://github.com/Sewer56
 [nma-discord]: https://discord.gg/ccSndYpypC
 [open-issue]: https://github.com/Sewer56/sewer56-archives-nx/issues/new
+[Reloaded3]: https://reloaded-project.github.io/Reloaded-III/
+[miri]: https://github.com/rust-lang/miri

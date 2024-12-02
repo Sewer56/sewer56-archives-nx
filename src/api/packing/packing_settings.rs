@@ -1,7 +1,6 @@
 #![allow(clippy::absurd_extreme_comparisons)]
 
 use core::hint::unreachable_unchecked;
-
 use static_assertions::const_assert;
 
 // STD ALERT!! However it's portable traits only.
@@ -76,6 +75,9 @@ pub struct PackingSettings {
     /// Enables deduplication of chunks. If true, chunks are deduplicated.
     /// Solid deduplication is virtually free for each file
     pub enable_solid_deduplication: bool,
+
+    /// If enabled, a dictionary will be created per file extension.
+    pub enable_per_extension_dictionary: bool,
 }
 
 impl PackingSettings {
@@ -91,6 +93,7 @@ impl PackingSettings {
             enable_chunked_deduplication: false,
             enable_solid_deduplication: true,
             store_hashes: true,
+            enable_per_extension_dictionary: true,
         }
     }
 
