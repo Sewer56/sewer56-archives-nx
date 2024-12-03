@@ -177,4 +177,11 @@ pub enum StringPoolUnpackError {
     /// this is a measure to prevent servers from running out of memory
     /// due to malformed string pool size. Since you can't always trust user input.
     ExceededMaxSize(u32),
+
+    /// Attempted buffer overflow detected.
+    /// This usually happens if a decompressed string pool has less elements than it should.
+    BufferOverflow,
+
+    /// The StringPool should end on a null terminator, but it does not.
+    ShouldEndOnNullTerminator,
 }

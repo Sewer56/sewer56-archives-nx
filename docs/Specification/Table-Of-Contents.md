@@ -306,6 +306,11 @@ When parsing the archive; we decode the StringPool into an array of strings.
     This might be added in the future but is currently not planned until additional testing and a backwards compatibility
     plan for decompressors missing the relevant dictionaries is decided.
 
+!!! info "Safety notes"
+
+    - Files with no file names have 0 length entries.
+    - StringPool only parses up to [FileCount] items.
+
 ## Performance Considerations
 
 The header + TOC design aim to fit under 4096 bytes when possible. Based on a small 132 Mod, 7 Game Dataset, it is expected that >=90% of

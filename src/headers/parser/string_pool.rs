@@ -298,7 +298,11 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
             }
 
             // Add null terminator
-            decompressed_pool[offset + path_len].write(0);
+            // SAFETY: We know decompressed_pool is long enough based on the assumption calc_pool_size
+            // is correct, which it is (passes miri).
+            unsafe {
+                *decompressed_pool.as_mut_ptr().add(offset + path_len) = MaybeUninit::new(0);
+            }
             offset += path_len + 1;
         }
 
@@ -384,6 +388,12 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
             }
         };
 
+        // Validate the decompressed segment ends with a null terminator
+        #[cfg(feature = "hardened")]
+        if decompressed.len() > 0 && decompressed[decompressed.len() - 1] != 0 {
+            return Err(StringPoolUnpackError::ShouldEndOnNullTerminator);
+        }
+
         // Populate all offsets
         let mut str_offsets: Box<[u32], LongAlloc> =
             unsafe { Box::new_uninit_slice_in(file_count, long_alloc.clone()).assume_init() };
@@ -399,38 +409,58 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
         let mut memchr_iter = Memchr::new(0, &decompressed);
         let mut last_start_offset = 0; // Offset into the decompressed data
         let mut dest_copy_offset = 0; // Offset where we copy into the raw data
-        let mut offset_index = 0;
+        let mut file_idx = 0;
 
-        while offset_index < file_count {
-            str_offsets[offset_index] = dest_copy_offset;
-            offset_index += 1;
+        while file_idx < file_count {
+            // SAFETY: It's not possible to overflow str_offsets here, because len of str_offsets'
+            // array length equals `file_count`.
+            unsafe {
+                *str_offsets.get_mut(file_idx).unwrap_unchecked() = dest_copy_offset;
+            }
+            file_idx += 1;
 
             if let Some(null_pos) = memchr_iter.next() {
                 let len = null_pos - last_start_offset;
+
+                #[cfg(feature = "hardened")]
+                {
+                    // Ensure we don't exceed the allocated space
+                    if dest_copy_offset as usize + len > raw_data.len() {
+                        return Err(StringPoolUnpackError::BufferOverflow);
+                    }
+                }
+
                 unsafe {
-                    // Copy the path bytes to the raw data
                     // SAFETY: memchr_iter ensures we don't overrun here.
                     copy_nonoverlapping(
                         decompressed.as_ptr().add(last_start_offset),
                         raw_data.as_mut_ptr().add(dest_copy_offset as usize),
                         len,
-                    )
-                };
+                    );
+                }
 
                 dest_copy_offset += len as u32;
                 last_start_offset = null_pos + 1; // +1 to skip the null terminator
             } else {
                 // If we've reached the end of the data, break the loop
 
+                // Check if there's remaining data to process
+                let remaining_len = decompressed_size - last_start_offset - 1;
+                #[cfg(feature = "hardened")]
+                {
+                    if dest_copy_offset as usize + remaining_len > raw_data.len() {
+                        return Err(StringPoolUnpackError::BufferOverflow);
+                    }
+                }
+
                 unsafe {
                     // SAFETY: count cannot exceed decompressed_size since source_offset is positive
                     copy_nonoverlapping(
                         decompressed.as_ptr().add(last_start_offset),
                         raw_data.as_mut_ptr().add(dest_copy_offset as usize),
-                        decompressed_size - last_start_offset - 1, // -1 for null terminator
-                    )
-                };
-
+                        remaining_len,
+                    );
+                }
                 break;
             }
         }
@@ -789,6 +819,55 @@ mod tests {
                 zstd_sys::ZSTD_ErrorCode::ZSTD_error_srcSize_wrong |
                 zstd_sys::ZSTD_ErrorCode::ZSTD_error_corruption_detected
             )
+        ));
+    }
+
+    #[cfg(feature = "hardened")]
+    #[rstest]
+    #[case(StringPoolFormat::V0)]
+    fn detect_overflow_when_file_count_too_small(#[case] format: StringPoolFormat) {
+        let data = b"test1\0test2\0"; // 2 entries but expecting 3 entries
+        let result = StringPool::unpack(data, 3, format, false);
+
+        /*
+            Note: This causes a buffer overflow because length of internal raw_data is derived from
+            (decompressed_size - file_count). Essentially existing data, minus number of null terminators,
+            which equals the file count.
+
+            In this case, the code expects 3 null terminators, because file_count is 3, but only 2
+            are present in the input. This means the `raw_data` allocation will be short by 1 byte.
+        */
+
+        assert!(matches!(result, Err(StringPoolUnpackError::BufferOverflow)));
+    }
+
+    #[rstest]
+    #[case(StringPoolFormat::V0)]
+    fn ignores_strings_beyond_expected_count(#[case] format: StringPoolFormat) {
+        let data = b"test1\0test2\0test3\0test4\0"; // 4 entries but expecting 3 entries
+        let result = StringPool::unpack(data, 3, format, false).unwrap();
+
+        assert_eq!(result.len(), 3);
+        assert!(result.contains("test1"));
+        assert!(result.contains("test2"));
+        assert!(result.contains("test3"));
+
+        // Last entry is not present
+        assert!(!result.contains("test4"));
+    }
+
+    #[cfg(feature = "hardened")]
+    #[rstest]
+    #[case(StringPoolFormat::V0)]
+    fn parses_successfully_when_missing_final_null_terminator(#[case] format: StringPoolFormat) {
+        let data = b"test1\0test2\0test3"; // missing final null terminator
+        let result = StringPool::unpack(data, 3, format, false);
+
+        // A final null terminator is missing.
+        // This is technically not fatal, but would result in the final character being chopped off.
+        assert!(matches!(
+            result,
+            Err(StringPoolUnpackError::ShouldEndOnNullTerminator)
         ));
     }
 }
