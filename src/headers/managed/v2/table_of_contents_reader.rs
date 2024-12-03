@@ -1,3 +1,4 @@
+#[cfg(feature = "hardened")]
 use crate::headers::managed::v2::*;
 use crate::{
     api::enums::compression_preference::CompressionPreference,
@@ -142,7 +143,7 @@ where
 #[allow(clippy::too_many_arguments)]
 unsafe fn deserialize_v2xx_preset_entries<ShortAlloc, LongAlloc>(
     reader: &mut LittleEndianReader,
-    avail_bytes: u32,
+    #[allow(unused_variables)] avail_bytes: u32, // used when hardening
     pool_size: u32,
     block_count: u32,
     file_count: u32,
@@ -214,7 +215,7 @@ where
 /// Result containing the deserialized table of contents or a [`DeserializeError`].
 unsafe fn deserialize_v2xx_fef64_entries<ShortAlloc, LongAlloc>(
     reader: &mut LittleEndianReader,
-    avail_bytes: u32,
+    #[allow(unused_variables)] avail_bytes: u32, // used when hardening
     toc_header: Fef64TocHeader,
     short_alloc: ShortAlloc,
     long_alloc: LongAlloc,
@@ -397,6 +398,7 @@ fn read_blocks_unrolled(
     }
 }
 
+#[cfg(feature = "hardened")]
 unsafe fn get_preset_toc_format(preset: u8, has_hash: bool) -> ToCFormat {
     if preset == 0 {
         ToCFormat::Preset0

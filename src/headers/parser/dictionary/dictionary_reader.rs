@@ -1,7 +1,7 @@
 use crate::{
     headers::{managed::InsufficientDataError, parser::*, types::xxh3sum::XXH3sum},
     implementation::pack::blocks::polyfills::NO_DICTIONARY_INDEX,
-    utilities::compression::{zstd, NxDecompressionError},
+    utilities::compression::*,
 };
 use alloc::alloc::AllocError;
 use alloc::boxed::Box;
@@ -80,7 +80,7 @@ impl DictionaryData {
         // SAFETY: This is safe provided that the DictionaryData itself is valid.
         // The hardening of deserialization logic should make this safe.
         let dict_index = *self.dict_indices_for_block.get_unchecked(block_index) as usize;
-        if dict_index == NO_DICTIONARY_INDEX.into() {
+        if dict_index == NO_DICTIONARY_INDEX as usize {
             return &[];
         }
 
@@ -120,42 +120,53 @@ pub unsafe fn extract_payload_with_allocator<ShortAlloc: Allocator + Clone>(
     let header = DictionariesHeader(reader.read_u64());
 
     // Validate we have enough bytes for the compressed content.
-    let remaining_bytes = dictionary_data.len() - DictionariesHeader::SIZE_BYTES;
     let decompressed_size = header.decompressed_size();
-    let compressed_size = header.compressed_size();
-    #[cfg(feature = "hardened")]
-    if remaining_bytes < compressed_size as usize {
-        return Err(InsufficientDataError::new(
-            dictionary_data.len() as u32,
-            compressed_size + DictionariesHeader::SIZE_BYTES as u32,
-        )
-        .into());
-    }
 
-    // Ensure decompressed data is large enough.
     #[cfg(feature = "hardened")]
-    if decompressed_size < DictionariesPayloadHeader::SIZE_BYTES as u32 {
-        return Err(DictionaryReadError::InsufficientPayloadSize);
+    let compressed_size = header.compressed_size();
+
+    #[cfg(feature = "hardened")]
+    {
+        let remaining_bytes = dictionary_data.len() - DictionariesHeader::SIZE_BYTES;
+
+        // Ensure we have enough bytes for the compressed content
+        if remaining_bytes < compressed_size as usize {
+            return Err(InsufficientDataError::new(
+                dictionary_data.len() as u32,
+                compressed_size + DictionariesHeader::SIZE_BYTES as u32,
+            )
+            .into());
+        }
+
+        // Ensure decompressed data is large enough.
+        if decompressed_size < DictionariesPayloadHeader::SIZE_BYTES as u32 {
+            return Err(DictionaryReadError::InsufficientPayloadSize);
+        }
     }
 
     // Decompress the compressed payload out.
     let layout = Layout::from_size_align_unchecked(decompressed_size as usize, 8);
+    #[allow(unused_mut)] // used when hardened
     let mut decompressed_data: Aligned8RawAlloc<ShortAlloc> =
         RawAlloc::new_in(layout, short_alloc.clone())
             .unwrap()
             .into();
-    let decompressed_bytes = zstd::decompress(
-        slice::from_raw_parts(reader.ptr, compressed_size as usize),
-        decompressed_data.as_mut_slice(),
-    )?;
 
-    // For some reason the compressed payload length doesn't match the decompressed size
+
+    // Validate the compressed payload length matches the decompressed size
     #[cfg(feature = "hardened")]
-    if decompressed_bytes != decompressed_size as usize {
-        return Err(DictionaryReadError::DecompressedSizeMismatch(
-            decompressed_size,
-            decompressed_bytes as u32,
-        ));
+    {
+        let decompressed_bytes = zstd::decompress(
+            slice::from_raw_parts(reader.ptr, compressed_size as usize),
+            decompressed_data.as_mut_slice(),
+        )?;
+
+        if decompressed_bytes != decompressed_size as usize {
+            return Err(DictionaryReadError::DecompressedSizeMismatch(
+                decompressed_size,
+                decompressed_bytes as u32,
+            ));
+        }
     }
 
     Ok(ExtractPayloadResult::new(decompressed_data))
@@ -280,18 +291,21 @@ pub unsafe fn parse_payload_with_allocator<ShortAlloc: Allocator + Clone>(
     }
 
     // Assert there are enough bytes for the payload
-    let expected_data_size = current_offset as usize;
 
     let raw_data_start = dict_sizes_reader.ptr as usize;
     let used_bytes = raw_data_start - payload_result.decompressed_data.as_ptr() as usize;
     let remaining_bytes = payload_result.decompressed_data.len() - used_bytes;
 
     #[cfg(feature = "hardened")]
-    if remaining_bytes < expected_data_size {
-        return Err(
-            InsufficientDataError::new(remaining_bytes as u32, expected_data_size as u32).into(),
-        );
+    {
+        let expected_data_size = current_offset as usize;
+        if remaining_bytes < expected_data_size {
+            return Err(
+                InsufficientDataError::new(remaining_bytes as u32, expected_data_size as u32).into(),
+            );
+        }
     }
+
 
     let raw_data = slice::from_raw_parts(raw_data_start as *const u8, remaining_bytes);
 
@@ -396,9 +410,9 @@ mod tests {
 
         // Verify dictionary content for each block
         unsafe {
-            assert_eq!(deserialized.get_dictionary_for_block_unchecked(0), &[]);
-            assert_eq!(deserialized.get_dictionary_for_block_unchecked(1), &[]);
-            assert_eq!(deserialized.get_dictionary_for_block_unchecked(2), &[]);
+            assert!(deserialized.get_dictionary_for_block_unchecked(0).is_empty());
+            assert!(deserialized.get_dictionary_for_block_unchecked(1).is_empty());
+            assert!(deserialized.get_dictionary_for_block_unchecked(2).is_empty());
         }
     }
 
@@ -426,9 +440,9 @@ mod tests {
         // Verify dictionary content for each block
         unsafe {
             assert_eq!(deserialized.get_dictionary_for_block_unchecked(0), &dict1);
-            assert_eq!(deserialized.get_dictionary_for_block_unchecked(1), &[]);
+            assert!(deserialized.get_dictionary_for_block_unchecked(1).is_empty());
             assert_eq!(deserialized.get_dictionary_for_block_unchecked(2), &dict1);
-            assert_eq!(deserialized.get_dictionary_for_block_unchecked(3), &[]);
+            assert!(deserialized.get_dictionary_for_block_unchecked(3).is_empty());
             assert_eq!(deserialized.get_dictionary_for_block_unchecked(4), &dict1);
         }
     }

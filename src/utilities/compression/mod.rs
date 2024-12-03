@@ -7,9 +7,11 @@ pub mod zstd_stream;
 #[cfg(feature = "lz4")]
 pub mod lz4;
 
+#[cfg(feature = "lz4")]
+use lz4::*;
+
 use crate::api::enums::*;
 use copy::*;
-use lz4::{Lz4CompressionError, Lz4DecompressionError};
 use thiserror_no_std::Error;
 
 /// A result type around compression functions..
@@ -23,8 +25,14 @@ pub enum NxCompressionError {
     Copy(#[from] CopyCompressionError),
     #[error("ZStandard Error: {0:?}")]
     ZStandard(#[from] ZSTD_ErrorCode),
+    #[cfg(feature = "lz4")]
     #[error(transparent)]
     Lz4(#[from] Lz4CompressionError),
+
+    /// The LZ4 feature is not enabled. This can only ever be emitted if the error is disabled.
+    #[cfg(not(feature = "lz4"))]
+    #[error("LZ4 Feature not enabled")]
+    Lz4NotEnabled,
 }
 
 /// A result type around compression functions..
@@ -36,6 +44,7 @@ pub type DecompressionResult = Result<usize, NxDecompressionError>;
 pub enum NxDecompressionError {
     Copy(#[from] CopyDecompressionError),
     ZStandard(#[from] ZSTD_ErrorCode),
+    #[cfg(feature = "lz4")]
     Lz4(#[from] Lz4DecompressionError),
 }
 
@@ -80,6 +89,8 @@ pub fn compress(
         CompressionPreference::ZStandard => zstd::compress(level, source, destination, used_copy),
         #[cfg(feature = "lz4")]
         CompressionPreference::Lz4 => lz4::compress(level, source, destination, used_copy),
+        #[cfg(not(feature = "lz4"))]
+        CompressionPreference::Lz4 => Err(NxCompressionError::Lz4NotEnabled),
         CompressionPreference::NoPreference => {
             zstd::compress(level, source, destination, used_copy)
         }
