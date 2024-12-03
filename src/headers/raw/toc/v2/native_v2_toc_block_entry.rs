@@ -53,7 +53,7 @@ impl NativeV2TocBlockEntry {
     pub fn set_compression(&mut self, pref: CompressionPreference) {
         self.set_compression_raw(match pref {
             // All cases of 'no preference' should be overwritten with zstd by default.
-            CompressionPreference::NoPreference => unsafe { unreachable_unchecked() },
+            CompressionPreference::NoPreference => 1,
             CompressionPreference::Copy => 0,
             CompressionPreference::ZStandard => 1,
             CompressionPreference::Lz4 => 2,

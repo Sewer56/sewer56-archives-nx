@@ -12,6 +12,8 @@ pub mod has_file_size;
 pub mod has_relative_path;
 /// Used for items to specify a preference on whether they'd prefer to be SOLIDly packed or not.
 pub mod has_solid_type;
+/// Used for reporting progress to external callers.
+pub mod progress;
 
 /// Prelude with re-exports
 pub use can_provide_input_data::*;
@@ -21,3 +23,4 @@ pub use has_dict_index::*;
 pub use has_file_size::*;
 pub use has_relative_path::*;
 pub use has_solid_type::*;
+pub use progress::*;

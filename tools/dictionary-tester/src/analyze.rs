@@ -22,14 +22,14 @@ use sewer56_archives_nx::{
 use std::{rc::Rc, time::Instant};
 
 #[derive(Debug)]
-struct AnalyzerStats {
-    groups: Vec<FileGroup>,
+struct AnalyzerStats<'a: 'static> {
+    groups: Vec<FileGroup<'a>>,
 }
 
 #[derive(Debug)]
-struct FileGroup {
+struct FileGroup<'a> {
     extension: String,
-    files: Vec<Rc<PackerFile>>,
+    files: Vec<Rc<PackerFile<'a>>>,
     total_size: u64,
 }
 
@@ -154,10 +154,11 @@ fn analyze_compression(
         }
 
         // Create blocks for this group
+        let groups = [(group.extension.as_str(), group.files.clone())]
+            .into_iter()
+            .collect();
         let blocks = make_blocks(
-            [(group.extension.as_str(), group.files.clone())]
-                .into_iter()
-                .collect(),
+            groups,
             args.block_size,
             args.chunk_size,
             CompressionPreference::ZStandard,

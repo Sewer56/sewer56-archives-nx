@@ -1,7 +1,6 @@
 use crate::api::filedata::FromFilePathProvider;
 use crate::api::packing::packer_file::PackerFile;
 use crate::api::traits::*;
-use alloc::sync::Arc;
 use std::fs::*;
 use std::path::*;
 
@@ -38,10 +37,10 @@ impl PathExt for Path {
 /// # Errors
 ///
 /// Returns an error if there are issues accessing the directory or files.
-pub fn find_files<P, F>(directory_path: P, mut callback: F) -> Result<(), FileProviderError>
+pub fn find_files<'a, P, F>(directory_path: P, mut callback: F) -> Result<(), FileProviderError>
 where
     P: AsRef<Path>,
-    F: FnMut(PackerFile),
+    F: FnMut(PackerFile<'a>),
 {
     walk_directory(
         directory_path.as_ref(),
@@ -50,13 +49,13 @@ where
     )
 }
 
-fn walk_directory<F>(
+fn walk_directory<'a, F>(
     current_path: &Path,
     base_path: &Path,
     callback: &mut F,
 ) -> Result<(), FileProviderError>
 where
-    F: FnMut(PackerFile),
+    F: FnMut(PackerFile<'a>),
 {
     for entry in read_dir(current_path)? {
         let entry = entry?;
@@ -70,7 +69,7 @@ where
             if let Ok(relative_path) = path.strip_prefix(base_path) {
                 let relative_path_str = relative_path.normalize_separators();
 
-                let provider = Arc::new(FromFilePathProvider::new(path.to_str().unwrap())?);
+                let provider = Box::new(FromFilePathProvider::new(path.to_str().unwrap())?);
                 let packer_file = PackerFile::new(relative_path_str, metadata.len(), provider);
 
                 callback(packer_file);

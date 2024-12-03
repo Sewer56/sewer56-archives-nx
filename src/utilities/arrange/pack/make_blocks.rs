@@ -83,7 +83,6 @@ where
         + HasCompressionPreference
         + CanProvideInputData
         + HasRelativePath
-        + Clone
         + 'static,
 {
     let mut chunked_blocks: Vec<Box<dyn Block<T>>> = Vec::new();
@@ -203,7 +202,6 @@ fn chunk_item<T>(
         + HasCompressionPreference
         + CanProvideInputData
         + HasRelativePath
-        + Clone
         + 'static,
 {
     let size_left = item.file_size();

@@ -1,4 +1,5 @@
 use endian_writer::*;
+use identity_hash::{BuildIdentityHasher, IdentityHashable};
 use twox_hash::XxHash3_64;
 
 /// A nominally typed xxHash3 checksum.
@@ -39,3 +40,7 @@ impl EndianWritableAt for XXH3sum {
 impl HasSize for XXH3sum {
     const SIZE: usize = size_of::<XXH3sum>();
 }
+
+/// Type alias for HashBuilder using IdentityHasher
+pub type XXH3sumHashBuilder = BuildIdentityHasher<XXH3sum>;
+impl IdentityHashable for XXH3sum {}
