@@ -8,6 +8,7 @@ use std::alloc::{Allocator, Global};
 /// * `dictionaries` - Raw dictionary data for each dictionary
 /// * `blocks` - The blocks in the exact order they will be compressed in the archive.
 /// * `write_hashes` - Whether to write the dictionary hashes
+/// * `compress` - Whether to compress the data (test only, used for benchmarking and miri)
 ///
 /// # Returns
 ///
@@ -16,11 +17,18 @@ pub fn serialize_dictionary_payload<THasDictIndex>(
     dictionaries: &[&[u8]],
     blocks: &[THasDictIndex],
     write_hashes: bool,
+    compress: bool,
 ) -> Result<DictionarySerializeResult, DictionarySerializeError>
 where
     THasDictIndex: HasDictIndex,
 {
-    serialize_dictionary_payload_with_allocator(dictionaries, blocks, Global, write_hashes)
+    serialize_dictionary_payload_with_allocator(
+        dictionaries,
+        blocks,
+        Global,
+        write_hashes,
+        compress,
+    )
 }
 
 /// Deserializes the dictionary data from its binary format.
@@ -76,12 +84,14 @@ pub(crate) fn serialize_dictionary_data<THasDictIndex>(
     dictionaries: &[&[u8]],
     blocks: &[THasDictIndex],
     write_hashes: bool,
+    compress: bool,
 ) -> Result<Vec<u8>, DictionarySerializeError>
 where
     THasDictIndex: HasDictIndex,
 {
     // Serialize the dictionary payload
-    let payload_result = serialize_dictionary_payload(dictionaries, blocks, write_hashes)?;
+    let payload_result =
+        serialize_dictionary_payload(dictionaries, blocks, write_hashes, compress)?;
 
     // Calculate the total size: header size + payload size
     let total_size = DictionariesHeader::SIZE_BYTES + payload_result.payload.len();

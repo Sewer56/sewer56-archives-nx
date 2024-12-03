@@ -16,6 +16,8 @@
     - `u27`: CompressedSize
     - `u28`: DecompressedSize
 
+!!! note "A `CompressedSize` of 0 indicates data is not compressed, use the decompressed size instead"
+
 ### Payload
 
 - **Payload Header (8 bytes)**:

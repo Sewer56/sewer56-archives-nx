@@ -50,6 +50,7 @@ pub enum DictionarySerializeError {
 /// * `blocks` - The blocks in the exact order they will be compressed in the archive.
 /// * `short_alloc` - Allocator for temporary allocations. (lifetime of method)
 /// * `write_hashes` - Whether to write the dictionary hashes
+/// * `compress` - Whether to compress the data (test only, used for benchmarking and miri)
 ///
 /// # Returns
 /// Slice of compressed bytes.
@@ -58,6 +59,7 @@ pub fn serialize_dictionary_payload_with_allocator<THasDictIndex, ShortAlloc>(
     blocks: &[THasDictIndex],
     short_alloc: ShortAlloc,
     write_hashes: bool,
+    compress: bool,
 ) -> Result<DictionarySerializeResult, DictionarySerializeError>
 where
     THasDictIndex: HasDictIndex,
@@ -156,23 +158,39 @@ where
             writer.write_bytes(dictionary);
         }
 
-        let num_written_bytes = writer.ptr as usize - start_ptr as usize;
+        // Ensure we wrote the expected number of bytes
+        debug_assert_eq!(
+            writer.ptr as usize - start_ptr as usize,
+            decompressed_size as usize
+        );
 
         // Compress the data.
-        let max_compressed_size = compression::zstd::max_alloc_for_compress_size(num_written_bytes);
-        let mut compressed_data: Vec<u8> = Vec::with_capacity(max_compressed_size);
-        let num_written_bytes = compression::zstd::compress_no_copy_fallback(
-            DEFAULT_COMPRESSION_LEVEL,
-            slice::from_raw_parts(start_ptr, num_written_bytes),
-            slice::from_raw_parts_mut(compressed_data.as_mut_ptr(), compressed_data.capacity()),
-        )?;
+        if compress {
+            let max_compressed_size =
+                compression::zstd::max_alloc_for_compress_size(decompressed_size as usize);
+            let mut compressed_data: Vec<u8> = Vec::with_capacity(max_compressed_size);
+            let num_written_bytes = compression::zstd::compress_no_copy_fallback(
+                DEFAULT_COMPRESSION_LEVEL,
+                slice::from_raw_parts(start_ptr, decompressed_size as usize),
+                slice::from_raw_parts_mut(compressed_data.as_mut_ptr(), compressed_data.capacity()),
+            )?;
 
-        // Slice the compressed data
-        compressed_data.set_len(num_written_bytes);
-        Ok(DictionarySerializeResult::new(
-            DictionariesHeader::new(0, 0, compressed_data.len() as u32, decompressed_size),
-            compressed_data,
-        ))
+            // Slice the compressed data
+            compressed_data.set_len(num_written_bytes);
+
+            Ok(DictionarySerializeResult::new(
+                DictionariesHeader::new(0, 0, compressed_data.len() as u32, decompressed_size),
+                compressed_data,
+            ))
+        } else {
+            let mut compressed_data: Vec<u8> = Vec::with_capacity(decompressed_size as usize);
+            compressed_data
+                .extend_from_slice(slice::from_raw_parts(start_ptr, decompressed_size as usize));
+            Ok(DictionarySerializeResult::new(
+                DictionariesHeader::new(0, 0, 0, decompressed_size),
+                compressed_data,
+            ))
+        }
     }
 }
 
