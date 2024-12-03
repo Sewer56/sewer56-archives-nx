@@ -348,6 +348,7 @@ mod tests {
     };
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn can_serialize_deserialize_basic_dictionary() {
         // Create test data
         let dict1: Vec<u8> = (0..100).collect(); // Dictionary with values 0-99
@@ -389,6 +390,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn can_serialize_deserialize_empty_dictionaries() {
         // Create test data with empty dictionaries
         let dict1: Vec<u8> = vec![];
@@ -417,6 +419,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn can_serialize_deserialize_with_no_dictionary_blocks() {
         // Create test data
         let dict1: Vec<u8> = (0..100).collect();
@@ -467,6 +470,7 @@ mod invalid_data_tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn insufficient_compressed_data() {
         // Create valid dictionary data but truncate it
         let dict1: Vec<u8> = vec![1, 2, 3];
@@ -481,6 +485,7 @@ mod invalid_data_tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn insufficient_payload_header_size() {
         // Create very small dictionary data that would decompress to less than header size
         let dict1: Vec<u8> = vec![];
@@ -499,6 +504,7 @@ mod invalid_data_tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn decompressed_size_too_big() {
         let dict1: Vec<u8> = vec![1, 2, 3];
         let dictionaries = vec![dict1.as_slice()];
@@ -517,6 +523,7 @@ mod invalid_data_tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn invalid_dictionary_index() {
         // Create dictionary data with invalid dictionary index
         let dict1: Vec<u8> = vec![1, 2, 3];
@@ -534,6 +541,7 @@ mod invalid_data_tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn out_of_bounds_block_access() {
         let dict1: Vec<u8> = vec![1, 2, 3];
         let dictionaries = vec![dict1.as_slice()];
@@ -548,6 +556,7 @@ mod invalid_data_tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn invalid_block_length_data() {
         let dict1: Vec<u8> = vec![1, 2, 3];
         let dictionaries = vec![dict1.as_slice()];
@@ -591,6 +600,7 @@ mod invalid_data_tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn insufficient_dictionary_payload_size() {
         let dict1: Vec<u8> = vec![1, 2, 3];
         let dictionaries = vec![dict1.as_slice()];
@@ -639,6 +649,7 @@ mod invalid_data_tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]    
     fn insufficient_raw_data_content() {
         let dict1: Vec<u8> = vec![1, 2, 3];
         let dictionaries = vec![dict1.as_slice()];

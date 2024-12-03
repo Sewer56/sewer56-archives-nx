@@ -87,6 +87,7 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
+    #[cfg_attr(miri, ignore)] // unsupported because calls OS function
     fn finds_files_in_directory() {
         let temp_dir = TempDir::new().unwrap();
         let base_path = temp_dir.path();
@@ -108,6 +109,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)] // unsupported because calls OS function
     fn handles_empty_directory() {
         let temp_dir = TempDir::new().unwrap();
         let mut count = 0;
@@ -116,6 +118,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)] // unsupported because calls OS function
     fn correct_file_sizes() {
         let temp_dir = TempDir::new().unwrap();
         let test_path = temp_dir.path().join("test.txt");
@@ -132,6 +135,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)] // unsupported because calls OS function
     fn path_separators_handling() {
         let temp_dir = TempDir::new().unwrap();
         let base_path = temp_dir.path();
@@ -148,6 +152,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)] // unsupported because calls OS function
     fn handles_invalid_directory() {
         let result = find_files("nonexistent_directory", |_| {});
         assert!(result.is_err());

@@ -72,12 +72,14 @@ mod tests {
     use tempfile::{NamedTempFile, TempDir};
 
     #[test]
+    #[cfg_attr(miri, ignore)] // involves external I/O
     fn can_create_provider() {
         let temp_file = NamedTempFile::new().unwrap();
         let _ = FromFilePathProvider::new(temp_file.path().to_str().unwrap()).unwrap();
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn can_create_provider_from_dir() {
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("test.txt");
@@ -91,6 +93,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn errors_on_nonexistent_file() {
         let result = FromFilePathProvider::new("nonexistent_file.txt");
         assert!(matches!(
@@ -100,6 +103,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn can_read_file_data() {
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(b"Hello, World!").unwrap();
@@ -111,6 +115,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn can_read_file_data_with_offset() {
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(b"Hello, World!").unwrap();
@@ -122,6 +127,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn can_create_multiple_mappings() {
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(b"Hello, World!").unwrap();

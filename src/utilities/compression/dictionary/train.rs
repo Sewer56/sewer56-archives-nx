@@ -92,6 +92,7 @@ mod tests {
     use zstd_sys::ZSTD_ErrorCode::ZSTD_error_srcSize_wrong;
 
     #[test]
+    #[cfg_attr(miri, ignore)] // unsupported because calls zstd code
     fn can_train_dictionary() {
         // Create sample data
         let samples: [&[u8]; 7] = [
@@ -118,6 +119,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)] // unsupported because calls zstd code
     fn errors_on_empty_samples() {
         let samples: [&[u8]; 0] = [];
         assert!(!has_enough_samples_for_dictionary(samples.len()));
@@ -126,6 +128,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)] // unsupported because calls zstd code
     fn errors_on_too_few_samples() {
         let samples: [&[u8]; 6] = [b"a", b"b", b"c", b"d", b"e", b"f"];
 

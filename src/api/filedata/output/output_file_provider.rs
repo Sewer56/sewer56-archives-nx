@@ -58,6 +58,7 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
+    #[cfg_attr(miri, ignore)] // involves external I/O
     fn new_provider() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test.bin").to_str().unwrap().to_string();
@@ -72,6 +73,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn new_provider_zero_size() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("empty.bin").to_str().unwrap().to_string();
@@ -86,6 +88,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn get_full_range() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("full.bin").to_str().unwrap().to_string();
@@ -97,6 +100,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn get_partial_range() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("partial.bin").to_str().unwrap().to_string();
@@ -108,6 +112,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn write_and_read_data() {
         let dir = tempdir().unwrap();
         let file_path = dir
@@ -132,6 +137,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn multiple_range_writes() {
         let dir = tempdir().unwrap();
         let file_path = dir
@@ -158,6 +164,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn invalid_file_path() {
         let entry = SmallFileEntry::new(10, 0, 0);
         let result = OutputFileProvider::new("/nonexistent/directory/file.bin", entry);
@@ -168,6 +175,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn verify_send() {
         fn assert_send<T: Send>() {}
         assert_send::<OutputFileProvider>();

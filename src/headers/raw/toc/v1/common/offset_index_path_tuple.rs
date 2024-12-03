@@ -80,6 +80,7 @@ mod tests {
     }
 
     #[rstest]
+    #[cfg_attr(miri, ignore)] // no memory accesses, and too slow to test
     fn can_be_packed_values_dont_overlap() {
         let mut tuple = OffsetPathIndexTuple::default();
         for block_offset in get_bit_packing_overlap_test_values(26) {

@@ -363,6 +363,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)] // unsupported because calls zstd code
     fn can_compress_with_dictionary() {
         // Create a simple dictionary from sample data
         let samples: [&[u8]; 7] = [

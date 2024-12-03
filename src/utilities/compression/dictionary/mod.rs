@@ -16,6 +16,7 @@ mod tests {
     const COMPRESSION_LEVEL: i32 = 1;
 
     #[test]
+    #[cfg_attr(miri, ignore)] // unsupported because calls zstd code
     fn can_train_and_use_dictionary() {
         unsafe {
             // Create sample data for dictionary training
@@ -70,6 +71,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)] // unsupported because calls zstd code
     fn handles_incompressible_data() {
         unsafe {
             let dict_data = vec![0u8; 1024]; // Empty dictionary

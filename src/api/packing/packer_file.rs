@@ -148,6 +148,7 @@ mod tests {
     use tempfile::NamedTempFile;
 
     #[test]
+    #[cfg_attr(miri, ignore)] // uses I/O, unsupported
     fn can_create_from_file_path() {
         // Create a temporary test file
         let mut temp_file = NamedTempFile::new().unwrap();
@@ -166,6 +167,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn can_set_preferences() {
         let mut temp_file = NamedTempFile::new().unwrap();
         writeln!(temp_file, "test").unwrap();
@@ -185,6 +187,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn handles_invalid_path() {
         let file_name = "test.txt".to_string();
         let result = PackerFile::from_file_path("nonexistent.txt", file_name, 0);

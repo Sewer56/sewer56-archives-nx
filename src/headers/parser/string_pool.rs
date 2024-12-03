@@ -9,6 +9,7 @@ use crate::utilities::compression::zstd::{
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
+use core::ptr::write_bytes;
 use core::{mem::MaybeUninit, ptr::copy_nonoverlapping};
 use memchr::Memchr;
 use std::alloc::{Allocator, Global};
@@ -461,7 +462,25 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
                         remaining_len,
                     );
                 }
+
+                dest_copy_offset += remaining_len as u32;
                 break;
+            }
+        }
+
+        // SAFETY: If the input had strings beyond the end of the expected count, then raw_data
+        // will have uninitialized memory. In this case, we must write into that memory, as there's
+        // technically non-zero chance there will be data that may make calls like `contains` invalid.
+        // Thanks miri <3
+        let remaining_bytes = raw_data.len() - dest_copy_offset as usize;
+        if remaining_bytes > 0 {
+            unsafe {
+                // SAFETY: dest_copy_offset is less than raw_data.len()
+                write_bytes(
+                    raw_data.as_mut_ptr().add(dest_copy_offset as usize),
+                    0,
+                    remaining_bytes,
+                );
             }
         }
 
