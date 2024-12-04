@@ -1,10 +1,10 @@
+use crate::prelude::*;
 use crate::{
     api::traits::*,
     headers::{raw::toc::PRESET0_BLOCK_COUNT_MAX, types::xxh3sum::XXH3sum},
     implementation::pack::blocks::polyfills::NO_DICTIONARY_INDEX,
     utilities::compression,
 };
-use alloc::alloc::*;
 use bitfield::bitfield;
 use core::{alloc::Layout, slice};
 use derive_new::new;
@@ -410,6 +410,7 @@ mod tests {
             mock_block::create_mock_block, packer_file_for_testing::PackerFileForTesting,
         },
     };
+    use allocator_api2::vec;
 
     #[test]
     fn calc_size_can_calculate_min_size_dictionary() {
@@ -544,7 +545,7 @@ mod tests {
     fn create_mappings_can_handle_empty_block_list() {
         let blocks: Vec<Box<dyn Block<PackerFileForTesting>>> = vec![];
         let mut last_block_idx = 0;
-        let mappings = create_dictionary_mappings(&blocks, &mut last_block_idx).unwrap();
+        let mappings = create_dictionary_mappings(blocks.as_slice(), &mut last_block_idx).unwrap();
         assert_eq!(mappings.len(), 0);
         assert_eq!(last_block_idx, 0); // No blocks use dictionary
     }

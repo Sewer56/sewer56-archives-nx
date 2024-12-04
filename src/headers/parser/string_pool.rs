@@ -3,16 +3,14 @@ use super::string_pool_common::{
 };
 use crate::api::traits::*;
 use crate::headers::raw::toc::*;
+use crate::prelude::*;
 use crate::utilities::compression::zstd::{
     self, compress_no_copy_fallback, max_alloc_for_compress_size,
 };
-use alloc::boxed::Box;
-use alloc::vec::Vec;
 use core::marker::PhantomData;
 use core::ptr::write_bytes;
 use core::{mem::MaybeUninit, ptr::copy_nonoverlapping};
 use memchr::Memchr;
-use std::alloc::{Allocator, Global};
 
 /// The compression level used for the zstd stringpool.
 /// This defaults to 16. Normally I would set this to 22,
@@ -553,6 +551,7 @@ fn calc_pool_size<T: HasRelativePath>(items: &mut [T]) -> usize {
 #[cfg(test)]
 mod tests {
     use crate::headers::raw::toc::*;
+    use crate::prelude::*;
     use crate::utilities::compression::zstd::compress_no_copy_fallback;
     use crate::utilities::compression::NxDecompressionError;
     use crate::{
@@ -562,11 +561,8 @@ mod tests {
             string_pool_common::StringPoolFormat::{self, *},
         },
     };
-    use alloc::format;
-    use alloc::vec;
-    use alloc::{string::String, vec::Vec};
+    use allocator_api2::vec;
     use rstest::rstest;
-    use std::alloc::System;
 
     #[derive(Debug, PartialEq, Eq)]
     struct TestItem {
@@ -672,9 +668,9 @@ mod tests {
         ];
 
         let packed =
-            StringPool::pack_with_allocators(&mut items, System, System, format, true).unwrap();
+            StringPool::pack_with_allocators(&mut items, Global, Global, format, true).unwrap();
         let unpacked =
-            StringPool::unpack_with_allocators(&packed, items.len(), System, System, format, true)
+            StringPool::unpack_with_allocators(&packed, items.len(), Global, Global, format, true)
                 .unwrap();
 
         assert_eq!(unpacked.len(), items.len());

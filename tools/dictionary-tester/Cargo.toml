@@ -8,7 +8,7 @@ license-file = "LICENSE"
 include = ["**/*"]
 
 [dependencies]
-sewer56-archives-nx = { path = "../.." }
+sewer56-archives-nx = { path = "../..", features = ["nightly"] }
 argh = "0.1.12"
 bytesize = "1.3.0"
 hashbrown = "0.15.1"

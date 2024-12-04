@@ -2,7 +2,7 @@ use super::{enums::*, filedata::*, packing::packer_file::PackerFile, traits::*};
 use crate::{
     api::packing::packing_settings::PackingSettings, utilities::io::file_finder::find_files,
 };
-use alloc::vec::Vec;
+use crate::{prelude::*, unsize_box2};
 use core::marker::PhantomData;
 use std::io::{Read, Seek};
 
@@ -111,9 +111,13 @@ impl<'a> NxPackerBuilder<'a> {
         options: AddFileParams,
     ) -> &mut Self {
         let provider = Box::new(FromSliceReferenceProvider::new(data));
-        let file = PackerFile::new(options.relative_path, data.len() as u64, provider)
-            .with_compression(options.compression_preference)
-            .with_solid(options.solid_type);
+        let file = PackerFile::new(
+            options.relative_path,
+            data.len() as u64,
+            unsize_box2!(provider),
+        )
+        .with_compression(options.compression_preference)
+        .with_solid(options.solid_type);
 
         self.files.push(file);
         self
@@ -136,7 +140,7 @@ impl<'a> NxPackerBuilder<'a> {
     ) -> &mut Self {
         let len = data.len();
         let provider = Box::new(FromBoxedSliceProvider::new(data));
-        let file = PackerFile::new(options.relative_path, len as u64, provider)
+        let file = PackerFile::new(options.relative_path, len as u64, unsize_box2!(provider))
             .with_compression(options.compression_preference)
             .with_solid(options.solid_type);
 
@@ -162,7 +166,7 @@ impl<'a> NxPackerBuilder<'a> {
         options: AddFileParams,
     ) -> &mut Self {
         let provider = Box::new(FromStreamProvider::new(stream));
-        let file = PackerFile::new(options.relative_path, length, provider)
+        let file = PackerFile::new(options.relative_path, length, unsize_box2!(provider))
             .with_compression(options.compression_preference)
             .with_solid(options.solid_type);
 
@@ -618,14 +622,15 @@ mod tests {
     #[test]
     fn can_add_file_from_boxed_slice() {
         let mut builder = NxPackerBuilder::new();
-        let data = b"Hello, World!".to_vec();
+        let data: Box<[u8]> = unsize_box2!(Box::new(*b"Hello, World!"));
+
         let options = AddFileParams {
             relative_path: String::from("test.txt"),
             compression_preference: CompressionPreference::NoPreference,
             solid_type: SolidPreference::Default,
         };
 
-        builder.add_file_from_boxed_slice(data.into_boxed_slice(), options);
+        builder.add_file_from_boxed_slice(data, options);
 
         assert_eq!(builder.files.len(), 1);
         let file = &builder.files[0];

@@ -4,7 +4,7 @@ use crate::headers::managed::FileEntry;
 use crate::utilities::compression;
 use alloc::sync::Arc;
 use core::cell::UnsafeCell;
-use std::sync::OnceLock;
+use once_cell::sync::OnceCell;
 
 /// Represents a block of data from an existing Nx archive that is lazily decompressed
 /// on demand.
@@ -28,7 +28,7 @@ use std::sync::OnceLock;
 /// This maxes maximum memory size bound by [`MAX_BLOCK_SIZE`], so we can represent this as [`u32`].
 pub struct LazyDecompressedSolidNxBlock {
     /// Raw decompressed data, lazily initialized when needed
-    data: OnceLock<Box<[u8]>>,
+    data: OnceCell<Box<[u8]>>,
 
     /// Provides access to the original Nx archive
     source_nx_data_provider: Arc<dyn InputDataProvider + Send + Sync>,
@@ -66,7 +66,7 @@ impl LazyDecompressedSolidNxBlock {
         compression: CompressionPreference,
     ) -> Self {
         Self {
-            data: OnceLock::new(),
+            data: OnceCell::new(),
             source_nx_data_provider,
             num_bytes_to_decompress: UnsafeCell::new(0),
             block_offset,

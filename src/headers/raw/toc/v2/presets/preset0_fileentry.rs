@@ -22,7 +22,7 @@ pub struct NativeFileEntryP0 {
     offset_path_index_tuple: CommonOffsetPathIndexTuple,
 }
 
-#[coverage(off)] // Impl without coverage
+#[cfg_attr(feature = "nightly", coverage(off))] // Impl without coverage
 impl NativeFileEntryP0 {
     /// `u24` Offset of the file inside the decompressed block.
     pub fn decompressed_block_offset(&self) -> u32 {

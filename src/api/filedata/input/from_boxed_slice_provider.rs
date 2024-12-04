@@ -1,5 +1,5 @@
 use crate::api::{filedata::SliceFileData, traits::*};
-use alloc::boxed::Box;
+use crate::{prelude::*, unsize_box2};
 
 /// Provides file data from an in-memory byte array.
 pub struct FromBoxedSliceProvider {
@@ -27,17 +27,21 @@ impl InputDataProvider for FromBoxedSliceProvider {
         //         assumed to be 'safe'/'trusted'.
         debug_assert!(start + length <= self.data.len());
         let slice = unsafe { self.data.get_unchecked(start..start + length) };
-        Ok(Box::new(SliceFileData::new(slice)))
+        Ok(unsize_box2!(Box::new(SliceFileData::new(slice))))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::{
+        api::{filedata::FromBoxedSliceProvider, traits::InputDataProvider},
+        prelude::*,
+        unsize_box2,
+    };
 
     #[test]
     fn from_array_provider_has_valid_range() {
-        let data = Box::new([10, 20, 30, 40, 50]);
+        let data: Box<[u8]> = unsize_box2!(Box::new([10, 20, 30, 40, 50]));
         let provider = FromBoxedSliceProvider::new(data);
 
         let file_data = provider.get_file_data(1, 3).unwrap();

@@ -1,5 +1,5 @@
 use super::*;
-use alloc::boxed::Box;
+use crate::prelude::*;
 
 /// An interface for creating [`ReadOnlyFileData`] instances.
 /// Used for providing read access to data, such as reading files for packing.

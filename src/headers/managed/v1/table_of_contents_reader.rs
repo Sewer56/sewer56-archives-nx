@@ -1,11 +1,10 @@
-use endian_writer::{EndianReader, LittleEndianReader};
-
+use crate::prelude::*;
 use crate::{
     api::enums::compression_preference::CompressionPreference,
     headers::{enums::v1::*, managed::*, parser::*, raw::toc::*},
 };
 use core::slice;
-use std::alloc::{Allocator, Global};
+use endian_writer::{EndianReader, LittleEndianReader};
 
 impl TableOfContents {
     /// Deserializes the table of contents from a given address and version.
@@ -76,12 +75,12 @@ where
         if !entries.is_empty() {
             match toc_version {
                 TableOfContentsVersion::V0 => {
-                    for entry in &mut entries {
+                    for entry in entries.iter_mut() {
                         entry.from_reader_v0(&mut reader);
                     }
                 }
                 TableOfContentsVersion::V1 => {
-                    for entry in &mut entries {
+                    for entry in entries.iter_mut() {
                         entry.from_reader_v1(&mut reader);
                     }
                 }

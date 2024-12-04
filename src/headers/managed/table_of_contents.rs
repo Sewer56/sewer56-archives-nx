@@ -1,11 +1,10 @@
-use derive_new::new;
-use thiserror_no_std::Error;
-
+use crate::prelude::*;
 use crate::{
     api::enums::compression_preference::CompressionPreference,
     headers::{managed::*, parser::*},
 };
-use std::alloc::{Allocator, Global};
+use derive_new::new;
+use thiserror_no_std::Error;
 
 /// Managed representation of the deserialized table of contents.
 /// Used for both NX v1.x.x and NX v2.x.x

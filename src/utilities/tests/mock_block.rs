@@ -1,4 +1,6 @@
 use super::packer_file_for_testing::PackerFileForTesting;
+use crate::prelude::*;
+use crate::unsize_box2;
 use crate::{
     api::traits::*,
     implementation::pack::blocks::polyfills::{Block, PtrEntry},
@@ -35,5 +37,5 @@ impl HasDictIndex for MockBlock {
 }
 
 pub fn create_mock_block(dict_index: u32) -> Box<dyn Block<PackerFileForTesting>> {
-    Box::new(MockBlock { dict_index })
+    unsize_box2!(Box::new(MockBlock { dict_index }))
 }

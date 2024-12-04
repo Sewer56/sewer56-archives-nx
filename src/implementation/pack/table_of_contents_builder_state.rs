@@ -1,7 +1,7 @@
+use crate::prelude::*;
 use crate::{api::enums::*, headers::managed::*};
 use ahash::RandomState;
 use hashbrown::HashMap;
-use std::alloc::{Allocator, Global};
 
 /// This contains the shared 'state' used to build the final binary Table of Contents.
 ///
@@ -231,11 +231,10 @@ pub enum TocBuilderError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::alloc::System;
 
     #[test]
     fn new_creates_correct_sizes() {
-        let state = unsafe { TableOfContentsBuilderState::new_with_allocator(10, 20, System) };
+        let state = unsafe { TableOfContentsBuilderState::new_with_allocator(10, 20, Global) };
         assert_eq!(state.block_compressions.len(), 10);
         assert_eq!(state.blocks.len(), 10);
         assert_eq!(state.entries.len(), 20);
@@ -243,7 +242,7 @@ mod tests {
 
     #[test]
     fn block_compression_getters_and_setters() {
-        let mut state = unsafe { TableOfContentsBuilderState::new_with_allocator(1, 1, System) };
+        let mut state = unsafe { TableOfContentsBuilderState::new_with_allocator(1, 1, Global) };
 
         // Test setters
         assert!(state
@@ -275,7 +274,7 @@ mod tests {
 
     #[test]
     fn block_getters_and_setters() {
-        let mut state = unsafe { TableOfContentsBuilderState::new_with_allocator(1, 1, System) };
+        let mut state = unsafe { TableOfContentsBuilderState::new_with_allocator(1, 1, Global) };
         let block = BlockSize {
             compressed_size: 100,
         };
@@ -305,7 +304,7 @@ mod tests {
 
     #[test]
     fn entry_getters_and_setters() {
-        let mut state = unsafe { TableOfContentsBuilderState::new_with_allocator(1, 1, System) };
+        let mut state = unsafe { TableOfContentsBuilderState::new_with_allocator(1, 1, Global) };
         let entry = FileEntry {
             hash: 123,
             decompressed_size: 456,
@@ -343,7 +342,7 @@ mod tests {
 
     #[test]
     fn file_name_hashtable_operations() {
-        let mut state = unsafe { TableOfContentsBuilderState::new_with_allocator(1, 1, System) };
+        let mut state = unsafe { TableOfContentsBuilderState::new_with_allocator(1, 1, Global) };
 
         // Test adding file names
         state.add_or_replace_file_name("file1.txt", 0);

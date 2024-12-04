@@ -1,4 +1,5 @@
 use crate::api::{enums::*, filedata::*, traits::*};
+use crate::{prelude::*, unsize_box2};
 
 /// Represents a file that will be packed into an Nx archive.
 pub struct PackerFile<'a> {
@@ -69,7 +70,7 @@ impl<'a> PackerFile<'a> {
         file_size: u64,
     ) -> Result<Self, FileProviderError> {
         let provider = Box::new(FromFilePathProvider::new(source_path)?);
-        Ok(Self::new(relative_path, file_size, provider))
+        Ok(Self::new(relative_path, file_size, unsize_box2!(provider)))
     }
 
     /// Creates a new PackerFile from a path, automatically creating the provider.
@@ -90,7 +91,7 @@ impl<'a> PackerFile<'a> {
         Ok(Self::new(
             relative_path,
             provider.file_size()? as u64,
-            provider,
+            unsize_box2!(provider),
         ))
     }
 

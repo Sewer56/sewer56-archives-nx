@@ -1,4 +1,5 @@
 use super::file_entry_intrinsics::{write_entries_as_v0, write_entries_as_v1};
+use crate::prelude::*;
 use crate::{
     api::{enums::compression_preference::CompressionPreference, traits::*},
     headers::{enums::v1::*, managed::*, parser::*, raw::toc::*},
@@ -7,7 +8,6 @@ use crate::{
     },
 };
 use endian_writer::{EndianWriter, LittleEndianWriter};
-use std::alloc::Allocator;
 
 // Max values for V0 & V1 formats.
 const MAX_BLOCK_COUNT_V0V1: usize = 262143; // 2^18 - 1
@@ -325,6 +325,7 @@ mod tests {
     use super::*;
     use crate::api::packing::packing_settings::MAX_BLOCK_SIZE;
     use crate::utilities::tests::packer_file_for_testing::PackerFileForTesting;
+    use allocator_api2::vec;
     use rstest::rstest;
 
     #[rstest]

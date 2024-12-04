@@ -1,4 +1,5 @@
 use crate::api::traits::*;
+use crate::{prelude::*, unsize_box2};
 use std::io::{Read, Seek, SeekFrom};
 use std::sync::Mutex;
 
@@ -38,7 +39,7 @@ impl<T: Read + Seek + Send> InputDataProvider for FromStreamProvider<T> {
             .read_exact(&mut buffer)
             .map_err(|_| FileProviderError::FailedToReadFromStream(length, start))?;
 
-        Ok(Box::new(StreamData { data: buffer }))
+        Ok(unsize_box2!(Box::new(StreamData { data: buffer })))
     }
 }
 

@@ -87,7 +87,7 @@ impl Preset3TocHeader {
     /// # Returns
     ///
     /// A new `Preset3TocHeader` instance.
-    #[coverage(off)]
+    #[cfg_attr(feature = "nightly", coverage(off))]
     pub fn from_raw(raw: u64) -> Self {
         Preset3TocHeader(raw.to_le())
     }

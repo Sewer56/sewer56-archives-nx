@@ -10,6 +10,7 @@ use sewer56_archives_nx::{
         traits::{CanProvideInputData, HasFileSize, HasSolidType},
     },
     implementation::pack::blocks::polyfills::{Block, PtrEntry},
+    prelude::*,
     utilities::{
         arrange::pack::{group_by_extension::*, make_blocks::*},
         compression::{
@@ -128,7 +129,7 @@ fn read_file_train_data(file: &PackerFile) -> Result<Vec<u8>, Box<dyn std::error
     let file_data = provider
         .get_file_data(0, min(file.file_size(), 131072))
         .unwrap();
-    Ok(file_data.data().to_vec())
+    Ok(Vec::from(file_data.data()))
 }
 
 fn analyze_compression(

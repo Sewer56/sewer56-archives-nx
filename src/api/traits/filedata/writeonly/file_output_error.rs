@@ -1,5 +1,5 @@
+use crate::prelude::*;
 use lightweight_mmap::handles::HandleOpenError;
-use std::alloc::AllocError;
 use thiserror_no_std::Error;
 
 /// Represents errors that can occur when providing outputs for files.

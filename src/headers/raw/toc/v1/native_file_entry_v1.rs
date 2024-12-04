@@ -19,7 +19,7 @@ pub struct NativeFileEntryV1 {
     offset_path_index_tuple: OffsetPathIndexTuple,
 }
 
-#[coverage(off)] // Impl without coverage
+#[cfg_attr(feature = "nightly", coverage(off))] // Impl without coverage
 impl NativeFileEntryV1 {
     /// Size of item in bytes.
     pub(crate) const SIZE_BYTES: usize = 24;

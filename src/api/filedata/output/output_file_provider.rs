@@ -1,4 +1,6 @@
 use crate::api::traits::*;
+use crate::prelude::*;
+use crate::unsize_box2;
 use lightweight_mmap::{handles::ReadWriteFileHandle, mmap::ReadWriteMmap};
 
 /// Output data provider that writes data to an existing or new file.
@@ -29,7 +31,9 @@ impl OutputDataProvider for OutputFileProvider {
         length: u64,
     ) -> Result<Box<dyn ReadWriteFileData + 'a>, FileProviderError> {
         let mapping = ReadWriteMmap::new(&self.file_handle, start, length as usize)?;
-        Ok(Box::new(ReadWriteMappedFileData::new(mapping)))
+        Ok(unsize_box2!(Box::new(ReadWriteMappedFileData::new(
+            mapping
+        ))))
     }
 }
 
@@ -160,7 +164,7 @@ mod tests {
 
         // Verify complete file contents
         let file_contents = read(&file_path).unwrap();
-        assert_eq!(file_contents, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        assert_eq!(&file_contents, &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     }
 
     #[test]

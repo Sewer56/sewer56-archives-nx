@@ -1,4 +1,5 @@
 use crate::api::traits::*;
+use crate::{prelude::*, unsize_box2};
 use lightweight_mmap::handles::ReadOnlyFileHandle;
 use lightweight_mmap::mmap::ReadOnlyMmap;
 use nanokit::string_concat_unsafe::*;
@@ -42,7 +43,7 @@ impl InputDataProvider for FromFilePathProvider {
         length: u64,
     ) -> Result<Box<dyn ReadOnlyFileData + 'a>, FileProviderError> {
         let mapping = ReadOnlyMmap::new(&self.file_handle, start, length as usize)?;
-        Ok(Box::new(ReadOnlyMappedFileData::new(mapping)))
+        Ok(unsize_box2!(Box::new(ReadOnlyMappedFileData::new(mapping))))
     }
 }
 

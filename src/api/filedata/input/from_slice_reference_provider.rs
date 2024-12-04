@@ -1,5 +1,5 @@
 use crate::api::{filedata::SliceFileData, traits::*};
-use alloc::boxed::Box;
+use crate::{prelude::*, unsize_box2};
 
 /// Provides file data from an in-memory byte array.
 pub struct FromSliceReferenceProvider<'a> {
@@ -27,7 +27,7 @@ impl InputDataProvider for FromSliceReferenceProvider<'_> {
         //         assumed to be 'safe'/'trusted'.
         debug_assert!(start + length <= self.data.len());
         let slice = unsafe { self.data.get_unchecked(start..start + length) };
-        Ok(Box::new(SliceFileData::new(slice)))
+        Ok(unsize_box2!(Box::new(SliceFileData::new(slice))))
     }
 }
 

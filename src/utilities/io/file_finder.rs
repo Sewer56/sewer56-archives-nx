@@ -1,6 +1,8 @@
 use crate::api::filedata::FromFilePathProvider;
 use crate::api::packing::packer_file::PackerFile;
 use crate::api::traits::*;
+use crate::prelude::*;
+use crate::unsize_box2;
 use std::fs::*;
 use std::path::*;
 
@@ -70,7 +72,8 @@ where
                 let relative_path_str = relative_path.normalize_separators();
 
                 let provider = Box::new(FromFilePathProvider::new(path.to_str().unwrap())?);
-                let packer_file = PackerFile::new(relative_path_str, metadata.len(), provider);
+                let packer_file =
+                    PackerFile::new(relative_path_str, metadata.len(), unsize_box2!(provider));
 
                 callback(packer_file);
             }

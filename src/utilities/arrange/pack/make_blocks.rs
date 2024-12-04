@@ -1,3 +1,5 @@
+use crate::prelude::*;
+use crate::unsize_box2;
 use crate::{
     api::{enums::*, traits::*},
     implementation::pack::blocks::polyfills::{
@@ -6,6 +8,7 @@ use crate::{
 };
 use alloc::rc::Rc;
 use alloc::sync::Arc;
+use allocator_api2::vec;
 use core::mem::take;
 use hashbrown::HashMap; // esoteric platform safe
 
@@ -121,11 +124,11 @@ where
             if item.solid_type() == SolidPreference::NoSolid {
                 solid_blocks.push((
                     item.file_size(),
-                    Box::new(SolidBlock::new(
+                    unsize_box2!(Box::new(SolidBlock::new(
                         vec![item.clone()],
                         item.compression_preference(),
                         dict_index,
-                    )),
+                    ))),
                 ));
                 continue;
             }
@@ -142,7 +145,11 @@ where
                     let cloned = current_block.clone();
                     solid_blocks.push((
                         current_block_size,
-                        Box::new(SolidBlock::new(cloned, solid_block_algorithm, dict_index)),
+                        unsize_box2!(Box::new(SolidBlock::new(
+                            cloned,
+                            solid_block_algorithm,
+                            dict_index
+                        ))),
                     ));
                     current_block.clear();
                 }
@@ -158,11 +165,11 @@ where
     if !current_block.is_empty() {
         solid_blocks.push((
             current_block_size,
-            Box::new(SolidBlock::new(
+            unsize_box2!(Box::new(SolidBlock::new(
                 take(&mut current_block),
                 solid_block_algorithm,
                 dict_index,
-            )),
+            ))),
         ));
     }
 
@@ -227,22 +234,22 @@ fn chunk_item<T>(
 
     let mut current_offset = 0_u64;
     for x in 0..num_iterations {
-        blocks.push(Box::new(ChunkedFileBlock::new(
+        blocks.push(unsize_box2!(Box::new(ChunkedFileBlock::new(
             current_offset,
             chunk_size,
             x,
             state.clone(),
-        )));
+        ))));
         current_offset += chunk_size as u64;
     }
 
     if remaining_size > 0 {
-        blocks.push(Box::new(ChunkedFileBlock::new(
+        blocks.push(unsize_box2!(Box::new(ChunkedFileBlock::new(
             current_offset,
             remaining_size,
             num_iterations,
             state,
-        )));
+        ))));
     }
 }
 
@@ -250,6 +257,7 @@ fn chunk_item<T>(
 mod tests {
     use super::*;
     use alloc::rc::Rc;
+    use allocator_api2::vec;
     use hashbrown::HashMap;
 
     #[derive(Clone)]

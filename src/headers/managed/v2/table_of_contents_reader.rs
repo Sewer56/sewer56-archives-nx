@@ -1,12 +1,12 @@
 #[cfg(feature = "hardened")]
 use crate::headers::managed::v2::*;
+use crate::prelude::*;
 use crate::{
     api::enums::compression_preference::CompressionPreference,
     headers::{managed::*, parser::*, raw::toc::*},
 };
 use core::{hint::unreachable_unchecked, slice};
 use endian_writer::{EndianReader, EndianReaderExt, LittleEndianReader};
-use std::alloc::{Allocator, Global};
 
 impl TableOfContents {
     /// Deserializes the table of contents from a given address and version.

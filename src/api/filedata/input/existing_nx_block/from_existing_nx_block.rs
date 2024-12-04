@@ -1,5 +1,6 @@
 use super::LazyDecompressedSolidNxBlock;
 use crate::{api::traits::*, headers::managed::FileEntry};
+use crate::{prelude::*, unsize_box2};
 use std::sync::Arc;
 
 /// This provider allows you to read a file from an existing SOLID Nx block,
@@ -48,7 +49,9 @@ impl InputDataProvider for FromExistingNxBlock {
                 self.block_offset as usize..self.block_offset as usize + self.file_size as usize,
             )
         };
-        Ok(Box::new(DecompressedNxBlockFileData::new(base_data_ptr)))
+        Ok(unsize_box2!(Box::new(DecompressedNxBlockFileData::new(
+            base_data_ptr
+        ))))
     }
 }
 
@@ -73,6 +76,7 @@ impl ReadOnlyFileData for DecompressedNxBlockFileData<'_> {
 mod tests {
     use super::*;
     use crate::api::{enums::CompressionPreference, filedata::FromStreamProvider};
+    use allocator_api2::vec;
     use std::io::Cursor;
 
     /// Helper function to create a test block with given data

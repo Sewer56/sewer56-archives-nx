@@ -1,6 +1,6 @@
 use crate::api::traits::*;
+use crate::prelude::*;
 use alloc::rc::Rc;
-use alloc::vec::Vec;
 use hashbrown::HashMap;
 
 /// Groups the given files by extension.
@@ -44,8 +44,7 @@ fn extract_extension(path: &str) -> &str {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use alloc::vec;
-    use alloc::{string::String, vec::Vec};
+    use allocator_api2::vec;
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     struct SortTestItem {

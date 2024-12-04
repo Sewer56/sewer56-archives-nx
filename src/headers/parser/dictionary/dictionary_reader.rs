@@ -3,15 +3,13 @@ use crate::{
     implementation::pack::blocks::polyfills::NO_DICTIONARY_INDEX,
     utilities::compression::*,
 };
-use alloc::alloc::AllocError;
-use alloc::boxed::Box;
+use crate::prelude::*;
 use core::{
     alloc::Layout, ops::{Deref, DerefMut}, ptr::copy_nonoverlapping, slice
 };
 use derive_new::new;
 use endian_writer::{ByteAlign, EndianReader, LittleEndianReader};
 use safe_allocator_api::RawAlloc;
-use std::alloc::Allocator;
 use thiserror_no_std::Error;
 
 #[derive(Debug, Error)]
@@ -365,12 +363,12 @@ impl<ShortAlloc: Allocator> From<RawAlloc<ShortAlloc>> for Aligned8RawAlloc<Shor
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
-
     use super::*;
     use crate::{
         implementation::pack::blocks::polyfills::NO_DICTIONARY_INDEX,
         utilities::tests::mock_block::create_mock_block,
     };
+    use allocator_api2::vec;
 
     #[rstest]
     #[case(false)]
@@ -482,10 +480,10 @@ mod tests {
 #[cfg(test)]
 #[cfg(feature = "hardened")]
 mod invalid_data_tests {
-    use std::alloc::Global;
     use rstest::rstest;
     use crate::utilities::tests::mock_block::create_mock_block;
     use super::*;
+    use allocator_api2::vec;    
 
     #[test]
     fn insufficient_dict_header_bytes() {

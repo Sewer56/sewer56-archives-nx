@@ -1,6 +1,6 @@
 use super::{dictionary_builder::*, dictionary_reader::*};
 use crate::api::traits::*;
-use std::alloc::{Allocator, Global};
+use crate::prelude::*;
 
 /// Serializes compressed dictionary payload.
 ///

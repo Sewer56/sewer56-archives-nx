@@ -1,6 +1,7 @@
 use crate::api::traits::filedata::*;
 use crate::api::traits::FileOutputError;
-use alloc::boxed::Box;
+use crate::prelude::*;
+use crate::unsize_box2;
 use core::cell::UnsafeCell;
 
 /// Output data provider that writes data to an existing slice of data.
@@ -57,9 +58,9 @@ impl OutputDataProvider for OutputArrayProvider {
         // All calls are done from within library and are assumed to be 'valid'
         debug_assert!(start + length <= data.len() as u64);
 
-        Ok(Box::new(ArrayFileData::new(unsafe {
+        Ok(unsize_box2!(Box::new(ArrayFileData::new(unsafe {
             data.get_unchecked_mut(start as usize..(start + length) as usize)
-        })))
+        }))))
     }
 }
 

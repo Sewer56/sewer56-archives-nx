@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::{
     api::{enums::compression_preference::CompressionPreference, traits::*},
     headers::{managed::*, parser::*, raw::toc::*},
@@ -10,7 +11,7 @@ use core::hint::unreachable_unchecked;
 use endian_writer::{EndianWriter, EndianWriterExt, LittleEndianWriter};
 use hashbrown::HashTable;
 use nanokit::count_bits::BitsNeeded;
-use std::alloc::Allocator;
+use std::rc::Rc;
 use thiserror_no_std::Error;
 
 /// Holds the result of initializing the creation of a binary Table of Contents.
@@ -65,7 +66,7 @@ pub fn init_toc_creation<
 ) -> Result<BuilderInfo<LongAlloc>, InitError> {
     let mut largest_file_size: u64 = 0;
     let mut can_create_chunks = false;
-    let mut files = Vec::with_capacity(blocks.len());
+    let mut files: Vec<Rc<T>> = Vec::with_capacity(blocks.len());
     let mut seenfiles: HashTable<PtrEntry> = HashTable::with_capacity(blocks.len());
 
     // Gather all files from blocks.
@@ -511,8 +512,8 @@ pub fn calculate_toc_size(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use allocator_api2::vec;
     use rstest::rstest;
-    use std::alloc::Global;
 
     // Shared test setup
     fn create_test_data(

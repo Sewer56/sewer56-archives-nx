@@ -1,8 +1,7 @@
 //! # Some Cool Reloaded Library
 //! Here's the crate documentation.
-#![feature(coverage_attribute)]
-#![feature(allocator_api)]
-#![feature(once_cell_try)]
+#![cfg_attr(feature = "nightly", feature(coverage_attribute))]
+#![cfg_attr(feature = "nightly", feature(allocator_api))]
 extern crate alloc;
 
 /// Public High Level API
@@ -120,5 +119,35 @@ pub mod utilities {
         pub mod packer_file_for_testing;
         pub mod packing_test_helpers;
         pub mod permutations;
+    }
+}
+
+pub mod prelude;
+pub use prelude::*;
+
+#[macro_export]
+macro_rules! unsize_box2 {
+    ($boxed:expr $(,)?) => {
+        {
+            #[cfg(feature = "nightly")]
+            {
+                $boxed
+            }
+            #[cfg(not(feature = "nightly"))]
+            {
+                let (ptr, allocator) = ::allocator_api2::boxed::Box::into_raw_with_allocator($boxed);
+                // we don't want to allow casting to arbitrary type U, but we do want to allow unsize coercion to happen.
+                // that's exactly what's happening here -- this is *not* a pointer cast ptr as *mut _, but the compiler
+                // *will* allow an unsizing coercion to happen into the `ptr` place, if one is available. And we use _ so that the user can
+                // fill in what they want the unsized type to be by annotating the type of the variable this macro will
+                // assign its result to.
+                let ptr: *mut _ = ptr;
+                // SAFETY: see above for why ptr's type can only be something that can be safely coerced.
+                // also, ptr just came from a properly allocated box in the same allocator.
+                unsafe {
+                    ::allocator_api2::boxed::Box::from_raw_in(ptr, allocator)
+                }
+            }
+        }
     }
 }
