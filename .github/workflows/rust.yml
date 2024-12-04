@@ -76,6 +76,7 @@ jobs:
           upload-coverage: true
           codecov-token: ${{ secrets.CODECOV_TOKEN }}ndraw %}
           target: ${{ matrix.target }}
+          rust-toolchain: nightly
           use-cross: ${{ matrix.use-cross }}
 
       # Note: The GitHub Runner Images will contain an up to date Rust Stable Toolchain
