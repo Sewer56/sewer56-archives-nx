@@ -3,6 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/sewer56-archives-nx.svg)](https://crates.io/crates/sewer56-archives-nx)
 [![Docs.rs](https://docs.rs/sewer56-archives-nx/badge.svg)](https://docs.rs/sewer56-archives-nx)
 [![CI](https://github.com/Sewer56/sewer56-archives-nx/actions/workflows/rust.yml/badge.svg)](https://github.com/Sewer56/sewer56-archives-nx/actions)
+[![codecov](https://codecov.io/gh/Sewer56/sewer56-archives-nx/graph/badge.svg?token=4POOLjdU7U)](https://codecov.io/gh/Sewer56/sewer56-archives-nx)
 
 ## About
 
