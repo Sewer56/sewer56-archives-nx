@@ -74,7 +74,7 @@ jobs:
         if: matrix.target != 'aarch64-pc-windows-msvc'
         with:
           upload-coverage: true
-          codecov-token: ${{ secrets.CODECOV_TOKEN }}ndraw %}
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
           target: ${{ matrix.target }}
           rust-toolchain: nightly
           use-cross: ${{ matrix.use-cross }}
