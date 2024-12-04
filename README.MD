@@ -94,52 +94,7 @@ And run with command `my_benchmark-eced832ac8f31257.exe --bench --profile-time 1
 
 ![example](./assets/profile_example.png)
 
-## Building C Libraries Locally
-
-Reloaded-based C libraries are built with `panic=abort` and self-built STD to minimize binary size.
-
-First get the prerequisites (nightly rust).
-
-```
-rustup toolchain install nightly
-rustup component add rust-src --toolchain nightly
-```
-
-To build C library locally, run the following command:
-
-```
-RUSTFLAGS="-C panic=abort -C lto=fat -C embed-bitcode=yes" cargo +nightly rustc -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort --crate-type cdylib --crate-type staticlib --target x86_64-unknown-linux-gnu
-```
-
-Replace `x86_64-unknown-linux-gnu` with your [target triple][target-triple].
-
-## Optimizing for Size when Creating C Libraries
-
-1. Add `"cdylib"` crate type to `Cargo.toml` (temporarily!! do not commit)
-
-```
-[lib]
-crate-type = ["cdylib"]
-```
-
-Install `cargo-bloat`, `nightly toolchain` and `build-std`:
-
-```
-cargo install cargo-bloat
-rustup toolchain install nightly
-rustup component add rust-src --toolchain nightly
-```
-
-Run `cargo-bloat` the following command to calculate package size:
-
-```
-RUSTFLAGS="-C panic=abort -C lto=fat -C embed-bitcode=yes" cargo +nightly bloat -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort --target x86_64-pc-windows-gnu --profile profile --crate-type cdylib -n 100 --features c-exports
-```
-
-Change `--target` if needed for your platform.  
-This should produce binaries more appropriate for dynamic linking from C.  
-
-## PGO (Profile Guided Optimization) on C Libraries
+## PGO (Profile Guided Optimization)
 
 This Reloaded-based library is built with [Profile Guided Optimization (PGO)](https://doc.rust-lang.org/rustc/profile-guided-optimization.html).
 
@@ -200,19 +155,6 @@ cargo +nightly pgo optimize bench
 If most of the results are equal or show an improvement, PGO has helped.
 Otherwise disable PGO from the library by editing the [rust.yml](./.github/workflows/rust.yml) workflow.
 
-## C# Bindings for sewer56_archives_nx
-
-This Reloaded-based project provides C# bindings, as [sewer56_archives_nx.Net.Sys](https://www.nuget.org/packages/sewer56_archives_nx.Net.Sys).
-
-These are the raw bindings to the C exports of this Rust library, and are automatically generated.
-
-The project is inside `bindings/csharp` folder. 
-It shouldn't be modified. 
-
-Instead, if you want to make a 'friendlier' API, make a separate project with 
-[sewer56_archives_nx.Net.Sys](https://www.nuget.org/packages/sewer56_archives_nx.Net.Sys) as a dependency,
-and provide high level bindings.
-
 ## File Layout
 
 The following is the expected file layout for your project:
@@ -229,9 +171,8 @@ The `docs` folder, and `mkdocs.yml` contain [MkDocs Material documentation][mkdo
 The `src` folder should contains all source code for your project.  
 
 `Cargo.toml` should be in the root of the project.  
-## Cross Platform Targeting
 
-Some templates allow for cross platform development.  
+## Cross Platform Targeting
 
 To work with cross-platform code, where you need to access OS specific APIs, some helper scripts are provided.  
 
