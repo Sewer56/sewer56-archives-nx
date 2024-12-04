@@ -3,8 +3,6 @@
 #![feature(coverage_attribute)]
 #![feature(allocator_api)]
 #![feature(once_cell_try)]
-#[cfg(feature = "c_exports")]
-pub mod exports;
 extern crate alloc;
 
 /// Public High Level API

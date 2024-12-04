@@ -13,9 +13,6 @@ default = ["lz4", "detect_num_cores", "hardened"]
 # See README.md for more information on using Profile-Guided Optimization.
 pgo = []
 
-# Feature for enabling C library exports.
-c_exports = []
-
 # Enables support for LZ4 compression/decompression
 lz4 = []
 
@@ -61,10 +58,6 @@ o2o = "0.4.11"
 twox-hash = "2.0.1"
 safe-allocator-api = { version = "0.3.0", features = ["nightly"] }
 identity-hash = "0.1.0"
-
-# C# Bindings
-[build-dependencies]
-csbindgen = "1.9.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dev-dependencies]
