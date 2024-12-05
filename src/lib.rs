@@ -2,7 +2,11 @@
 //! Here's the crate documentation.
 #![cfg_attr(feature = "nightly", feature(coverage_attribute))]
 #![cfg_attr(feature = "nightly", feature(allocator_api))]
+#![cfg_attr(not(test), no_std)]
 extern crate alloc;
+
+// Avoid importing prelude, as it makes life with allocator_api hard.
+extern crate std;
 
 /// Public High Level API
 pub mod api {

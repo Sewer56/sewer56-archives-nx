@@ -132,7 +132,7 @@ impl Default for Preset0TocHeader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::mem::size_of;
+    use core::mem::size_of;
 
     #[test]
     fn header_size_is_correct() {

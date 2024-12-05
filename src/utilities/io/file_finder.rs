@@ -3,8 +3,9 @@ use crate::api::packing::packer_file::PackerFile;
 use crate::api::traits::*;
 use crate::prelude::*;
 use crate::unsize_box2;
+use alloc::string::String;
 use std::fs::*;
-use std::path::*;
+use std::path::Path;
 
 // TODO: Optimized version of this struct that doesn't use `std::fs`.
 //       for now I'm not concerned because binary size for packing is not as big a priority as for

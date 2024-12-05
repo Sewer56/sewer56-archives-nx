@@ -1,5 +1,6 @@
 use crate::api::{enums::*, filedata::*, traits::*};
 use crate::{prelude::*, unsize_box2};
+use alloc::string::String;
 
 /// Represents a file that will be packed into an Nx archive.
 pub struct PackerFile<'a> {

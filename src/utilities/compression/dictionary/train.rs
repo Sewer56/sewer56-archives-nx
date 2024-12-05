@@ -1,6 +1,6 @@
-use crate::utilities::system_info::get_num_cores;
-
 use super::super::NxCompressionError;
+use crate::prelude::*;
+use crate::utilities::system_info::get_num_cores;
 use core::{
     ffi::{c_uint, c_void},
     mem::*,

@@ -3,6 +3,7 @@ use crate::{
     api::packing::packing_settings::PackingSettings, utilities::io::file_finder::find_files,
 };
 use crate::{prelude::*, unsize_box2};
+use alloc::string::String;
 use core::marker::PhantomData;
 use std::io::{Read, Seek};
 

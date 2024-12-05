@@ -1,7 +1,7 @@
 use super::LazyDecompressedSolidNxBlock;
 use crate::{api::traits::*, headers::managed::FileEntry};
 use crate::{prelude::*, unsize_box2};
-use std::sync::Arc;
+use alloc::sync::Arc;
 
 /// This provider allows you to read a file from an existing SOLID Nx block,
 /// where the Nx block is lazy decompressed and provided by [`LazyDecompressedSolidNxBlock`].

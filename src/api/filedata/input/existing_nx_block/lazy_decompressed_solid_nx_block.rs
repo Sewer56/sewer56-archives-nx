@@ -1,6 +1,7 @@
 use crate::api::packing::packing_settings::MAX_BLOCK_SIZE;
 use crate::api::{enums::CompressionPreference, traits::*};
 use crate::headers::managed::FileEntry;
+use crate::prelude::*;
 use crate::utilities::compression;
 use alloc::sync::Arc;
 use core::cell::UnsafeCell;
@@ -141,6 +142,7 @@ impl LazyDecompressedSolidNxBlock {
 mod tests {
     use super::*;
     use crate::api::filedata::FromStreamProvider;
+    use allocator_api2::vec;
     use std::io::Cursor;
 
     #[test]
