@@ -9,7 +9,6 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-
 env:
   build-with-pgo: true
 
@@ -68,27 +67,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build C Libraries and Run Tests
-        uses: Reloaded-Project/devops-rust-lightweight-binary@v1
+      - name: Run Tests and Upload Coverage
+        uses: Reloaded-Project/devops-rust-test-and-coverage@v1
+        # Currently unsupported due to no native runner.
+        # Native runner currently only available in enterprise.
+        if: matrix.target != 'aarch64-pc-windows-msvc'
         with:
-          crate-name: ${{ github.event.repository.name }}
-          target: ${{ matrix.target }}
-          use-pgo: ${{ matrix.use-pgo && env.build-with-pgo }}
-          use-cross: ${{ matrix.use-cross }}
-          features: "c_exports"
-          build-library: true
-          run-tests-and-coverage: ${{ matrix.target != 'aarch64-pc-windows-msvc' }}
+          upload-coverage: true
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
+          target: ${{ matrix.target }}
+          rust-toolchain: nightly
+          use-cross: ${{ matrix.use-cross }}
+
       # Note: The GitHub Runner Images will contain an up to date Rust Stable Toolchain
       #       thus as per recommendation of cargo-semver-checks, we're using stable here.
       #
       # Note to reader. If adding this to a new repo, please clear cache.
       - name: Run cargo-semver-checks
         if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+        shell: bash
         run: |
-          rustup target add ${{ matrix.target }}
-          cargo install cargo-semver-checks
-          cargo semver-checks --target ${{ matrix.target }} --features c_exports
+          SEARCH_RESULT=$(cargo search "^{{project-name}}$" --limit 1)
+
+          if echo "$SEARCH_RESULT" | grep -q "^{{project-name}} "; then
+            rustup +stable target add ${{ matrix.target }}
+            cargo +stable install cargo-semver-checks
+            cargo +stable semver-checks --target ${{ matrix.target }} --only-explicit-features --features "lz4,detect_num_cores,hardened"
+          else
+            echo "No previous version found on crates.io. Skipping semver checks."
+          fi
 
   test-on-wine:
     runs-on: ubuntu-latest
@@ -108,45 +115,13 @@ jobs:
           setup-rust-cache: true
           upload-coverage: true
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
-          features: "c_exports"
           use-cross: true
-
-  build-c-headers:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Generate C++ bindings
-        uses: Reloaded-Project/devops-rust-cbindgen@v1
-        with:
-          config-file: cbindgen_cpp.toml
-          output-header-file: bindings_cpp.hpp
-
-      - name: Generate C bindings
-        uses: Reloaded-Project/devops-rust-cbindgen@v1
-        with:
-          config-file: cbindgen_c.toml
-          output-header-file: bindings_c.h
-
-  build-dotnet-library:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build and Package .NET Wrapper
-        uses: Reloaded-Project/devops-rust-c-library-to-dotnet@v1
-        with:
-          csharp-project-path: bindings/csharp
 
   publish-crate:
     permissions:
       contents: write
 
-    needs: [build-and-test,build-c-headers,build-dotnet-library,test-on-wine]
+    needs: [build-and-test,test-on-wine]
     # Publish only on tags
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
