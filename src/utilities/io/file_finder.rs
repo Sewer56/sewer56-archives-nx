@@ -130,6 +130,7 @@ mod tests {
         let mut file = File::create(&test_path).unwrap();
         write!(file, "Hello World!").unwrap();
         file.flush().unwrap();
+        drop(file);
 
         let mut files = Vec::new();
         find_files(temp_dir.path(), |file| files.push(file)).unwrap();
