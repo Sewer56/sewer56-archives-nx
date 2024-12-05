@@ -88,7 +88,7 @@ jobs:
         run: |
           rustup +stable target add ${{ matrix.target }}
           cargo +stable install cargo-semver-checks
-          cargo +stable semver-checks --target ${{ matrix.target }}
+          cargo +stable semver-checks --target ${{ matrix.target }} --only-explicit-features --features "lz4,detect_num_cores,hardened"
 
   test-on-wine:
     runs-on: ubuntu-latest
