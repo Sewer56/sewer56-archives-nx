@@ -85,10 +85,17 @@ jobs:
       # Note to reader. If adding this to a new repo, please clear cache.
       - name: Run cargo-semver-checks
         if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+        shell: bash
         run: |
-          rustup +stable target add ${{ matrix.target }}
-          cargo +stable install cargo-semver-checks
-          cargo +stable semver-checks --target ${{ matrix.target }} --only-explicit-features --features "lz4,detect_num_cores,hardened"
+          SEARCH_RESULT=$(cargo search "^{{project-name}}$" --limit 1)
+
+          if echo "$SEARCH_RESULT" | grep -q "^{{project-name}} "; then
+            rustup +stable target add ${{ matrix.target }}
+            cargo +stable install cargo-semver-checks
+            cargo +stable semver-checks --target ${{ matrix.target }} --only-explicit-features --features "lz4,detect_num_cores,hardened"
+          else
+            echo "No previous version found on crates.io. Skipping semver checks."
+          fi
 
   test-on-wine:
     runs-on: ubuntu-latest
