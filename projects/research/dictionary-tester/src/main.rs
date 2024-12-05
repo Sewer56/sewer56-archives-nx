@@ -1,3 +1,6 @@
+#![feature(coverage_attribute)]
+#![coverage(off)]
+
 mod analyze;
 
 use analyze::analyze_directory;
