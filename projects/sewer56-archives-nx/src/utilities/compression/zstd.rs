@@ -153,7 +153,8 @@ where
                 pos: 0,
             };
 
-            loop {
+            let mut finished = false;
+            while !finished {
                 let result = ZSTD_compressStream2(*cstream, &mut output, &mut input, mode);
 
                 // Check if zstd returned an error, or no bytes were compressed in this iteration.
@@ -175,15 +176,12 @@ where
                 // If we're on the last chunk we're finished when zstd returns 0,
                 // which means its consumed all the input AND finished the frame.
                 // Otherwise, we're finished when we've consumed all the input.
-                let finished = if last_chunk {
+                // Note: Copied from zstd example.
+                finished = if last_chunk {
                     result == 0
                 } else {
                     input.pos == input.size
                 };
-
-                if finished {
-                    break;
-                }
             }
 
             total_read += input.pos;
