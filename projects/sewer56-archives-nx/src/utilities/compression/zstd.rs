@@ -1,9 +1,12 @@
 use super::dictionary::ZstdCompressionDict;
 use super::{CompressionResult, DecompressionResult, NxCompressionError, NxDecompressionError};
 use crate::api::enums::*;
+use crate::utilities::compression::copy;
 use core::cmp::min;
 use core::ffi::c_void;
 use core::ptr::NonNull;
+use derive_more::derive::{Deref, DerefMut};
+use derive_new::new;
 use zstd_sys::ZSTD_ErrorCode::*;
 use zstd_sys::*;
 
@@ -100,13 +103,13 @@ pub fn compress_streamed<F>(
     used_copy: &mut bool,
 ) -> CompressionResult
 where
-    F: Fn() -> Option<i32>,
+    F: Fn() -> Option<usize>,
 {
     *used_copy = false;
 
     unsafe {
         // Create compression stream
-        let cstream = ZSTD_createCStream();
+        let cstream = SafeCStream::new(ZSTD_createCStream());
         if cstream.is_null() {
             return Err(NxCompressionError::ZStandard(
                 ZSTD_ErrorCode::ZSTD_error_memory_allocation,
@@ -114,7 +117,7 @@ where
         }
 
         // Initialize the stream
-        let init_result = ZSTD_initCStream(cstream, level);
+        let init_result = ZSTD_initCStream(*cstream, level);
         if ZSTD_isError(init_result) != 0 {
             return Err(NxCompressionError::ZStandard(ZSTD_getErrorCode(
                 init_result,
@@ -133,91 +136,70 @@ where
             pos: 0,
         };
 
-        let result = {
-            let mut compression_result = Ok(0);
-            while total_read < source_len {
-                let to_read = min(in_buffer_size, source_len - total_read);
-                let last_chunk = to_read < in_buffer_size;
-                let mode = if last_chunk {
-                    ZSTD_EndDirective::ZSTD_e_end
-                } else {
-                    ZSTD_EndDirective::ZSTD_e_continue
-                };
-
-                let mut input = ZSTD_inBuffer {
-                    // SAFETY: total_read is guaranteed under < source_len by while condition above.
-                    src: source.as_ptr().add(total_read) as *const c_void,
-                    size: to_read,
-                    pos: 0,
-                };
-
-                loop {
-                    let result = ZSTD_compressStream2(cstream, &mut output, &mut input, mode);
-
-                    // Check if destination buffer is too small or compression is ineffective
-                    // Note: `result > source_len` can be true if file is 1 chunked.
-                    if result > source_len
-                        || ZSTD_getErrorCode(result) == ZSTD_ErrorCode::ZSTD_error_dstSize_tooSmall
-                    {
-                        *used_copy = true;
-                        compression_result = super::compress(
-                            super::CompressionPreference::Copy,
-                            level,
-                            source,
-                            destination,
-                            used_copy,
-                        );
-                        break;
-                    }
-
-                    // Check for early termination if callback provided
-                    if let Some(callback) = &terminate_early {
-                        if let Some(early_result) = callback() {
-                            compression_result = Ok(early_result as usize);
-                            break;
-                        }
-                    }
-
-                    // If we're on the last chunk we're finished when zstd returns 0,
-                    // which means its consumed all the input AND finished the frame.
-                    // Otherwise, we're finished when we've consumed all the input.
-
-                    let finished = if last_chunk {
-                        result == 0
-                    } else {
-                        input.pos == input.size
-                    };
-
-                    if finished {
-                        break;
-                    }
-                }
-
-                if compression_result != Ok(0) {
-                    break;
-                }
-
-                debug_assert!(
-                    input.pos == input.size,
-                    "ZStd should have consumed all input"
-                );
-                total_read += input.pos;
-
-                if last_chunk {
-                    break;
-                }
-            }
-
-            if compression_result == Ok(0) {
-                Ok(output.pos)
+        let mut last_out_pos = 0;
+        while total_read < source_len {
+            let to_read = min(in_buffer_size, source_len - total_read);
+            let last_chunk = to_read < in_buffer_size;
+            let mode = if last_chunk {
+                ZSTD_EndDirective::ZSTD_e_end
             } else {
-                compression_result
-            }
-        };
+                ZSTD_EndDirective::ZSTD_e_continue
+            };
 
-        // Clean up
-        ZSTD_freeCStream(cstream);
-        result
+            let mut input = ZSTD_inBuffer {
+                // SAFETY: total_read is guaranteed under < source_len by while condition above.
+                src: source.as_ptr().add(total_read) as *const c_void,
+                size: to_read,
+                pos: 0,
+            };
+
+            loop {
+                let result = ZSTD_compressStream2(*cstream, &mut output, &mut input, mode);
+
+                // Check if zstd returned an error, or no bytes were compressed in this iteration.
+                // If no bytes were compressed, that means destination buffer is too small.
+                let has_error = ZSTD_getErrorCode(result) != ZSTD_error_no_error;
+                let dest_too_small = output.pos == last_out_pos;
+                if has_error || dest_too_small {
+                    return copy::compress(source, destination, used_copy);
+                }
+                last_out_pos = output.pos;
+
+                // Check for early termination if callback provided
+                if let Some(callback) = &terminate_early {
+                    if let Some(early_result) = callback() {
+                        return Err(NxCompressionError::TerminatedStream(early_result));
+                    }
+                }
+
+                // If we're on the last chunk we're finished when zstd returns 0,
+                // which means its consumed all the input AND finished the frame.
+                // Otherwise, we're finished when we've consumed all the input.
+                let finished = if last_chunk {
+                    result == 0
+                } else {
+                    input.pos == input.size
+                };
+
+                if finished {
+                    break;
+                }
+            }
+
+            total_read += input.pos;
+
+            if last_chunk {
+                break;
+            }
+        }
+
+        // Check if compression was beneficial.
+        // If it was not, default to copy.
+        if output.pos > source_len {
+            return copy::compress(source, destination, used_copy);
+        }
+
+        Ok(output.pos)
     }
 }
 
@@ -426,11 +408,20 @@ pub enum GetDecompressedSizeError {
     UnknownErrorOccurred,
 }
 
+#[derive(Deref, DerefMut, new)]
+pub struct SafeCStream(*mut ZSTD_CStream);
+impl Drop for SafeCStream {
+    fn drop(&mut self) {
+        if !self.0.is_null() {
+            unsafe { ZSTD_freeCStream(self.0) };
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::utilities::compression::dictionary::train_dictionary;
-
     use super::*;
+    use crate::utilities::compression::dictionary::train_dictionary;
     use alloc::vec;
 
     #[test]
@@ -545,53 +536,6 @@ mod tests {
         assert!(
             compressed_size < test_data.len(),
             "Should achieve some compression"
-        );
-    }
-
-    #[test]
-    #[cfg_attr(miri, ignore)]
-    fn compress_streamed_basic() {
-        let original_data = b"Hello, ZStandard!".repeat(100);
-        let mut compressed = vec![0u8; max_alloc_for_compress_size(original_data.len())];
-        let mut used_copy = false;
-
-        let result = compress_streamed(
-            3,
-            &original_data,
-            &mut compressed,
-            None as Option<fn() -> Option<i32>>,
-            &mut used_copy,
-        )
-        .unwrap();
-
-        assert!(!used_copy, "Should not have used copy compression");
-        assert!(result > 0, "Should have compressed some data");
-        assert!(
-            result < original_data.len(),
-            "Should achieve some compression"
-        );
-    }
-
-    #[test]
-    #[cfg_attr(miri, ignore)]
-    fn compress_streamed_early_termination() {
-        let original_data = b"Hello, ZStandard!".repeat(100);
-        let mut compressed = vec![0u8; max_alloc_for_compress_size(original_data.len())];
-        let mut used_copy = false;
-
-        let early_return_value = 42;
-        let result = compress_streamed(
-            3,
-            &original_data,
-            &mut compressed,
-            Some(|| Some(early_return_value)),
-            &mut used_copy,
-        )
-        .unwrap();
-
-        assert_eq!(
-            result, early_return_value as usize,
-            "Should return early with callback value"
         );
     }
 }

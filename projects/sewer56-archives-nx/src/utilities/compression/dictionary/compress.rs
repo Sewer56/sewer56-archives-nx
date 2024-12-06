@@ -1,3 +1,5 @@
+use crate::utilities::compression::copy;
+
 use super::super::{CompressionResult, NxCompressionError};
 use core::ffi::c_void;
 use core::ptr::NonNull;
@@ -72,13 +74,7 @@ impl ZstdCompressionDict {
 
         let errcode = unsafe { ZSTD_getErrorCode(result) };
         if result > source.len() || errcode == ZSTD_error_dstSize_tooSmall {
-            return super::super::compress(
-                super::super::CompressionPreference::Copy,
-                0,
-                source,
-                destination,
-                used_copy,
-            );
+            return copy::compress(source, destination, used_copy);
         }
 
         if unsafe { ZSTD_isError(result) } == 0 {

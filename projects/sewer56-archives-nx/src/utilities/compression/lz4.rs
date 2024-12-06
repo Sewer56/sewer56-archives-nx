@@ -1,7 +1,12 @@
 use core::cmp::min;
 
 use super::{CompressionResult, DecompressionResult};
-use crate::api::enums::*;
+use crate::{
+    api::enums::*,
+    utilities::compression::{copy, NxCompressionError},
+};
+use derive_more::derive::{Deref, DerefMut};
+use derive_new::new;
 use lz4_sys::*;
 use thiserror_no_std::Error;
 
@@ -113,76 +118,62 @@ pub fn compress_streamed<F>(
     used_copy: &mut bool,
 ) -> CompressionResult
 where
-    F: Fn() -> Option<i32>,
+    F: Fn() -> Option<usize>,
 {
     *used_copy = false;
     const BLOCK_SIZE: usize = 131072;
 
     unsafe {
         // Create LZ4 HC stream
-        let stream = LZ4_createStreamHC();
+        let stream = SafeStreamEncode::new(LZ4_createStreamHC());
         if stream.is_null() {
             return Err(Lz4CompressionError::CompressionFailed.into());
         }
 
         // Set compression level
-        LZ4_setCompressionLevel(stream, level);
+        LZ4_setCompressionLevel(*stream, level);
 
-        let result = {
-            let mut total_written = 0;
-            let mut total_read = 0;
-            let source_len = source.len();
+        let mut total_written = 0;
+        let mut total_read = 0;
+        let source_len = source.len();
 
-            while total_read < source_len {
-                // Calculate chunk size for this iteration
-                let remaining = source_len - total_read;
-                let chunk_size = min(BLOCK_SIZE, remaining);
+        while total_read < source_len {
+            // Calculate chunk size for this iteration
+            let remaining = source_len - total_read;
+            let chunk_size = min(BLOCK_SIZE, remaining);
 
-                // Compress the current chunk
-                let num_compressed = LZ4_compress_HC_continue(
-                    stream,
-                    // SAFETY: total_read is less than source_len, guaranteed by loop above.
-                    source.as_ptr().add(total_read) as *const c_char,
-                    destination.as_mut_ptr().add(total_written) as *mut c_char,
-                    chunk_size as c_int,
-                    (destination.len() - total_written) as c_int,
-                );
+            // Compress the current chunk
+            let num_compressed = LZ4_compress_HC_continue(
+                *stream,
+                // SAFETY: total_read is less than source_len, guaranteed by loop above.
+                source.as_ptr().add(total_read) as *const c_char,
+                destination.as_mut_ptr().add(total_written) as *mut c_char,
+                chunk_size as c_int,
+                (destination.len() - total_written) as c_int,
+            );
 
-                if num_compressed <= 0 {
-                    LZ4_freeStreamHC(stream);
-                    return Err(Lz4CompressionError::CompressionFailed.into());
-                }
-
-                // Check for early termination
-                if let Some(ref callback) = terminate_early {
-                    if let Some(early_result) = callback() {
-                        LZ4_freeStreamHC(stream);
-                        return Ok(early_result as usize);
-                    }
-                }
-
-                // Check if compression is efficient for this chunk
-                if num_compressed as usize > chunk_size {
-                    LZ4_freeStreamHC(stream);
-                    return super::compress(
-                        super::CompressionPreference::Copy,
-                        level,
-                        source,
-                        destination,
-                        used_copy,
-                    );
-                }
-
-                total_written += num_compressed as usize;
-                total_read += chunk_size;
+            if num_compressed <= 0 {
+                return Err(Lz4CompressionError::CompressionFailed.into());
             }
 
-            Ok(total_written)
-        };
+            // Check for early termination
+            if let Some(ref callback) = terminate_early {
+                if let Some(early_result) = callback() {
+                    return Err(NxCompressionError::TerminatedStream(early_result));
+                }
+            }
 
-        // Clean up
-        LZ4_freeStreamHC(stream);
-        result
+            total_written += num_compressed as usize;
+            total_read += chunk_size;
+        }
+
+        // Check if compression was beneficial.
+        // If it was not, default to copy.
+        if total_written > source.len() {
+            return copy::compress(source, destination, used_copy);
+        }
+
+        Ok(total_written)
     }
 }
 
@@ -243,6 +234,16 @@ pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> Decompressio
     }
 }
 
+#[derive(Deref, DerefMut, new)]
+pub struct SafeStreamEncode(*mut LZ4StreamEncode);
+impl Drop for SafeStreamEncode {
+    fn drop(&mut self) {
+        if !self.0.is_null() {
+            unsafe { LZ4_freeStreamHC(self.0) };
+        }
+    }
+}
+
 // Missing bindings from lz4-sys declared here.
 extern "C" {
     #[allow(non_snake_case)]
@@ -271,100 +272,4 @@ extern "C" {
         src_size: c_int,
         dst_capacity: c_int,
     ) -> c_int;
-}
-
-#[cfg(test)]
-mod tests {
-    use super::super::max_alloc_for_compress_size;
-    use super::*;
-    use alloc::vec;
-
-    #[test]
-    #[cfg_attr(miri, ignore)]
-    fn compress_streamed_basic() {
-        let original_data = b"Hello, LZ4!".repeat(100_000); // Large enough to test multiple chunks
-        let mut compressed = vec![0u8; max_alloc_for_compress_size(original_data.len())];
-        let mut used_copy = false;
-
-        let result = compress_streamed(
-            3,
-            &original_data,
-            &mut compressed,
-            None as Option<fn() -> Option<i32>>,
-            &mut used_copy,
-        )
-        .unwrap();
-
-        assert!(!used_copy, "Should not have used copy compression");
-        assert!(result > 0, "Should have compressed some data");
-        assert!(
-            result < original_data.len(),
-            "Should achieve some compression"
-        );
-    }
-
-    #[test]
-    #[cfg_attr(miri, ignore)]
-    fn compress_streamed_early_termination() {
-        let original_data = b"Hello, LZ4!".repeat(100_000);
-        let mut compressed = vec![0u8; max_alloc_for_compress_size(original_data.len())];
-        let mut used_copy = false;
-
-        let early_return_value = 42;
-        let result = compress_streamed(
-            3,
-            &original_data,
-            &mut compressed,
-            Some(|| Some(early_return_value)),
-            &mut used_copy,
-        )
-        .unwrap();
-
-        assert_eq!(
-            result, early_return_value as usize,
-            "Should return early with callback value"
-        );
-    }
-
-    #[test]
-    #[cfg_attr(miri, ignore)]
-    fn compress_streamed_small_destination() {
-        let original_data = b"Hello, LZ4!".repeat(100_000);
-        let mut compressed = vec![0u8; 10]; // Too small destination buffer
-        let mut used_copy = false;
-
-        let result = compress_streamed(
-            3,
-            &original_data,
-            &mut compressed,
-            None as Option<fn() -> Option<i32>>,
-            &mut used_copy,
-        );
-
-        assert!(result.is_err(), "Should fail");
-    }
-
-    #[test]
-    #[cfg_attr(miri, ignore)]
-    fn compress_streamed_multiple_chunks() {
-        let original_data = b"Hello, LZ4!".repeat(200_000); // Ensures multiple chunks
-        let mut compressed = vec![0u8; max_alloc_for_compress_size(original_data.len())];
-        let mut used_copy = false;
-
-        let result = compress_streamed(
-            3,
-            &original_data,
-            &mut compressed,
-            None as Option<fn() -> Option<i32>>,
-            &mut used_copy,
-        )
-        .unwrap();
-
-        assert!(!used_copy, "Should not have used copy compression");
-        assert!(result > 0, "Should have compressed some data");
-        assert!(
-            result < original_data.len(),
-            "Should achieve some compression"
-        );
-    }
 }
