@@ -1,8 +1,12 @@
 use super::dictionary::ZstdCompressionDict;
 use super::{CompressionResult, DecompressionResult, NxCompressionError, NxDecompressionError};
 use crate::api::enums::*;
+use crate::utilities::compression::copy;
+use core::cmp::min;
 use core::ffi::c_void;
 use core::ptr::NonNull;
+use derive_more::derive::{Deref, DerefMut};
+use derive_new::new;
 use zstd_sys::ZSTD_ErrorCode::*;
 use zstd_sys::*;
 
@@ -69,6 +73,134 @@ pub fn compress(
     Err(NxCompressionError::ZStandard(errcode))
 }
 
+/// Compresses data using streaming compression with ZStandard.
+///
+/// This function allows compression of data in chunks while providing the ability
+/// to terminate compression early through a callback function.
+///
+/// # Parameters
+///
+/// * `level`: Compression level to use.
+/// * `source`: Source data to compress.
+/// * `destination`: Destination buffer for compressed data.
+/// * `terminate_early`: Optional callback that returns `Some(i32)` to terminate early
+///   with that value, or `None` to continue compression.
+/// * `used_copy`: If this is true, Copy compression was used, due to uncompressible data.
+///
+/// # Returns
+///
+/// * `Ok(usize)`: The number of bytes written to the destination.
+/// * `Err(NxCompressionError)`: If compression fails.
+///
+/// # Safety
+///
+/// This function uses unsafe code to interact with the ZStandard C API.
+pub fn compress_streamed<F>(
+    level: i32,
+    source: &[u8],
+    destination: &mut [u8],
+    terminate_early: Option<F>,
+    used_copy: &mut bool,
+) -> CompressionResult
+where
+    F: Fn() -> Option<usize>,
+{
+    *used_copy = false;
+
+    unsafe {
+        // Create compression stream
+        let cstream = SafeCStream::new(ZSTD_createCStream());
+        if cstream.is_null() {
+            return Err(NxCompressionError::ZStandard(
+                ZSTD_ErrorCode::ZSTD_error_memory_allocation,
+            ));
+        }
+
+        // Initialize the stream
+        let init_result = ZSTD_initCStream(*cstream, level);
+        if ZSTD_isError(init_result) != 0 {
+            return Err(NxCompressionError::ZStandard(ZSTD_getErrorCode(
+                init_result,
+            )));
+        }
+
+        // Determine optimal input size for optimal compression performance
+        // while doing as little work as possible per chunk.
+        let in_buffer_size = ZSTD_CStreamInSize();
+        let mut total_read: usize = 0;
+        let source_len = source.len();
+
+        let mut output = ZSTD_outBuffer {
+            dst: destination.as_mut_ptr() as *mut c_void,
+            size: destination.len(),
+            pos: 0,
+        };
+
+        let mut last_out_pos = 0;
+        while total_read < source_len {
+            let to_read = min(in_buffer_size, source_len - total_read);
+            let last_chunk = to_read < in_buffer_size;
+            let mode = if last_chunk {
+                ZSTD_EndDirective::ZSTD_e_end
+            } else {
+                ZSTD_EndDirective::ZSTD_e_continue
+            };
+
+            let mut input = ZSTD_inBuffer {
+                // SAFETY: total_read is guaranteed under < source_len by while condition above.
+                src: source.as_ptr().add(total_read) as *const c_void,
+                size: to_read,
+                pos: 0,
+            };
+
+            let mut finished = false;
+            while !finished {
+                let result = ZSTD_compressStream2(*cstream, &mut output, &mut input, mode);
+
+                // Check if zstd returned an error, or no bytes were compressed in this iteration.
+                // If no bytes were compressed, that means destination buffer is too small.
+                let has_error = ZSTD_isError(result) != 0;
+                let dest_too_small = output.pos == last_out_pos;
+                if has_error || dest_too_small {
+                    return copy::compress(source, destination, used_copy);
+                }
+                last_out_pos = output.pos;
+
+                // Check for early termination if callback provided
+                if let Some(callback) = &terminate_early {
+                    if let Some(early_result) = callback() {
+                        return Err(NxCompressionError::TerminatedStream(early_result));
+                    }
+                }
+
+                // If we're on the last chunk we're finished when zstd returns 0,
+                // which means its consumed all the input AND finished the frame.
+                // Otherwise, we're finished when we've consumed all the input.
+                // Note: Copied from zstd example.
+                finished = if last_chunk {
+                    result == 0
+                } else {
+                    input.pos == input.size
+                };
+            }
+
+            total_read += input.pos;
+
+            if last_chunk {
+                break;
+            }
+        }
+
+        // Check if compression was beneficial.
+        // If it was not, default to copy.
+        if output.pos > source_len {
+            return copy::compress(source, destination, used_copy);
+        }
+
+        Ok(output.pos)
+    }
+}
+
 /// Compresses data with ZStandard, without fallback to Copy
 /// if the data is not compressible.
 ///
@@ -92,7 +224,6 @@ pub fn compress_no_copy_fallback(
         )
     };
 
-    let errcode = unsafe { ZSTD_getErrorCode(result) };
     if unsafe { ZSTD_isError(result) } == 0 {
         return Ok(result);
     }
@@ -107,7 +238,9 @@ pub fn compress_no_copy_fallback(
     }
 
     #[cfg(not(feature = "zstd_panic_on_unhandled_error"))]
-    Err(NxCompressionError::ZStandard(errcode))
+    Err(NxCompressionError::ZStandard(unsafe {
+        ZSTD_getErrorCode(result)
+    }))
 }
 
 /// Compresses data using a ZStandard dictionary.
@@ -274,11 +407,20 @@ pub enum GetDecompressedSizeError {
     UnknownErrorOccurred,
 }
 
+#[derive(Deref, DerefMut, new)]
+pub struct SafeCStream(*mut ZSTD_CStream);
+impl Drop for SafeCStream {
+    fn drop(&mut self) {
+        if !self.0.is_null() {
+            unsafe { ZSTD_freeCStream(self.0) };
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::utilities::compression::dictionary::train_dictionary;
-
     use super::*;
+    use crate::utilities::compression::dictionary::train_dictionary;
     use alloc::vec;
 
     #[test]

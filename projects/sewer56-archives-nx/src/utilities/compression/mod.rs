@@ -28,11 +28,12 @@ pub enum NxCompressionError {
     #[cfg(feature = "lz4")]
     #[error(transparent)]
     Lz4(#[from] Lz4CompressionError),
-
     /// The LZ4 feature is not enabled. This can only ever be emitted if the error is disabled.
     #[cfg(not(feature = "lz4"))]
     #[error("LZ4 Feature not enabled")]
     Lz4NotEnabled,
+    #[error("The operation was terminated during a stream operation with code: {0}")]
+    TerminatedStream(usize),
 }
 
 /// A result type around compression functions..
@@ -93,6 +94,49 @@ pub fn compress(
         CompressionPreference::Lz4 => Err(NxCompressionError::Lz4NotEnabled),
         CompressionPreference::NoPreference => {
             zstd::compress(level, source, destination, used_copy)
+        }
+    }
+}
+
+/// Compresses data with a specific method, with support for streaming and early termination.
+///
+/// # Parameters
+///
+/// * `method`: Method we compress with.
+/// * `level`: Level at which we are compressing.
+/// * `source`: Source data to compress.
+/// * `destination`: Destination buffer for compressed data.
+/// * `terminate_early`: Optional callback function that can terminate compression early.
+/// * `used_copy`: If this is true, Copy compression was used, due to uncompressible data or by request.
+///
+/// # Returns
+///
+/// The number of bytes written to the destination.
+pub fn compress_streamed<F>(
+    method: CompressionPreference,
+    level: i32,
+    source: &[u8],
+    destination: &mut [u8],
+    terminate_early: Option<F>,
+    used_copy: &mut bool,
+) -> CompressionResult
+where
+    F: Fn() -> Option<usize>,
+{
+    *used_copy = false;
+    match method {
+        CompressionPreference::Copy => copy::compress(source, destination, used_copy),
+        CompressionPreference::ZStandard => {
+            zstd::compress_streamed(level, source, destination, terminate_early, used_copy)
+        }
+        #[cfg(feature = "lz4")]
+        CompressionPreference::Lz4 => {
+            lz4::compress_streamed(level, source, destination, terminate_early, used_copy)
+        }
+        #[cfg(not(feature = "lz4"))]
+        CompressionPreference::Lz4 => Err(NxCompressionError::Lz4NotEnabled),
+        CompressionPreference::NoPreference => {
+            zstd::compress_streamed(level, source, destination, terminate_early, used_copy)
         }
     }
 }
@@ -272,7 +316,7 @@ mod tests {
         )
     )]
     #[cfg_attr(miri, ignore)]
-    fn decompress_buffer_too_small_returms_error(
+    fn decompress_buffer_too_small_returns_error(
         #[case] method: CompressionPreference,
         #[case] expected_decompression_error: NxDecompressionError,
     ) {
@@ -292,5 +336,115 @@ mod tests {
             "Should return an error when decompression buffer is too small"
         );
         assert_eq!(result.unwrap_err(), expected_decompression_error);
+    }
+
+    #[rstest]
+    #[case::copy(CompressionPreference::Copy)]
+    #[case::zstd(CompressionPreference::ZStandard)]
+    #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
+    #[cfg_attr(miri, ignore)]
+    fn can_round_trip_streamed(#[case] method: CompressionPreference) {
+        let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
+        let mut decompressed = vec![0u8; TEST_DATA.len()];
+        let mut used_copy = false;
+
+        let compressed_size = compress_streamed(
+            method,
+            0,
+            TEST_DATA,
+            &mut compressed,
+            None::<fn() -> Option<usize>>,
+            &mut used_copy,
+        )
+        .unwrap();
+        compressed.truncate(compressed_size);
+
+        let decompressed_size = decompress(method, &compressed, &mut decompressed).unwrap();
+        decompressed.truncate(decompressed_size);
+        assert_eq!(TEST_DATA, decompressed.as_slice());
+    }
+
+    #[rstest]
+    #[case::zstd(CompressionPreference::ZStandard)]
+    #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
+    #[cfg_attr(miri, ignore)]
+    fn can_terminate_early_streamed(#[case] method: CompressionPreference) {
+        let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
+        let mut used_copy = false;
+        let error_code = 0;
+
+        let result = compress_streamed(
+            method,
+            0,
+            TEST_DATA,
+            &mut compressed,
+            Some(|| Some(error_code)),
+            &mut used_copy,
+        );
+
+        assert!(
+            result.is_err(),
+            "Early termination should complete successfully"
+        );
+        assert!(matches!(result, Err(NxCompressionError::TerminatedStream(x)) if x == error_code));
+    }
+
+    #[rstest]
+    #[case::copy(CompressionPreference::Copy)]
+    #[case::zstd(CompressionPreference::ZStandard)]
+    #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
+    #[cfg_attr(miri, ignore)]
+    fn incompressible_data_defaults_to_copy_streamed(#[case] method: CompressionPreference) {
+        let mut compressed = vec![0u8; max_alloc_for_compress_size(INCOMPRESSIBLE_DATA.len())];
+        let mut used_copy = false;
+
+        let compressed_size = compress_streamed(
+            method,
+            0,
+            INCOMPRESSIBLE_DATA,
+            &mut compressed,
+            None::<fn() -> Option<usize>>,
+            &mut used_copy,
+        )
+        .unwrap();
+
+        assert!(used_copy, "Incompressible data should use copy method");
+        assert_eq!(compressed_size, INCOMPRESSIBLE_DATA.len());
+    }
+
+    #[rstest]
+    #[case::copy(
+        CompressionPreference::Copy,
+        NxCompressionError::Copy(CopyCompressionError::DestinationTooSmall)
+    )]
+    #[case::zstd(
+        CompressionPreference::ZStandard,
+        NxCompressionError::Copy(CopyCompressionError::DestinationTooSmall)
+    )]
+    #[cfg_attr(
+        feature = "lz4",
+        case::lz4(
+            CompressionPreference::Lz4,
+            NxCompressionError::Lz4(Lz4CompressionError::CompressionFailed)
+        )
+    )]
+    #[cfg_attr(miri, ignore)]
+    fn destination_too_small_returns_err_streamed(
+        #[case] method: CompressionPreference,
+        #[case] expected_compression_error: NxCompressionError,
+    ) {
+        let small_buffer = [0u8; 10];
+        let mut used_copy = false;
+
+        let result = compress_streamed(
+            method,
+            0,
+            TEST_DATA,
+            &mut small_buffer.to_vec(),
+            None::<fn() -> Option<usize>>,
+            &mut used_copy,
+        );
+
+        assert_eq!(result.unwrap_err(), expected_compression_error);
     }
 }
