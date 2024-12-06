@@ -159,7 +159,7 @@ where
 
                 // Check if zstd returned an error, or no bytes were compressed in this iteration.
                 // If no bytes were compressed, that means destination buffer is too small.
-                let has_error = ZSTD_getErrorCode(result) != ZSTD_error_no_error;
+                let has_error = ZSTD_isError(result) != 0;
                 let dest_too_small = output.pos == last_out_pos;
                 if has_error || dest_too_small {
                     return copy::compress(source, destination, used_copy);
@@ -224,7 +224,6 @@ pub fn compress_no_copy_fallback(
         )
     };
 
-    let errcode = unsafe { ZSTD_getErrorCode(result) };
     if unsafe { ZSTD_isError(result) } == 0 {
         return Ok(result);
     }
@@ -239,7 +238,9 @@ pub fn compress_no_copy_fallback(
     }
 
     #[cfg(not(feature = "zstd_panic_on_unhandled_error"))]
-    Err(NxCompressionError::ZStandard(errcode))
+    Err(NxCompressionError::ZStandard(unsafe {
+        ZSTD_getErrorCode(result)
+    }))
 }
 
 /// Compresses data using a ZStandard dictionary.
