@@ -17,50 +17,31 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            use-pgo: true
-            use-cross: false
-          - os: ubuntu-latest
-            target: i686-unknown-linux-gnu
-            use-pgo: true
-            use-cross: false
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            use-pgo: false # no native runner
-            use-cross: true
-          - os: ubuntu-latest
-            target: armv7-unknown-linux-gnueabihf
-            use-pgo: false # no native runner
-            use-cross: true
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            use-pgo: true
-            use-cross: false
-          - os: windows-latest
-            target: i686-pc-windows-msvc
-            use-pgo: true
-            use-cross: false
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
-            use-pgo: false # no native runner
-            use-cross: false
-          - os: macos-13 # x86
-            target: x86_64-apple-darwin
-            use-pgo: true
-            use-cross: false
-          - os: macos-14 # M1
-            target: aarch64-apple-darwin
-            use-pgo: true
-            use-cross: false
-          - os: ubuntu-latest
-            target: x86_64-pc-windows-gnu
-            use-pgo: false # test only, and has issues has issues
-            use-cross: true
-          - os: ubuntu-latest
-            target: i686-pc-windows-gnu
-            use-pgo: false # test only, and has issues has issues
-            use-cross: true
+          # Nightly (nightly feature)
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly }
+          - { os: ubuntu-latest, target: i686-unknown-linux-gnu, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly }
+          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu, use-pgo: false, use-cross: true, toolchain: nightly, features: nightly } # no native runner
+          - { os: ubuntu-latest, target: armv7-unknown-linux-gnueabihf, use-pgo: false, use-cross: true, toolchain: nightly, features: nightly } # no native runner
+          - { os: windows-latest, target: x86_64-pc-windows-msvc, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly }
+          - { os: windows-latest, target: i686-pc-windows-msvc, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly }
+          - { os: windows-latest, target: aarch64-pc-windows-msvc, use-pgo: false, use-cross: false, toolchain: nightly, features: nightly } # no native runner
+          - { os: macos-13, target: x86_64-apple-darwin, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly } # x86
+          - { os: macos-14, target: aarch64-apple-darwin, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly } # M1
+          - { os: ubuntu-latest, target: x86_64-pc-windows-gnu, use-pgo: false, use-cross: true, toolchain: nightly, features: nightly } # test only, and has issues
+          - { os: ubuntu-latest, target: i686-pc-windows-gnu, use-pgo: false, use-cross: true, toolchain: nightly, features: nightly } # test only, and has issues
+
+          # Stable (no nightly feature)
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, use-pgo: true, use-cross: false, toolchain: stable }
+          - { os: ubuntu-latest, target: i686-unknown-linux-gnu, use-pgo: true, use-cross: false, toolchain: stable }
+          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu, use-pgo: false, use-cross: true, toolchain: stable } # no native runner
+          - { os: ubuntu-latest, target: armv7-unknown-linux-gnueabihf, use-pgo: false, use-cross: true, toolchain: stable } # no native runner
+          - { os: windows-latest, target: x86_64-pc-windows-msvc, use-pgo: true, use-cross: false, toolchain: stable }
+          - { os: windows-latest, target: i686-pc-windows-msvc, use-pgo: true, use-cross: false, toolchain: stable }
+          - { os: windows-latest, target: aarch64-pc-windows-msvc, use-pgo: false, use-cross: false, toolchain: stable } # no native runner
+          - { os: macos-13, target: x86_64-apple-darwin, use-pgo: true, use-cross: false, toolchain: stable } # x86
+          - { os: macos-14, target: aarch64-apple-darwin, use-pgo: true, use-cross: false, toolchain: stable } # M1
+          - { os: ubuntu-latest, target: x86_64-pc-windows-gnu, use-pgo: false, use-cross: true, toolchain: stable } # test only, and has issues
+          - { os: ubuntu-latest, target: i686-pc-windows-gnu, use-pgo: false, use-cross: true, toolchain: stable } # test only, and has issues
 
     runs-on: ${{ matrix.os }}
 
@@ -76,7 +57,8 @@ jobs:
           upload-coverage: true
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
           target: ${{ matrix.target }}
-          rust-toolchain: nightly
+          rust-toolchain: ${{ matrix.toolchain }}
+          features: ${{ matrix.features }}
           use-cross: ${{ matrix.use-cross }}
 
       # Note: The GitHub Runner Images will contain an up to date Rust Stable Toolchain
@@ -84,15 +66,15 @@ jobs:
       #
       # Note to reader. If adding this to a new repo, please clear cache.
       - name: Run cargo-semver-checks
-        if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+        if: (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.toolchain == 'stable'
         shell: bash
         run: |
           SEARCH_RESULT=$(cargo search "^{{project-name}}$" --limit 1)
 
           if echo "$SEARCH_RESULT" | grep -q "^{{project-name}} "; then
-            rustup +stable target add ${{ matrix.target }}
-            cargo +stable install cargo-semver-checks
-            cargo +stable semver-checks --target ${{ matrix.target }} --only-explicit-features --features "lz4,detect_num_cores,hardened"
+            rustup target add ${{ matrix.target }}
+            cargo install cargo-semver-checks
+            cargo semver-checks --target ${{ matrix.target }} --only-explicit-features --features "lz4,detect_num_cores,hardened"
           else
             echo "No previous version found on crates.io. Skipping semver checks."
           fi

@@ -8,7 +8,7 @@ license-file = "LICENSE"
 include = ["src/**/*"]
 
 [features]
-default = ["lz4", "detect_num_cores", "hardened", "nightly"]
+default = ["lz4", "detect_num_cores", "hardened"]
 
 # Uses additional nightly APIs in additional to the existing ones.
 nightly = ["allocator-api2/nightly", "hashbrown/nightly", "safe-allocator-api/nightly"]

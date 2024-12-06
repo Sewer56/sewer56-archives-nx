@@ -17,7 +17,9 @@ panic = "abort"
 members = [
     # Main Project Directory
     "projects/sewer56-archives-nx",
+
     # Tool to test dictionary compression
+    # Requires nightly compiler. Is skipped on stable.
     "projects/research/dictionary-tester"
 ]
 resolver = "2"
