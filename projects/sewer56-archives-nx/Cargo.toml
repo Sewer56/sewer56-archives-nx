@@ -17,7 +17,7 @@ nightly = ["allocator-api2/nightly", "hashbrown/nightly", "safe-allocator-api/ni
 pgo = []
 
 # Enables support for LZ4 compression/decompression
-lz4 = []
+lz4 = ["lz4-sys"]
 
 # Adds additional runtime checks against untrusted input.
 # This is useful if you receive NX2 files from the internet.
@@ -41,7 +41,7 @@ miri_extra_checks = []
 
 [dependencies]
 bitfield = "0.17.0"
-lzzzz = "1.1.0"
+lz4-sys = { version = "1.11.1", optional = true }
 zstd-sys = {version = "2.0.13", features = ["experimental"]} # 1.5.6
 no-panic = "0.1.32"
 int-enum = "1.1.2"
@@ -74,21 +74,6 @@ tempfile = "3.14.0"
 
 [target.'cfg(unix)'.dev-dependencies]
 pprof = { version = "0.14", features = ["flamegraph", "criterion"] }
-
-# Profile Build
-[profile.profile]
-inherits = "release"
-debug = true
-codegen-units = 1
-lto = true
-strip = false  # No stripping!!
-
-# Optimized Release Build
-[profile.release]
-codegen-units = 1
-lto = true
-strip = true  # Automatically strip symbols from the binary.
-panic = "abort"
 
 # Benchmark Stuff
 [[bench]]
