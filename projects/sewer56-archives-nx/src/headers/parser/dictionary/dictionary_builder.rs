@@ -169,7 +169,7 @@ where
             let max_compressed_size =
                 compression::zstd::max_alloc_for_compress_size(decompressed_size as usize);
             let mut compressed_data: Vec<u8> = Vec::with_capacity(max_compressed_size);
-            let num_written_bytes = compression::zstd::compress_no_copy_fallback(
+            let num_written_bytes = compression::zstd::force_compress(
                 DEFAULT_COMPRESSION_LEVEL,
                 slice::from_raw_parts(start_ptr, decompressed_size as usize),
                 slice::from_raw_parts_mut(compressed_data.as_mut_ptr(), compressed_data.capacity()),

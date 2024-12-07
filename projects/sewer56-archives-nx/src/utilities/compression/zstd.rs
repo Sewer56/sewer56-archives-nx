@@ -1,6 +1,5 @@
 use super::dictionary::ZstdCompressionDict;
 use super::{CompressionResult, DecompressionResult, NxCompressionError, NxDecompressionError};
-use crate::api::enums::*;
 use crate::utilities::compression::copy;
 use core::cmp::min;
 use core::ffi::c_void;
@@ -8,6 +7,9 @@ use core::ptr::NonNull;
 use derive_more::derive::{Deref, DerefMut};
 use derive_new::new;
 use zstd_sys::ZSTD_ErrorCode::*;
+use zstd_sys::ZSTD_cParameter::*;
+use zstd_sys::ZSTD_dParameter::*;
+use zstd_sys::ZSTD_format_e::*;
 use zstd_sys::*;
 
 /// Determines maximum file size for output needed to alloc to compress data with ZStandard.
@@ -35,41 +37,42 @@ pub fn compress(
 ) -> CompressionResult {
     *used_copy = false;
 
+    // Create a compression context
+    let cctx = unsafe { ZSTD_createCCtx() };
+    if cctx.is_null() {
+        return Err(NxCompressionError::ZStandard(
+            ZSTD_ErrorCode::ZSTD_error_GENERIC,
+        ));
+    }
+
+    // Set compression parameters (magicless format, no extra headers)
+    zstd_setcommoncompressparams(cctx, Some(level));
+
+    // Perform compression
     let result = unsafe {
-        ZSTD_compress(
+        ZSTD_compress2(
+            cctx,
             destination.as_mut_ptr() as *mut c_void,
             destination.len(),
             source.as_ptr() as *const c_void,
             source.len(),
-            level,
         )
     };
 
+    // Free the context
+    unsafe {
+        ZSTD_freeCCtx(cctx);
+    }
+
     let errcode = unsafe { ZSTD_getErrorCode(result) };
     if result > source.len() || errcode == ZSTD_error_dstSize_tooSmall {
-        return super::compress(
-            CompressionPreference::Copy,
-            level,
-            source,
-            destination,
-            used_copy,
-        );
+        return copy::compress(source, destination, used_copy);
     }
 
     if unsafe { ZSTD_isError(result) } == 0 {
         return Ok(result);
     }
 
-    #[cfg(feature = "zstd_panic_on_unhandled_error")]
-    {
-        let error_name = ZSTD_getErrorName(error_code);
-        panic!(
-            "ZStd Compression error: {}",
-            CStr::from_ptr(error_name).to_string_lossy()
-        );
-    }
-
-    #[cfg(not(feature = "zstd_panic_on_unhandled_error"))]
     Err(NxCompressionError::ZStandard(errcode))
 }
 
@@ -115,6 +118,9 @@ where
                 ZSTD_ErrorCode::ZSTD_error_memory_allocation,
             ));
         }
+
+        // Set compression parameters (magicless format, no extra headers)
+        zstd_setcommoncompressparams(*cstream, Some(level));
 
         // Initialize the stream
         let init_result = ZSTD_initCStream(*cstream, level);
@@ -201,48 +207,6 @@ where
     }
 }
 
-/// Compresses data with ZStandard, without fallback to Copy
-/// if the data is not compressible.
-///
-/// # Parameters
-///
-/// * `level`: Level at which we are compressing.
-/// * `source`: Length of the source in bytes.
-/// * `destination`: Pointer to destination.
-pub fn compress_no_copy_fallback(
-    level: i32,
-    source: &[u8],
-    destination: &mut [u8],
-) -> CompressionResult {
-    let result = unsafe {
-        ZSTD_compress(
-            destination.as_mut_ptr() as *mut c_void,
-            destination.len(),
-            source.as_ptr() as *const c_void,
-            source.len(),
-            level,
-        )
-    };
-
-    if unsafe { ZSTD_isError(result) } == 0 {
-        return Ok(result);
-    }
-
-    #[cfg(feature = "zstd_panic_on_unhandled_error")]
-    {
-        let error_name = ZSTD_getErrorName(error_code);
-        panic!(
-            "ZStd Compression error: {}",
-            CStr::from_ptr(error_name).to_string_lossy()
-        );
-    }
-
-    #[cfg(not(feature = "zstd_panic_on_unhandled_error"))]
-    Err(NxCompressionError::ZStandard(unsafe {
-        ZSTD_getErrorCode(result)
-    }))
-}
-
 /// Compresses data using a ZStandard dictionary.
 ///
 /// This function allows for compression using a pre-trained dictionary to potentially
@@ -273,6 +237,9 @@ pub fn compress_with_dictionary(
             ));
         }
 
+        // Set compression parameters (magicless format, no extra headers)
+        zstd_setcommoncompressparams(cctx_ptr, None);
+
         // Compress using the dictionary
         let result = dict.compress(
             source,
@@ -295,21 +262,39 @@ pub fn compress_with_dictionary(
 /// * `source`: Source data to decompress.
 /// * `destination`: Destination buffer for decompressed data.
 pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
-    unsafe {
-        let result = ZSTD_decompress(
+    // Create decompression context
+    let dctx = unsafe { ZSTD_createDCtx() };
+    if dctx.is_null() {
+        return Err(NxDecompressionError::ZStandard(
+            ZSTD_ErrorCode::ZSTD_error_GENERIC,
+        ));
+    }
+
+    // Set decompression parameters to match compression
+    zstd_setcommondecompressionparams(dctx);
+
+    // Perform decompression
+    let result = unsafe {
+        ZSTD_decompressDCtx(
+            dctx,
             destination.as_mut_ptr() as *mut c_void,
             destination.len(),
             source.as_ptr() as *const c_void,
             source.len(),
-        );
+        )
+    };
 
-        if ZSTD_isError(result) != 0 {
-            let error_code = ZSTD_getErrorCode(result);
-            Err(NxDecompressionError::ZStandard(error_code))
-        } else {
-            Ok(result)
-        }
+    // Free the context
+    unsafe {
+        ZSTD_freeDCtx(dctx);
     }
+
+    if unsafe { ZSTD_isError(result) } != 0 {
+        let errcode = unsafe { ZSTD_getErrorCode(result) };
+        return Err(NxDecompressionError::ZStandard(errcode));
+    }
+
+    Ok(result)
 }
 
 /// Partially decompresses data with ZStandard until the destination buffer is filled
@@ -321,6 +306,10 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
 pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
     unsafe {
         let d_stream = ZSTD_createDStream();
+
+        // Set decompression parameters to match compression
+        zstd_setcommondecompressionparams(d_stream);
+
         let mut out_buf = ZSTD_outBuffer {
             dst: destination.as_mut_ptr() as *mut c_void,
             pos: 0,
@@ -339,17 +328,6 @@ pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> Decompressio
             if ZSTD_isError(result) != 0 {
                 let error_code = ZSTD_getErrorCode(result);
                 ZSTD_freeDStream(d_stream);
-
-                #[cfg(feature = "zstd_panic_on_unhandled_error")]
-                {
-                    let error_name = ZSTD_getErrorName(result);
-                    panic!(
-                        "ZStd Decompression error: {}",
-                        CStr::from_ptr(error_name).to_string_lossy()
-                    );
-                }
-
-                #[cfg(not(feature = "zstd_panic_on_unhandled_error"))]
                 return Err(NxDecompressionError::ZStandard(error_code));
             }
 
@@ -397,6 +375,78 @@ pub fn get_decompressed_size(compressed_data: &[u8]) -> Result<usize, GetDecompr
     }
 }
 
+/// Compresses data with ZStandard.
+/// Does not use fallback to 'copy' if compression is ineffective.
+///
+/// # Parameters
+///
+/// * `level`: Level at which we are compressing.
+/// * `source`: Length of the source in bytes.
+/// * `destination`: Pointer to destination.
+pub fn force_compress(level: i32, source: &[u8], destination: &mut [u8]) -> CompressionResult {
+    // Create a compression context
+    let cctx = unsafe { ZSTD_createCCtx() };
+    if cctx.is_null() {
+        return Err(NxCompressionError::ZStandard(
+            ZSTD_ErrorCode::ZSTD_error_GENERIC,
+        ));
+    }
+
+    // Set compression parameters (magicless format, no extra headers)
+    zstd_setcommoncompressparams(cctx, Some(level));
+
+    // Perform compression
+    let result = unsafe {
+        ZSTD_compress2(
+            cctx,
+            destination.as_mut_ptr() as *mut c_void,
+            destination.len(),
+            source.as_ptr() as *const c_void,
+            source.len(),
+        )
+    };
+
+    // Free the context
+    unsafe {
+        ZSTD_freeCCtx(cctx);
+    }
+
+    if unsafe { ZSTD_isError(result) } == 0 {
+        return Ok(result);
+    }
+
+    Err(NxCompressionError::ZStandard(unsafe {
+        ZSTD_getErrorCode(result)
+    }))
+}
+
+#[inline(always)]
+fn zstd_setcommoncompressparams(cctx: *mut ZSTD_CCtx_s, level: Option<i32>) {
+    unsafe {
+        if let Some(lv) = level {
+            ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, lv);
+        }
+        ZSTD_CCtx_setParameter(
+            cctx,
+            ZSTD_c_experimentalParam2, // zstd_c_format
+            ZSTD_f_zstd1_magicless as i32,
+        );
+        ZSTD_CCtx_setParameter(cctx, ZSTD_c_contentSizeFlag, 0);
+        ZSTD_CCtx_setParameter(cctx, ZSTD_c_checksumFlag, 0);
+        ZSTD_CCtx_setParameter(cctx, ZSTD_c_dictIDFlag, 0);
+    }
+}
+
+pub(crate) fn zstd_setcommondecompressionparams(dctx: *mut ZSTD_DCtx_s) {
+    unsafe {
+        ZSTD_DCtx_setParameter(
+            dctx,
+            ZSTD_d_experimentalParam1, // zstd_d_format
+            ZSTD_f_zstd1_magicless as i32,
+        );
+    };
+}
+
 /// Represents an error returned from the Nx compression APIs.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum GetDecompressedSizeError {
@@ -426,7 +476,7 @@ mod tests {
     #[test]
     #[cfg_attr(miri, ignore)]
     fn decompress_invalid_data_returns_error() {
-        let invalid_compressed_data = vec![0u8; 100];
+        let invalid_compressed_data = vec![0xFFu8; 100];
         let mut destination = vec![0u8; 1000];
 
         let result = decompress(&invalid_compressed_data, &mut destination);
@@ -438,7 +488,7 @@ mod tests {
         match result {
             Err(NxDecompressionError::ZStandard(error_code)) => {
                 assert_eq!(
-                    error_code, ZSTD_error_prefix_unknown,
+                    error_code, ZSTD_error_frameParameter_unsupported,
                     "Not a zstandard file"
                 );
             }
@@ -449,7 +499,7 @@ mod tests {
     #[test]
     #[cfg_attr(miri, ignore)]
     fn decompress_partial_invalid_data_returns_error() {
-        let invalid_compressed_data = vec![0u8; 100];
+        let invalid_compressed_data = vec![0xFFu8; 100];
         let mut destination = vec![0u8; 1000];
 
         let result = decompress_partial(&invalid_compressed_data, &mut destination);
@@ -461,7 +511,7 @@ mod tests {
         match result {
             Err(NxDecompressionError::ZStandard(error_code)) => {
                 assert_eq!(
-                    error_code, ZSTD_error_prefix_unknown,
+                    error_code, ZSTD_error_frameParameter_unsupported,
                     "Not a zstandard file"
                 );
             }
@@ -477,9 +527,15 @@ mod tests {
 
         // Compress the data
         let mut compressed_data = vec![0u8; max_alloc_for_compress_size(original_data.len())];
-        let mut used_copy = false;
-        let compressed_size =
-            compress(3, &original_data, &mut compressed_data, &mut used_copy).unwrap();
+        let compressed_size = unsafe {
+            ZSTD_compress(
+                compressed_data.as_mut_ptr() as *mut c_void,
+                compressed_data.len(),
+                original_data.as_ptr() as *const c_void,
+                original_data.len(),
+                3,
+            )
+        };
         compressed_data.truncate(compressed_size);
 
         // Get the decompressed size

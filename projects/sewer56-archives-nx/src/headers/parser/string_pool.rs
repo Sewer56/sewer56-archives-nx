@@ -4,9 +4,7 @@ use super::string_pool_common::{
 use crate::api::traits::*;
 use crate::headers::raw::toc::*;
 use crate::prelude::*;
-use crate::utilities::compression::zstd::{
-    self, compress_no_copy_fallback, max_alloc_for_compress_size,
-};
+use crate::utilities::compression::zstd::{self, force_compress, max_alloc_for_compress_size};
 use core::marker::PhantomData;
 use core::ptr::write_bytes;
 use core::{mem::MaybeUninit, ptr::copy_nonoverlapping};
@@ -19,6 +17,9 @@ use memchr::Memchr;
 ///
 /// Levels beyond this point don't save much space.
 const DEFAULT_COMPRESSION_LEVEL: i32 = 16;
+
+/// Size of the 'decompressed size' field.
+const SIZE_OF_DECOMP_FIELD: usize = size_of::<u32>();
 
 /// Structure for serializing and deserializing the string pool within the Nx Archive format.
 ///
@@ -275,18 +276,18 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
         items.sort_by(|a, b| a.relative_path().cmp(b.relative_path()));
 
         // Sum up all string lengths (incl. null terminators)
-        let total_size = calc_pool_size(items);
+        let raw_data_size = calc_raw_data_size(items);
 
         // Allocate uninitialized memory
         let mut decompressed_pool: Box<[MaybeUninit<u8>], ShortAlloc> =
-            Box::new_uninit_slice_in(total_size, short_alloc);
+            Box::new_uninit_slice_in(raw_data_size, short_alloc);
 
         let mut offset = 0;
         for item in items.iter() {
             let path = item.relative_path().as_bytes();
             let path_len = path.len();
 
-            // Safety: We know exact length of pool before compression.
+            // SAFETY: We know exact length of pool before compression.
             // Manually copy the path bytes
             unsafe {
                 copy_nonoverlapping(
@@ -310,10 +311,15 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
             Self::compress_pool(&decompressed_pool, long_alloc)
         } else {
             // This path is unoptimized in grand scheme of things, because it's only used for testing.
-            let mut result = Vec::with_capacity_in(total_size, long_alloc);
+            let mut result: Vec<u8, LongAlloc> = Vec::with_capacity_in(raw_data_size, long_alloc);
             unsafe {
-                copy_nonoverlapping(decompressed_pool.as_ptr(), result.as_mut_ptr(), total_size);
-                result.set_len(total_size);
+                // Write raw data
+                copy_nonoverlapping(
+                    decompressed_pool.as_ptr(),
+                    result.as_mut_ptr(),
+                    raw_data_size,
+                );
+                result.set_len(raw_data_size);
             }
             Ok(result)
         }
@@ -349,11 +355,14 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
             return return_empty_pool(&long_alloc);
         }
 
+        #[cfg(feature = "hardened")]
+        if source.len() < size_of::<u32>() {
+            return Err(StringPoolUnpackError::NotEnoughData);
+        }
+
         let decompressed_size;
         let decompressed: Box<[u8], ShortAlloc> = if use_compression {
-            // Determine size of decompressed data
-            // Note: This is very fast `O(1)` because the zstd frame header will contain the necessary info.
-            decompressed_size = zstd::get_decompressed_size(source)?;
+            decompressed_size = unsafe { (*(source.as_ptr() as *const u32)).to_le() } as usize;
 
             // SAFETY: Compressed data is empty or zstd frame is missing size, return an empty pool.
             if decompressed_size == 0 {
@@ -371,11 +380,15 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
             // Decompress the data
             let mut decompressed =
                 unsafe { Box::new_uninit_slice_in(decompressed_size, short_alloc).assume_init() };
-            zstd::decompress(source, &mut decompressed[..])?;
+            zstd::decompress(
+                unsafe { source.get_unchecked(SIZE_OF_DECOMP_FIELD..) },
+                &mut decompressed[..],
+            )?;
             decompressed
         } else {
-            // For uncompressed data, we can directly use the source
             decompressed_size = source.len();
+
+            // For uncompressed data, we can directly use the source
             let mut decompressed = Box::new_uninit_slice_in(source.len(), short_alloc);
             unsafe {
                 copy_nonoverlapping(
@@ -495,22 +508,27 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
         long_alloc: LongAlloc,
     ) -> Result<Vec<u8, LongAlloc>, StringPoolPackError> {
         let destination: Box<[MaybeUninit<u8>], LongAlloc> = Box::new_uninit_slice_in(
-            max_alloc_for_compress_size(decompressed_pool.len()),
+            max_alloc_for_compress_size(decompressed_pool.len() + SIZE_OF_DECOMP_FIELD),
             long_alloc,
         );
+
         let mut destination = unsafe { destination.assume_init() };
-        let comp_result = compress_no_copy_fallback(
-            DEFAULT_COMPRESSION_LEVEL,
-            decompressed_pool,
-            &mut destination[..],
-        );
+
+        // Write decompressed data size.
+        let result_ptr = destination.as_mut_ptr() as *mut u32;
+        unsafe {
+            *result_ptr = (decompressed_pool.len() as u32).to_le();
+        }
+
+        let comp_dest = unsafe { destination.get_unchecked_mut(SIZE_OF_DECOMP_FIELD..) };
+        let comp_result = force_compress(DEFAULT_COMPRESSION_LEVEL, decompressed_pool, comp_dest);
 
         match comp_result {
             Ok(num_bytes) => {
                 if destination.len() <= MAX_STRING_POOL_SIZE {
                     let mut vec = destination.into_vec();
                     // SAFETY: We know exact length of pool after compression, if it did not fit, we would have matched the error branch.
-                    unsafe { vec.set_len(num_bytes) };
+                    unsafe { vec.set_len(num_bytes + SIZE_OF_DECOMP_FIELD) };
                     Ok(vec)
                 } else {
                     Err(StringPoolPackError::PoolTooLarge)
@@ -538,8 +556,8 @@ fn return_empty_pool<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone
 }
 
 /// Calculates the total size of the pool for both the
-/// [`StringPoolFormat::V0`] and [`StringPoolFormat::V1`] formats.
-fn calc_pool_size<T: HasRelativePath>(items: &mut [T]) -> usize {
+/// [`StringPoolFormat::V0`] and [`StringPoolFormat::V1`] (deprecated) formats.
+fn calc_raw_data_size<T: HasRelativePath>(items: &mut [T]) -> usize {
     let total_path_size: usize = items
         .iter()
         .map(|item| item.relative_path().len())
@@ -552,7 +570,7 @@ fn calc_pool_size<T: HasRelativePath>(items: &mut [T]) -> usize {
 mod tests {
     use crate::headers::raw::toc::*;
     use crate::prelude::*;
-    use crate::utilities::compression::zstd::compress_no_copy_fallback;
+    use crate::utilities::compression::zstd::force_compress;
     use crate::utilities::compression::NxDecompressionError;
     use crate::{
         api::traits::*,
@@ -563,6 +581,7 @@ mod tests {
     };
     use allocator_api2::vec;
     use rstest::rstest;
+    use zstd_sys::ZSTD_ErrorCode::ZSTD_error_srcSize_wrong;
 
     #[derive(Debug, PartialEq, Eq)]
     struct TestItem {
@@ -645,12 +664,12 @@ mod tests {
     #[case(V0)]
     #[cfg_attr(miri, ignore)]
     fn unpack_invalid_data(#[case] format: StringPoolFormat) {
-        let invalid_data = vec![0, 1, 2, 3, 4]; // Invalid compressed data
+        // len 4, then bytes 1,2,3,4
+        let invalid_data = vec![4, 0, 0, 0, 1, 2, 3, 4]; // Invalid compressed data
         let result = StringPool::unpack(&invalid_data, 1, format, true);
         assert!(matches!(
             result,
-            Err(StringPoolUnpackError::FailedToGetDecompressedSize(_)
-                | StringPoolUnpackError::FailedToDecompress(_))
+            Err(StringPoolUnpackError::FailedToDecompress(_))
         ));
     }
 
@@ -741,16 +760,24 @@ mod tests {
     #[rstest]
     #[case(StringPoolFormat::V0)]
     #[cfg_attr(miri, ignore)]
-    fn unpack_fails_when_zstd_frame_size_exceeds_max(#[case] format: StringPoolFormat) {
+    fn unpack_fails_when_decompressed_size_exceeds_max(#[case] format: StringPoolFormat) {
         // Create a large input that exceeds MAX_STRING_POOL_SIZE
+
+        use crate::headers::parser::string_pool::SIZE_OF_DECOMP_FIELD;
         let large_input = vec![b'A'; MAX_STRING_POOL_SIZE + 1];
 
         // Compress the large input
-        let mut compressed = vec![0u8; MAX_STRING_POOL_SIZE + 1];
-        let comp_result = compress_no_copy_fallback(1, &large_input, &mut compressed).unwrap();
-        compressed.truncate(comp_result);
+        let mut compressed = vec![0u8; MAX_STRING_POOL_SIZE + 1 + SIZE_OF_DECOMP_FIELD];
+        unsafe {
+            // Write the payload length manually.
+            *(compressed.as_mut_ptr() as *mut u32) = ((MAX_STRING_POOL_SIZE + 1) as u32).to_le()
+        }
+        let comp_result =
+            force_compress(1, &large_input, &mut compressed[SIZE_OF_DECOMP_FIELD..]).unwrap();
+        compressed.truncate(comp_result + SIZE_OF_DECOMP_FIELD);
 
         // Attempt to unpack the compressed data
+
         let result = StringPool::unpack(&compressed, 1, format, true);
 
         // Check that the result is an error and specifically an ExceededMaxSize error
@@ -763,7 +790,7 @@ mod tests {
     #[rstest]
     #[case(StringPoolFormat::V0)]
     #[cfg_attr(miri, ignore)]
-    fn unpack_fails_when_frame_size_missing(#[case] format: StringPoolFormat) {
+    fn unpack_fails_when_decompressed_size_invalid_data(#[case] format: StringPoolFormat) {
         // Pre-compressed "Hello, World!" without frame size
         let no_frame_size = vec![
             0x28, 0xB5, 0x2F, 0xFD, 0x04, 0x00, 0x41, 0x10, 0x00, 0x00, 0x48, 0x65, 0x6C, 0x6C,
@@ -771,69 +798,48 @@ mod tests {
         ];
 
         let result = StringPool::unpack(&no_frame_size, 1, format, true);
+        // In this case, the number is bigger than max allowed.
         assert!(matches!(
             result,
-            Err(StringPoolUnpackError::FailedToGetDecompressedSize(_))
+            Err(StringPoolUnpackError::ExceededMaxSize(_))
         ));
     }
 
     #[rstest]
     #[case(StringPoolFormat::V0)]
     #[cfg_attr(miri, ignore)]
-    fn unpack_fails_when_zstd_frame_size_made_too_small(#[case] format: StringPoolFormat) {
-        // Compressed data with altered frame size 86 -> 40 bytes.
-        // Data is following text:
-        //
-        //      Hello World!!
-        //      I am an evil file, my frame size is too small compared to actual size!!
-
-        let altered_frame_size = vec![
-            0x28, 0xB5, 0x2F, 0xFD, 0x24, 0x28, 0x2D, 0x02, 0x00, 0x62, 0x45, 0x10, 0x11, 0xA0,
-            0xED, 0x78, 0x78, 0x0F, 0xFA, 0x02, 0x02, 0x6D, 0x44, 0x74, 0xAB, 0x5E, 0x63, 0xBE,
-            0x67, 0x46, 0x20, 0x84, 0x9D, 0xC9, 0x9D, 0x15, 0x3E, 0xA3, 0xEF, 0xF7, 0xB3, 0x4D,
-            0x99, 0x6A, 0x73, 0x66, 0x55, 0xEE, 0xDD, 0xEF, 0x2E, 0x7D, 0x67, 0x72, 0x5F, 0xA5,
-            0x0D, 0x5D, 0xAA, 0x8B, 0xE5, 0x84, 0xCE, 0x29, 0xEE, 0x97, 0x5E, 0xE9, 0x09, 0x08,
-            0xE1, 0x70, 0xEB, 0xF2, 0x66, 0xDE, 0x11, 0x00, 0x20, 0x1F, 0x7A, 0x48,
+    fn unpack_fails_when_decompressed_size_too_short(#[case] format: StringPoolFormat) {
+        // Pre-compressed "Hello, World!" without frame size
+        // 05 length, which is only 'Hello'.
+        let no_frame_size = vec![
+            0x05, 0x00, 0x00, 0x00, 0x04, 0x00, 0x41, 0x10, 0x00, 0x00, 0x48, 0x65, 0x6C, 0x6C,
+            0x6F, 0x2C, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, 0x21, 0x03,
         ];
 
-        let result = StringPool::unpack(&altered_frame_size, 1, format, true);
+        let result = StringPool::unpack(&no_frame_size, 1, format, true);
         assert!(matches!(
             result,
-            Err(StringPoolUnpackError::FailedToDecompress(NxDecompressionError::ZStandard(err)))
-            if matches!(err,
-                zstd_sys::ZSTD_ErrorCode::ZSTD_error_srcSize_wrong |
-                zstd_sys::ZSTD_ErrorCode::ZSTD_error_corruption_detected
-            )
+            Err(StringPoolUnpackError::FailedToDecompress(NxDecompressionError::ZStandard(zstd_error_code)))
+            if zstd_error_code == ZSTD_error_srcSize_wrong
         ));
     }
 
     #[rstest]
     #[case(StringPoolFormat::V0)]
     #[cfg_attr(miri, ignore)]
-    fn unpack_fails_when_zstd_frame_size_made_too_large(#[case] format: StringPoolFormat) {
-        // Compressed data with altered frame size 86 -> 120 bytes.
-        // Data is following text:
-        //
-        //      Hello World!!
-        //      I am an evil file, my frame size is too large compared to actual size!!
-
-        let altered_frame_size = vec![
-            0x28, 0xB5, 0x2F, 0xFD, 0x24, 0x78, 0x35, 0x02, 0x00, 0x62, 0x85, 0x10, 0x11, 0xA0,
-            0xED, 0x78, 0x78, 0xE7, 0x1F, 0x07, 0x8B, 0x36, 0x22, 0xBA, 0x55, 0xAF, 0x31, 0xDF,
-            0x33, 0x23, 0x20, 0x04, 0xAE, 0x0A, 0xBE, 0x57, 0x46, 0xB3, 0x6F, 0xF1, 0x87, 0xDF,
-            0xBA, 0xD5, 0xCC, 0x39, 0xBD, 0xED, 0xB7, 0x16, 0x0F, 0xD5, 0xB9, 0x2A, 0x78, 0x5E,
-            0xFB, 0xD0, 0xE9, 0xBA, 0xE0, 0x56, 0xE8, 0xAD, 0x26, 0x9F, 0xED, 0xD7, 0x9E, 0x80,
-            0x10, 0x4E, 0xBF, 0x56, 0xDE, 0xBA, 0x79, 0x04, 0x00, 0xE2, 0xC7, 0x15, 0x50,
+    fn unpack_fails_when_decompressed_size_too_long(#[case] format: StringPoolFormat) {
+        // Pre-compressed "Hello, World!" without frame size
+        // FF length, which goes beyond the permissible amount but under allowed limits
+        let no_frame_size = vec![
+            0xFF, 0x00, 0x00, 0x00, 0x04, 0x00, 0x41, 0x10, 0x00, 0x00, 0x48, 0x65, 0x6C, 0x6C,
+            0x6F, 0x2C, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, 0x21, 0x03,
         ];
 
-        let result = StringPool::unpack(&altered_frame_size, 1, format, true);
+        let result = StringPool::unpack(&no_frame_size, 1, format, true);
         assert!(matches!(
             result,
-            Err(StringPoolUnpackError::FailedToDecompress(NxDecompressionError::ZStandard(err)))
-            if matches!(err,
-                zstd_sys::ZSTD_ErrorCode::ZSTD_error_srcSize_wrong |
-                zstd_sys::ZSTD_ErrorCode::ZSTD_error_corruption_detected
-            )
+            Err(StringPoolUnpackError::FailedToDecompress(NxDecompressionError::ZStandard(zstd_error_code)))
+            if zstd_error_code == ZSTD_error_srcSize_wrong
         ));
     }
 

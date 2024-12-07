@@ -125,6 +125,12 @@ User Data:
 - `align8`: 0-7
 - [User Data Header][User Data Header]: 8
 
+## Compressor Settings
+
+!!! warning "Nx uses non-standard zstandard compressor settings"
+
+    For more details, see [Stripping ZStandard Frame Headers]
+
 ## Version History
 
 !!! info "This is the version history for the file format, not the reference implementation/library."
@@ -141,9 +147,10 @@ for each version and read this specification.***
 ***THIS IS A WIP. REST OF SPEC IS NOT YET UPDATED TO ACCOUNT FOR THIS***
 
 - Hashing algorithm replaced with [XXH3] (from [XXH64][XXH3]).
-- [Unconfirmed] Support for per-extension dictionaries.
+- Support for per-extension dictionaries.
 - Implementation of User Data Segment in reference implementation.
 - Added `Section Alignment` section to docs.
+
 
 #### Implementation of User Data Segment
 
@@ -170,19 +177,37 @@ The hashing algorithm has been changed to [XXH3] from [XXH64][XXH3].
 
 This is a hard change because [XXH3] is superior in just about all use cases.
 The format originally intended to use [XXH3], however the [Nexus Mods App] opted
-to go with [XXH64][XXH3] instead.
+to go with `XXH64` instead.
 
 The original intent was that you'd take the hash of each file from the archive and get hashes
 'for free' (no I/O bottleneck). However the design changed.
 
-Since the [Nexus Mods App] does not make use of the hashes in the archives, the archive
+Since the [Nexus Mods App] does not make use of the hashes in the archives (outside of GC), the archive
 format is migrating to [XXH3] as standard.
+
+#### Stripping Zstandard Frame Headers
+
+Nx format now skips the Zstandard frame headers, namely zstd compressed sections are now compressed with the
+following settings:
+
+```
+- ZSTD_c_format = ZSTD_f_zstd1_magicless
+- ZSTD_c_contentSizeFlag = 0
+- ZSTD_c_checksumFlag = 0
+- ZSTD_c_dictIDFlag = 0
+```
+
+This reduces the size of each block by 12 bytes, as the magic number (4 bytes),
+block size (typically 4 bytes) and checksum (4 bytes) are skipped.
+
+The removal of the checksum flag also speeds up decompression a tiny bit.
+In cases where a decompressed size is needed, such as in decompression,
 
 #### String Pool Experiment
 
 !!! info "An alternative implementation of the [String Pool] was experimented with."
 
-It speeds up from around 89us to 67us, however the format will not use it, as it increases binary size
+It speeds up from around 89us to 67us, however ***the format will not use it***, as it increases binary size
 considerably. The format was a variation of the pool where the buffer starts with an array of `u8`
 containing the path lengths. The strings following naturally.
 
@@ -256,3 +281,5 @@ The [Table of Contents][ToC Header] has also received its own proper
 [Dictionaries]: ./Dictionaries.md
 [Research: Dictionaries]: ../Research/DictionaryCompression.md
 [Research: Decode Speed]: ../Research/DecodeSpeed.md
+[Stripping ZStandard Frame Headers]: #stripping-zstandard-frame-headers
+[Dictionary Header]: ./Dictionaries.md
