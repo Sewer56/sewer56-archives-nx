@@ -1,3 +1,4 @@
+use super::zstd::zstd_setcommondecompressionparams;
 use super::{DecompressionResult, NxDecompressionError};
 use core::ffi::c_void;
 use zstd_sys::ZSTD_ErrorCode::ZSTD_error_memory_allocation;
@@ -35,6 +36,8 @@ impl<'a> ZstdDecompressor<'a> {
                     ZSTD_error_memory_allocation,
                 ));
             }
+
+            zstd_setcommondecompressionparams(d_stream);
 
             Ok(ZstdDecompressor {
                 d_stream,
@@ -179,7 +182,7 @@ mod tests {
     #[test]
     #[cfg_attr(miri, ignore)]
     fn handles_invalid_data() {
-        let invalid_data = vec![0u8; 100];
+        let invalid_data = vec![0xFFu8; 100];
         let mut decompressor = ZstdDecompressor::new(&invalid_data).unwrap();
         let mut output = vec![0u8; 1000];
 

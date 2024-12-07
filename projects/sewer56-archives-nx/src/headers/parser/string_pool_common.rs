@@ -184,4 +184,7 @@ pub enum StringPoolUnpackError {
 
     /// The StringPool should end on a null terminator, but it does not.
     ShouldEndOnNullTerminator,
+
+    /// There is insufficient data to deserialize the string pool.
+    NotEnoughData,
 }

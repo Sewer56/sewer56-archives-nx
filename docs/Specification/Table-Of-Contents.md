@@ -29,14 +29,14 @@ Format:
 - **TOC Header (8 Bytes)**:
     - `u1`: IsFlexibleFormat (Always `1`)
     - `u1`: HasHash
-    - `u5`: StringPoolSizeBits (num bits for [StringPoolSize] in `Item Counts` below.)
+    - `u5`: CompressedPoolSizeBits (num bits for [CompressedPoolSize] in `Item Counts` below.)
     - `u5`: FileCountBits (num bits for [FileCount] in `Item Counts` below.)
     - `u5`: BlockCountBits (num bits for [BlockCount] in `Item Counts` below.)
-    - `u5`: [DecompressedBlockOffset]Bits (num bits for [StringPoolSize] in `Item Counts` below.)
+    - `u5`: [DecompressedBlockOffset]Bits (num bits for [CompressedPoolSize] in `Item Counts` below.)
     - `u42`: Padding (`align8`) OR ItemCounts (if fits in 42 bits)
 - [Optional: If Greater than 42 bits] **ItemCounts Struct (8 Bytes)**:
     - `align8` (Padding)
-    - `u[StringPoolSizeBits]`: [StringPoolSize]
+    - `u[CompressedPoolSizeBits]`: [CompressedPoolSize]
     - `u[BlockCountBits]`: [BlockCount]
     - `u[FileCountBits]`: [FileCount]
 - **FileEntry** (8/16 bytes):
@@ -51,10 +51,10 @@ Format:
 - [StringPool]
     - `RawCompressedData...`
 
-Values stored in `StringPoolSizeBits`, `BlockCountBits` and`FileCountBits` are offset by 1.
+Values stored in `CompressedPoolSizeBits`, `BlockCountBits` and`FileCountBits` are offset by 1.
 That means that if the stored value is `0`, we actually mean 1.
 
-If ***StringPoolSizeBits + BlockCountBits + FileCountBits*** fit in the 42 bits of padding; then they
+If ***CompressedPoolSizeBits + BlockCountBits + FileCountBits*** fit in the 42 bits of padding; then they
 are placed in the lower 42 bits. Otherwise we allocate 8 bytes for the ItemCounts struct.
 
 !!! note "Compressed pool data is ~4 bytes per entry usually."
@@ -81,7 +81,7 @@ Format:
 - **TOC Header**:
     - `u1`: IsFlexibleFormat (Always `0`)
     - `u2`: Preset (Always `0`)
-    - `u21`: [StringPoolSize]
+    - `u21`: [CompressedPoolSize]
     - `u22`: [BlockCount]
     - `u18`: [FileCount]
 - **FileEntry** (20 bytes):
@@ -115,7 +115,7 @@ Format:
 - **TOC Header**:
     - `u1`: IsFlexibleFormat (Always `0`)
     - `u2`: Preset (Always `1`)
-    - `u21`: [StringPoolSize]
+    - `u21`: [CompressedPoolSize]
     - `u22`: [BlockCount]
     - `u18`: [FileCount]
 - **FileEntry** (12 bytes):
@@ -149,7 +149,7 @@ Format:
 - **TOC Header**:
     - `u1`: IsFlexibleFormat (Always `0`)
     - `u2`: Preset (Always `2`)
-    - `u21`: [StringPoolSize]
+    - `u21`: [CompressedPoolSize]
     - `u22`: [BlockCount]
     - `u18`: [FileCount]
 - **FileEntry** (20 bytes):
@@ -183,7 +183,7 @@ Format:
     - `u1`: IsFlexibleFormat (Always `0`)
     - `u2`: Preset (Always `3`)
     - `u1`: HasHash (Always `0`)
-    - `u20`: [StringPoolSize]
+    - `u20`: [CompressedPoolSize]
     - `u16`: [BlockCount]
     - `u16`: [FileCount]
     - `u8`: Padding (Align to 8 bytes)
@@ -208,11 +208,11 @@ Format:
 
 !!! info "The `BlockCount` in the TOC header determines the number of [Block](#blocks) structs following."
 
-### StringPoolSize
+### CompressedPoolSize
 
-!!! info "The `StringPoolSize` in the TOC header specifies the size of the compressed [StringPool]"
+!!! info "The `CompressedPoolSize` in the TOC header specifies the size of the compressed [StringPool]"
 
-Based on observation, a `StringPoolSize` of 16 MB can accommodate approximately 4.4 million
+Based on observation, a `CompressedPoolSize` of 16 MB can accommodate approximately 4.4 million
 files with average path lengths.
 
 ### DecompressedBlockOffset
@@ -270,13 +270,23 @@ Size: `2 bits` (0-7)
 
 !!! note "As we do not store the length of the decompressed data, this must be determined from the compressed block."
 
+!!! warning "Nx uses non-standard zstandard compressor settings"
+
+    For more details, see [Stripping ZStandard Frame Headers]
+
 ## String Pool
 
-!!! note "Nx archives should only use '/' as the path delimiter."
+The String Pool has the following format:
 
-Raw buffer of UTF-8 deduplicated strings of file paths. Each string is null terminated.
-The strings in this pool are first lexicographically sorted (to group similar paths together); and then compressed using ZStd.
-As for decompression, size of this pool is unknown until after decompression is done; file header should specify sufficient buffer size.
+- `u32` DecompressedSize
+- `u8[DecompressedSize]` RawData
+
+The `DecompressedSize` stores the size of the pool after decompression, the compressed size can be
+found above as [CompressedPoolSize].
+
+The `RawData` is a buffer of UTF-8 deduplicated file path strings. Each string is null terminated.
+The strings in this pool are first lexicographically sorted (to group similar paths together);
+and then compressed using ZStd. This improves compression ratios.
 
 For example a valid (decompressed) pool might look like this:
 `data/textures/cat.png\0data/textures/dog.png`
@@ -295,21 +305,21 @@ See UTF-8 encoding table:
 
 When parsing the archive; we decode the StringPool into an array of strings.
 
+!!! note "Nx archives should only use '/' as the path delimiter."
+
 !!! tip "The number of items in the pool is equivalent to the number of files in the Table of Contents"
 
-    If an archive has 1000 items, the pool has 1000 strings.
+    If an archive has 1000 items, the pool has 1000 strings. The StringPool parser may only parse
+    up to [FileCount] items. Files may choose not to use file names, in which case
+    they would use a 0 length name. (Only `\0` null terminator)
 
 !!! note
 
-    It is possible to make ZSTD dictionaries for individual game directories that would further improve StringPool compression ratios.
+    It is possible to make ZSTD dictionaries for individual game directories that would further
+    improve StringPool compression ratios.
 
-    This might be added in the future but is currently not planned until additional testing and a backwards compatibility
-    plan for decompressors missing the relevant dictionaries is decided.
-
-!!! info "Safety notes"
-
-    - Files with no file names have 0 length entries.
-    - StringPool only parses up to [FileCount] items.
+    This might be added in the future but is currently not planned until additional testing and a
+    backwards compatibility plan for decompressors missing the relevant dictionaries is decided.
 
 ## Performance Considerations
 
@@ -357,9 +367,9 @@ In practice, the 128K size can handle around 5000 files when using a 20-byte [Fi
 This is considered to be the 'upper limit' in terms of file counts for mod packages; therefore
 we do not have many variants beyond 20 bytes/entry. i.e. Beyond this limit, we don't aggressively optimize.
 
-### Selecting StringPoolSize in Version/Variants
+### Selecting CompressedPoolSize in Version/Variants
 
-!!! tip "The [StringPoolSize] field size is proportional to the [FileCount]"
+!!! tip "The [CompressedPoolSize] field size is proportional to the [FileCount]"
 
 Consider the following:
 
@@ -370,14 +380,14 @@ Consider the following:
 To compensate for games with highly varying file names, ***we'll assume that the average
 file path (after compression) is 8 bytes***.
 
-***As a direct result, the [StringPoolSize] field should use 3 more bits than the [FileCount] field.***
+***As a direct result, the [CompressedPoolSize] field should use 3 more bits than the [FileCount] field.***
 
 [FileCount]: #filecount
 [StringPool]: #string-pool
 [Compression]: #compression
 [FileEntry]: #file-entries
 [Advanced-Format]: https://learn.microsoft.com/en-us/windows/win32/fileio/file-buffering#alignment-and-file-access-requirements
-[StringPoolSize]: #stringpoolsize
+[CompressedPoolSize]: #CompressedPoolSize
 [fh-version]: ./File-Header.md#versionvariant
 [BlockCount]: #blockcount
 [DecompressedBlockOffset]: #decompressedblockoffset
