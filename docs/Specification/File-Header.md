@@ -54,7 +54,7 @@ i.e.
 
 !!! warning "Chunk size should always exceed Block size."
 
-!!! warning "Reference implementation does not currently support chunks >1GiB"
+!!! warning "Chunk size is limited to 512MiB, as no ToC format currently supports larger"
 
 ### Block Size
 

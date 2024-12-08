@@ -134,7 +134,7 @@ where
             }
 
             // Check if the item fits in the current block
-            // SAFETY: Block size is limited to 1GiB (fits in 32-bit range)
+            // SAFETY: Block size is limited to 512MiB (fits in 32-bit range)
             if current_block_size + item.file_size() <= block_size as u64 {
                 // [Hot Path] Add item to SOLID block
                 current_block.push(item.clone());

@@ -388,16 +388,16 @@ impl<'a> NxPackerBuilder<'a> {
     /// Returns self for method chaining.
     pub fn with_preset(mut self, preset: PackerPreset) -> Self {
         match preset {
-            PackerPreset::Archival => {
+            PackerPreset::LocalArchival => {
                 self.settings.block_size = 16777215; // 16MiB
-                self.settings.chunk_size = 1073741824; // 1GiB
+                self.settings.chunk_size = 1 << 29; // 512MiB
                 self.settings.solid_compression_level = 16;
                 self.settings.chunked_compression_level = 16;
                 self.settings.solid_block_algorithm = CompressionPreference::ZStandard;
                 self.settings.chunked_file_algorithm = CompressionPreference::ZStandard;
                 self.settings.enable_per_extension_dictionary = true;
             }
-            PackerPreset::Archival32BitTarget => {
+            PackerPreset::LocalArchival32BitTarget => {
                 self.settings.block_size = 16777215; // 16MiB
                 self.settings.chunk_size = 16777216; // 16MiB
                 self.settings.solid_compression_level = 16;
@@ -408,7 +408,7 @@ impl<'a> NxPackerBuilder<'a> {
             }
             PackerPreset::GameBulkLoad => {
                 self.settings.block_size = 16777215; // 16MiB
-                self.settings.chunk_size = 1073741824; // 1GiB
+                self.settings.chunk_size = 1 << 29; // 512MiB
                 self.settings.solid_compression_level = 12;
                 self.settings.chunked_compression_level = 12;
                 self.settings.solid_block_algorithm = CompressionPreference::ZStandard;
@@ -517,14 +517,14 @@ pub enum PackerPreset {
     ///
     /// Uses a profile equal or similar to:
     /// - 16MiB SOLID Blocks
-    /// - 1GiB File Chunks
+    /// - 512MiB File Chunks
     /// - ZStd Compression (Level 16)
     /// - Per extension dictionary compression
-    Archival,
+    LocalArchival,
 
     /// Same as [`PackerPreset::Archival`] but with 16MiB File Chunks to avoid
     /// running out of address space.
-    Archival32BitTarget,
+    LocalArchival32BitTarget,
 
     /// Optimizes for a use case where files are loaded from a single directory in bulk.
     ///
@@ -545,7 +545,7 @@ pub enum PackerPreset {
     ///
     /// Uses a profile equal or similar to:
     /// - 16MiB SOLID Blocks
-    /// - 1GiB File Chunks
+    /// - 512MiB File Chunks
     /// - ZStd Compression (Level 12)
     /// - Per extension dictionary compression
     GameBulkLoad,
@@ -692,10 +692,10 @@ mod tests {
 
     #[test]
     fn archival_preset_sets_correct_values() {
-        let builder = NxPackerBuilder::new().with_preset(PackerPreset::Archival);
+        let builder = NxPackerBuilder::new().with_preset(PackerPreset::LocalArchival);
 
         assert_eq!(builder.settings.block_size, 16777215);
-        assert_eq!(builder.settings.chunk_size, 1073741824);
+        assert_eq!(builder.settings.chunk_size, 1 << 29);
         assert_eq!(builder.settings.solid_compression_level, 16);
         assert_eq!(builder.settings.chunked_compression_level, 16);
         assert!(matches!(

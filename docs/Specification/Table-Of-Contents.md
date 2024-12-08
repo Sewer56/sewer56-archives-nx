@@ -46,8 +46,8 @@ Format:
     - `u[FileCountBits]`: [FilePathIndex]
     - `u[BlockCountBits]`: [FirstBlockIndex]
 - [Blocks[BlockCount]](#blocks)
-    - `u30` CompressedBlockSize
-    - `u2` [Compression]
+    - `u29` CompressedBlockSize
+    - `u3` [Compression]
 - [StringPool]
     - `RawCompressedData...`
 
@@ -71,9 +71,9 @@ are placed in the lower 42 bits. Otherwise we allocate 8 bytes for the ItemCount
     - **Max Block Count**: 4M
     - **Max SOLID Block Size**: 16MiB
     - **Max File Size**: 4GiB
-    - **Max Block Size**: 1GiB
+    - **Max Block Size**: 512MiB
 - **Derived Limits**:
-    - **Max Guaranteed Content Size**: 1PiB (4M blocks * 1GiB size)
+    - **Max Guaranteed Content Size**: 0.5PiB (4M blocks * 512MiB size)
     - **Max Size @64K Block Size**: 256GiB (4M blocks * 64KiB size)
 
 Format:
@@ -91,8 +91,8 @@ Format:
     - `u18`: [FilePathIndex]
     - `u22`: [FirstBlockIndex]
 - [Blocks[BlockCount]](#blocks)
-    - `u30` CompressedBlockSize
-    - `u2` [Compression]
+    - `u29` CompressedBlockSize
+    - `u3` [Compression]
 - [StringPool]
     - `RawCompressedData...`
 
@@ -105,9 +105,9 @@ Format:
     - **Max Block Count**: 4M
     - **Max SOLID Block Size**: 16MiB
     - **Max File Size**: 4GiB
-    - **Max Block Size**: 1GiB
+    - **Max Block Size**: 512MiB
 - **Derived Limits**:
-    - **Max Guaranteed Content Size**: 1PiB (4M blocks * 1GiB size)
+    - **Max Guaranteed Content Size**: 0.5PiB (4M blocks * 512MiB size)
     - **Max Size @64K Block Size**: 256GiB (4M blocks * 64KiB size)
 
 Format:
@@ -124,8 +124,8 @@ Format:
     - `u18`: [FilePathIndex]
     - `u22`: [FirstBlockIndex]
 - [Blocks[BlockCount]](#blocks)
-    - `u30` CompressedBlockSize
-    - `u2` [Compression]
+    - `u29` CompressedBlockSize
+    - `u3` [Compression]
 - [StringPool]
     - `RawCompressedData...`
 
@@ -138,9 +138,9 @@ Format:
     - **Max Block Count**: 4M
     - **Max SOLID Block Size**: 16MiB
     - **Max File Size**: 4GiB
-    - **Max Block Size**: 1GiB
+    - **Max Block Size**: 512MiB
 - **Derived Limits**:
-    - **Max Guaranteed Content Size**: 1PiB (4M blocks * 1GiB size)
+    - **Max Guaranteed Content Size**: 0.5PiB (4M blocks * 512MiB size)
     - **Max Size @64K Block Size**: 256GiB (4M blocks * 64KiB size)
     - **Max Size @1M Block Size**: 4TiB (4M blocks * 1MiB size)
 
@@ -159,8 +159,8 @@ Format:
     - `u18`: [FilePathIndex]
     - `u22`: [FirstBlockIndex]
 - [Blocks[BlockCount]](#blocks)
-    - `u30` CompressedBlockSize
-    - `u2` [Compression]
+    - `u29` CompressedBlockSize
+    - `u3` [Compression]
 - [StringPool]
     - `RawCompressedData...`
 
@@ -173,9 +173,9 @@ Format:
     - **Max Block Count**: 64K
     - **Max SOLID Block Size**: 0 MiB
     - **Max File Size**: 4GiB
-    - **Max Block Size**: 1GiB
+    - **Max Block Size**: 512MiB
 - **Derived Limits**:
-    - **Max Guaranteed Content Size**: 64TiB (64K blocks * 1GiB block size)
+    - **Max Guaranteed Content Size**: 32TiB (64K blocks * 512MiB block size)
 
 Format:
 
@@ -193,8 +193,8 @@ Format:
     - `u16`: [FilePathIndex]
     - `u16`: [FirstBlockIndex]
 - [Blocks[BlockCount]](#blocks)
-    - `u30` CompressedBlockSize
-    - `u2` [Compression]
+    - `u29` CompressedBlockSize
+    - `u3` [Compression]
 - [StringPool]
     - `RawCompressedData...`
 
@@ -261,12 +261,12 @@ Each entry contains raw size of the block; and compression used. This avoids us 
 
 ### Compression
 
-Size: `2 bits` (0-7)
+Size: `3 bits` (0-7)
 
 - `0`: Copy
 - `1`: ZStandard
 - `2`: LZ4
-- `3`: Reserved
+- `3`: BZip3
 
 !!! note "As we do not store the length of the decompressed data, this must be determined from the compressed block."
 
@@ -387,7 +387,7 @@ file path (after compression) is 8 bytes***.
 [Compression]: #compression
 [FileEntry]: #file-entries
 [Advanced-Format]: https://learn.microsoft.com/en-us/windows/win32/fileio/file-buffering#alignment-and-file-access-requirements
-[CompressedPoolSize]: #CompressedPoolSize
+[CompressedPoolSize]: #compressedpoolsize
 [fh-version]: ./File-Header.md#versionvariant
 [BlockCount]: #blockcount
 [DecompressedBlockOffset]: #decompressedblockoffset

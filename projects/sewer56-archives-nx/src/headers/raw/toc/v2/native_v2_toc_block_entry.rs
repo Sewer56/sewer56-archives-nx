@@ -10,11 +10,11 @@ bitfield! {
     impl Debug;
     u32;
 
-    /// `u30` The compressed size of the block.
-    pub compressed_block_size, set_compressed_block_size: 31, 2;
+    /// `u29` The compressed size of the block.
+    pub compressed_block_size, set_compressed_block_size: 31, 3;
 
-    // `u2` Compression preference. Keep the raw getter/setter, but make them private
-    compression_raw, set_compression_raw: 1, 0;
+    // `u3` Compression preference. Keep the raw getter/setter, but make them private
+    compression_raw, set_compression_raw: 2, 0;
 }
 
 impl NativeV2TocBlockEntry {

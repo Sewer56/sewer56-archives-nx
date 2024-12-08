@@ -17,7 +17,7 @@ const_assert!(MAX_BLOCK_SIZE <= u32::MAX); // It's a breaking change to extend t
 pub const MIN_CHUNK_SIZE: u32 = 32_768;
 
 /// The maximum chunk size that the user is allowed to specify
-pub const MAX_CHUNK_SIZE: u32 = 1_073_741_824;
+pub const MAX_CHUNK_SIZE: u32 = 1 << 29;
 
 /// Controls the configuration settings of the packer.
 ///
@@ -110,7 +110,8 @@ impl PackingSettings {
 
         // Note: BlockSize is minus one, see spec.
         self.block_size = self.block_size.clamp(MIN_BLOCK_SIZE, MAX_BLOCK_SIZE);
-        // 1GiB because larger chunks cause problems with LZ4 and the likes
+        // 512MiB because larger chunks provide negligible gains
+        // and use too much memory on the more complex compressors
         self.chunk_size = self.chunk_size.clamp(MIN_CHUNK_SIZE, MAX_CHUNK_SIZE);
 
         self.block_size = self.block_size.next_power_of_two() - 1;
