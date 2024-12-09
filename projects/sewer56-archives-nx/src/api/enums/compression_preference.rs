@@ -15,4 +15,7 @@ pub enum CompressionPreference {
 
     /// Compress with LZ4.
     Lz4 = 2,
+
+    /// Compress with BZip3
+    Bzip3 = 3,
 }

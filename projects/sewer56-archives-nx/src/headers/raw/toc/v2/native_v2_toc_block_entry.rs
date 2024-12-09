@@ -45,6 +45,7 @@ impl NativeV2TocBlockEntry {
             0 => CompressionPreference::Copy,
             1 => CompressionPreference::ZStandard,
             2 => CompressionPreference::Lz4,
+            3 => CompressionPreference::Bzip3,
             _ => unsafe { unreachable_unchecked() },
         }
     }
@@ -57,6 +58,7 @@ impl NativeV2TocBlockEntry {
             CompressionPreference::Copy => 0,
             CompressionPreference::ZStandard => 1,
             CompressionPreference::Lz4 => 2,
+            CompressionPreference::Bzip3 => 3,
         });
     }
 }

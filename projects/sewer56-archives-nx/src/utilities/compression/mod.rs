@@ -10,6 +10,12 @@ pub mod lz4;
 #[cfg(feature = "lz4")]
 use lz4::*;
 
+#[cfg(feature = "bzip3")]
+pub mod bzip3;
+
+#[cfg(feature = "bzip3")]
+use bzip3::*;
+
 use crate::api::enums::*;
 use copy::*;
 use thiserror_no_std::Error;
@@ -32,6 +38,15 @@ pub enum NxCompressionError {
     #[cfg(not(feature = "lz4"))]
     #[error("LZ4 Feature not enabled")]
     Lz4NotEnabled,
+
+    #[cfg(feature = "bzip3")]
+    #[error(transparent)]
+    Bzip3(#[from] Bzip3CompressionError),
+    /// The BZip3 feature is not enabled. This can only ever be emitted if the error is disabled.
+    #[cfg(not(feature = "bzip3"))]
+    #[error("BZip3 Feature not enabled")]
+    Bzip3NotEnabled,
+
     #[error("The operation was terminated during a stream operation with code: {0}")]
     TerminatedStream(usize),
 }
@@ -47,6 +62,8 @@ pub enum NxDecompressionError {
     ZStandard(#[from] ZSTD_ErrorCode),
     #[cfg(feature = "lz4")]
     Lz4(#[from] Lz4DecompressionError),
+    #[cfg(feature = "bzip3")]
+    Bzip3(#[from] Bzip3DecompressionError),
 }
 
 /// Determines maximum memory needed to alloc to compress data with any method.
@@ -60,6 +77,11 @@ pub fn max_alloc_for_compress_size(source_length: usize) -> usize {
     {
         max_size = lz4::max_alloc_for_compress_size(source_length).max(max_size);
     }
+    #[cfg(feature = "bzip3")]
+    {
+        max_size = bzip3::max_alloc_for_compress_size(source_length).max(max_size);
+    }
+
     max_size = zstd::max_alloc_for_compress_size(source_length).max(max_size);
     max_size
 }
@@ -92,6 +114,10 @@ pub fn compress(
         CompressionPreference::Lz4 => lz4::compress(level, source, destination, used_copy),
         #[cfg(not(feature = "lz4"))]
         CompressionPreference::Lz4 => Err(NxCompressionError::Lz4NotEnabled),
+        #[cfg(feature = "bzip3")]
+        CompressionPreference::Bzip3 => bzip3::compress(source, destination, used_copy),
+        #[cfg(not(feature = "bzip3"))]
+        CompressionPreference::Bzip3 => Err(NxCompressionError::Bzip3NotEnabled),
         CompressionPreference::NoPreference => {
             zstd::compress(level, source, destination, used_copy)
         }
@@ -135,6 +161,12 @@ where
         }
         #[cfg(not(feature = "lz4"))]
         CompressionPreference::Lz4 => Err(NxCompressionError::Lz4NotEnabled),
+        #[cfg(feature = "bzip3")]
+        CompressionPreference::Bzip3 => {
+            bzip3::compress_streamed(source, destination, terminate_early, used_copy)
+        }
+        #[cfg(not(feature = "bzip3"))]
+        CompressionPreference::Bzip3 => Err(NxCompressionError::Bzip3NotEnabled),
         CompressionPreference::NoPreference => {
             zstd::compress_streamed(level, source, destination, terminate_early, used_copy)
         }
@@ -158,6 +190,8 @@ pub fn decompress(
         CompressionPreference::ZStandard => zstd::decompress(source, destination),
         #[cfg(feature = "lz4")]
         CompressionPreference::Lz4 => lz4::decompress(source, destination),
+        #[cfg(feature = "bzip3")]
+        CompressionPreference::Bzip3 => bzip3::decompress(source, destination),
         _ => panic!("Unsupported decompression method"),
     }
 }
@@ -179,6 +213,8 @@ pub fn decompress_partial(
         CompressionPreference::ZStandard => zstd::decompress_partial(source, destination),
         #[cfg(feature = "lz4")]
         CompressionPreference::Lz4 => lz4::decompress_partial(source, destination),
+        #[cfg(feature = "bzip3")]
+        CompressionPreference::Bzip3 => bzip3::decompress_partial(source, destination),
         _ => panic!("Unsupported partial decompression method"),
     }
 }
@@ -197,6 +233,7 @@ mod tests {
     #[case::copy(CompressionPreference::Copy)]
     #[case::zstd(CompressionPreference::ZStandard)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
+    //#[cfg_attr(feature = "bzip3", case::bzip3(CompressionPreference::Bzip3))]
     #[cfg_attr(miri, ignore)]
     fn can_round_trip(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
@@ -217,6 +254,7 @@ mod tests {
     #[case::copy(CompressionPreference::Copy)]
     #[case::zstd(CompressionPreference::ZStandard)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
+    //#[cfg_attr(feature = "bzip3", case::bzip3(CompressionPreference::Bzip3))]
     #[cfg_attr(miri, ignore)]
     fn incompressible_data_defaults_to_copy(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(INCOMPRESSIBLE_DATA.len())];
