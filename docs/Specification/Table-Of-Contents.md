@@ -267,6 +267,7 @@ Size: `3 bits` (0-7)
 - `1`: ZStandard
 - `2`: LZ4
 - `3`: BZip3
+- `4`: LZMA
 
 !!! note "As we do not store the length of the decompressed data, this must be determined from the compressed block."
 
