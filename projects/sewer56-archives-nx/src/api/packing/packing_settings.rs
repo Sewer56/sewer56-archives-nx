@@ -32,7 +32,7 @@ pub struct PackingSettings {
     /// Values are powers of 2, minus 1.\
     ///
     /// Must be smaller than [`Self::chunk_size`].
-    pub block_size: u32,
+    pub solid_size: u32,
 
     /// Size of large file chunks.
     ///
@@ -84,7 +84,7 @@ impl PackingSettings {
     /// Creates a new `PackingSettings` with default values.
     pub fn new() -> Self {
         PackingSettings {
-            block_size: 1_048_575,
+            solid_size: 1_048_575,
             chunk_size: 1_048_576,
             solid_compression_level: 12,
             chunked_compression_level: 12,
@@ -109,16 +109,16 @@ impl PackingSettings {
         }
 
         // Note: BlockSize is minus one, see spec.
-        self.block_size = self.block_size.clamp(MIN_BLOCK_SIZE, MAX_BLOCK_SIZE);
+        self.solid_size = self.solid_size.clamp(MIN_BLOCK_SIZE, MAX_BLOCK_SIZE);
         // 512MiB because larger chunks provide negligible gains
         // and use too much memory on the more complex compressors
         self.chunk_size = self.chunk_size.clamp(MIN_CHUNK_SIZE, MAX_CHUNK_SIZE);
 
-        self.block_size = self.block_size.next_power_of_two() - 1;
+        self.solid_size = self.solid_size.next_power_of_two() - 1;
         self.chunk_size = self.chunk_size.next_power_of_two();
 
-        if self.chunk_size <= self.block_size {
-            self.chunk_size = self.block_size + 1;
+        if self.chunk_size <= self.solid_size {
+            self.chunk_size = self.solid_size + 1;
         }
 
         self.solid_compression_level =
@@ -133,6 +133,7 @@ impl PackingSettings {
             CompressionPreference::Copy => 1,
             CompressionPreference::ZStandard => level.clamp(-5, 22),
             CompressionPreference::Lz4 => level.clamp(1, 12),
+            CompressionPreference::LZMA => level.clamp(0, 0),
             CompressionPreference::Bzip3 => level.clamp(1, 9), // bzip3 does not use levels
             CompressionPreference::NoPreference => unsafe { unreachable_unchecked() },
         }
@@ -159,7 +160,7 @@ mod tests {
     fn chunk_size_is_clamped(chunk_size: u32, expected: u32) {
         let mut settings = PackingSettings::new();
         settings.chunk_size = chunk_size;
-        settings.block_size = MIN_BLOCK_SIZE; // Set block_size to minimum to avoid influencing chunk_size
+        settings.solid_size = MIN_BLOCK_SIZE; // Set block_size to minimum to avoid influencing chunk_size
         settings.sanitize();
         assert_eq!(settings.chunk_size, expected);
     }
@@ -172,9 +173,9 @@ mod tests {
     )]
     fn block_size_is_clamped(value: u32, expected: u32) {
         let mut settings = PackingSettings::new();
-        settings.block_size = value;
+        settings.solid_size = value;
         settings.sanitize();
-        assert_eq!(settings.block_size, expected);
+        assert_eq!(settings.solid_size, expected);
     }
 
     #[rstest(block_size, chunk_size,
@@ -191,10 +192,10 @@ mod tests {
     )]
     fn chunk_size_must_be_greater_than_block_size(block_size: u32, chunk_size: u32) {
         let mut settings = PackingSettings::new();
-        settings.block_size = block_size;
+        settings.solid_size = block_size;
         settings.chunk_size = chunk_size;
         settings.sanitize();
-        assert!(settings.chunk_size > settings.block_size);
+        assert!(settings.chunk_size > settings.solid_size);
     }
 
     #[rstest(value, expected,

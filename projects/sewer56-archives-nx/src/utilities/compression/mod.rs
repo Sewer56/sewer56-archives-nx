@@ -121,6 +121,7 @@ pub fn compress(
         CompressionPreference::NoPreference => {
             zstd::compress(level, source, destination, used_copy)
         }
+        CompressionPreference::LZMA => todo!(),
     }
 }
 
@@ -170,6 +171,7 @@ where
         CompressionPreference::NoPreference => {
             zstd::compress_streamed(level, source, destination, terminate_early, used_copy)
         }
+        CompressionPreference::LZMA => todo!(),
     }
 }
 

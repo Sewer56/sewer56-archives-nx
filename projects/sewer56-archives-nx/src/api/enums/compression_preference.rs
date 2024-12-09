@@ -18,4 +18,7 @@ pub enum CompressionPreference {
 
     /// Compress with BZip3
     Bzip3 = 3,
+
+    /// Compress with LZMA (LZMA-SDK)
+    LZMA = 4,
 }

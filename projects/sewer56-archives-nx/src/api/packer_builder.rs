@@ -214,8 +214,8 @@ impl<'a> NxPackerBuilder<'a> {
     ///
     /// [`MIN_BLOCK_SIZE`]: crate::api::packing::packing_settings::MIN_BLOCK_SIZE
     /// [`MAX_BLOCK_SIZE`]: crate::api::packing::packing_settings::MAX_BLOCK_SIZE
-    pub fn with_block_size(mut self, block_size: u32) -> Self {
-        self.settings.block_size = block_size;
+    pub fn with_solid_size(mut self, block_size: u32) -> Self {
+        self.settings.solid_size = block_size;
         self
     }
 
@@ -388,26 +388,62 @@ impl<'a> NxPackerBuilder<'a> {
     /// Returns self for method chaining.
     pub fn with_preset(mut self, preset: PackerPreset) -> Self {
         match preset {
-            PackerPreset::LocalArchival => {
-                self.settings.block_size = 16777215; // 16MiB
+            PackerPreset::LocalArchivalSSD => {
+                self.settings.solid_size = 16777215; // 16MiB
                 self.settings.chunk_size = 1 << 29; // 512MiB
-                self.settings.solid_compression_level = 16;
-                self.settings.chunked_compression_level = 16;
+                self.settings.solid_compression_level = 9;
+                self.settings.chunked_compression_level = 9;
+                self.settings.solid_block_algorithm = CompressionPreference::LZMA;
+                self.settings.chunked_file_algorithm = CompressionPreference::LZMA;
+                self.settings.enable_per_extension_dictionary = false;
+            }
+            PackerPreset::LocalArchivalSSD32BitTarget => {
+                self.settings.solid_size = 16777215; // 16MiB
+                self.settings.chunk_size = 16777216; // 16MiB
+                self.settings.solid_compression_level = 9;
+                self.settings.chunked_compression_level = 9;
+                self.settings.solid_block_algorithm = CompressionPreference::LZMA;
+                self.settings.chunked_file_algorithm = CompressionPreference::LZMA;
+                self.settings.enable_per_extension_dictionary = true;
+            }
+            PackerPreset::LocalArchivalNVME => {
+                self.settings.solid_size = (1 << 29) - 1; // 512MiB
+                self.settings.chunk_size = 1 << 29; // 512MiB
+                self.settings.solid_compression_level = 22;
+                self.settings.chunked_compression_level = 22;
+                self.settings.solid_block_algorithm = CompressionPreference::ZStandard;
+                self.settings.chunked_file_algorithm = CompressionPreference::ZStandard;
+                self.settings.enable_per_extension_dictionary = false;
+            }
+            PackerPreset::LocalArchivalNVME32BitTarget => {
+                self.settings.solid_size = 16777215; // 16MiB
+                self.settings.chunk_size = 16777216; // 16MiB
+                self.settings.solid_compression_level = 22;
+                self.settings.chunked_compression_level = 22;
                 self.settings.solid_block_algorithm = CompressionPreference::ZStandard;
                 self.settings.chunked_file_algorithm = CompressionPreference::ZStandard;
                 self.settings.enable_per_extension_dictionary = true;
             }
-            PackerPreset::LocalArchival32BitTarget => {
-                self.settings.block_size = 16777215; // 16MiB
+            PackerPreset::WebUpload => {
+                self.settings.solid_size = 16777215; // 16MiB
                 self.settings.chunk_size = 16777216; // 16MiB
-                self.settings.solid_compression_level = 16;
-                self.settings.chunked_compression_level = 16;
-                self.settings.solid_block_algorithm = CompressionPreference::ZStandard;
-                self.settings.chunked_file_algorithm = CompressionPreference::ZStandard;
-                self.settings.enable_per_extension_dictionary = true;
+                self.settings.solid_compression_level = 0;
+                self.settings.chunked_compression_level = 0;
+                self.settings.solid_block_algorithm = CompressionPreference::Bzip3;
+                self.settings.chunked_file_algorithm = CompressionPreference::Bzip3;
+                self.settings.enable_per_extension_dictionary = false;
+            }
+            PackerPreset::WebUploadNoSolid => {
+                self.settings.solid_size = 0; // Ensure server side deduplication.
+                self.settings.chunk_size = 16777216; // 16MiB
+                self.settings.solid_compression_level = 0;
+                self.settings.chunked_compression_level = 0;
+                self.settings.solid_block_algorithm = CompressionPreference::Bzip3;
+                self.settings.chunked_file_algorithm = CompressionPreference::Bzip3;
+                self.settings.enable_per_extension_dictionary = false;
             }
             PackerPreset::GameBulkLoad => {
-                self.settings.block_size = 16777215; // 16MiB
+                self.settings.solid_size = 16777215; // 16MiB
                 self.settings.chunk_size = 1 << 29; // 512MiB
                 self.settings.solid_compression_level = 12;
                 self.settings.chunked_compression_level = 12;
@@ -416,7 +452,7 @@ impl<'a> NxPackerBuilder<'a> {
                 self.settings.enable_per_extension_dictionary = true;
             }
             PackerPreset::GameBulkLoad32BitTarget => {
-                self.settings.block_size = 16777215; // 16MiB
+                self.settings.solid_size = 16777215; // 16MiB
                 self.settings.chunk_size = 16777216; // 16MiB
                 self.settings.solid_compression_level = 12;
                 self.settings.chunked_compression_level = 12;
@@ -425,7 +461,7 @@ impl<'a> NxPackerBuilder<'a> {
                 self.settings.enable_per_extension_dictionary = true;
             }
             PackerPreset::LowLatencyVFS => {
-                self.settings.block_size = 0; // No SOLID Blocks
+                self.settings.solid_size = 0; // No SOLID Blocks
                 self.settings.chunk_size = 131072; // 128KiB
                 self.settings.solid_compression_level = 12;
                 self.settings.chunked_compression_level = 12;
@@ -518,18 +554,70 @@ pub enum PackerPreset {
     /// Uses a profile equal or similar to:
     /// - 16MiB SOLID Blocks
     /// - 512MiB File Chunks
-    /// - ZStd Compression (Level 16)
-    /// - Per extension dictionary compression
-    LocalArchival,
+    /// - LZMA Compression (Level 9)
+    LocalArchivalSSD,
 
-    /// Same as [`PackerPreset::Archival`] but with 16MiB File Chunks to avoid
+    /// Same as [`PackerPreset::LocalArchivalSSD`] but with 16MiB File Chunks to avoid
     /// running out of address space.
-    LocalArchival32BitTarget,
+    LocalArchivalSSD32BitTarget,
+
+    /// Optimized for longer term storage and extracting whole archive at once.
+    /// Basically use in place of .zip.
+    ///
+    /// # Settings
+    ///
+    /// Uses a profile equal or similar to:
+    /// - 512MiB SOLID Blocks
+    /// - 512MiB File Chunks
+    /// - ZStandard Compression (level 22/Max)
+    LocalArchivalNVME,
+
+    /// Same as [`PackerPreset::LocalArchivalNVME`] but with 16MiB File Chunks to avoid
+    /// running out of address space.
+    ///
+    /// Uses a profile equal or similar to:
+    /// - 16MiB SOLID Blocks
+    /// - 512MiB File Chunks
+    /// - ZStandard Compression (level 22/Max)
+    /// - Per extension dictionary compression
+    LocalArchivalNVME32BitTarget,
+
+    /// Optimized for web uploads to generic services with no special handling
+    /// for Nx.
+    ///
+    /// # Settings
+    ///
+    /// Uses a profile equal or similar to:
+    /// - 16MiB SOLID Blocks
+    /// - 16MiB File Chunks
+    /// - Uses BZip3 (minimized file size)
+    ///
+    /// # Remarks
+    ///
+    /// If block count is low, this setting may default back to LZMA, sacrificing
+    /// a tiny bit of ratio for 5-7x decompression speed.
+    ///
+    /// Currently 'low' means 'under 8'.
+    WebUpload,
+
+    /// Optimized for web uploads to specialized services with special handling of
+    /// Nx.
+    ///
+    /// These 'specialized' services are ones that would split up the blocks
+    /// into an individual Nx archive into separate blocks.
+    ///
+    /// # Settings
+    ///
+    /// Uses a profile equal or similar to:
+    /// - No SOLID Blocks
+    /// - 16MiB File Chunks
+    /// - Uses BZip3 (minimized file size)
+    WebUploadNoSolid,
 
     /// Optimizes for a use case where files are loaded from a single directory in bulk.
     ///
-    /// This is a variation of [`PackerPreset::Archival`], but we use level 12 to optimize for
-    /// decompression speed.
+    /// This is a variation of [`PackerPreset::LocalArchivalNVME`], but we use level 12 of zstd to
+    /// optimize for decompression speed.
     ///
     /// # Remarks
     ///
@@ -574,9 +662,9 @@ mod tests {
     use std::io::Cursor;
 
     #[test]
-    fn can_configure_block_size() {
-        let builder = NxPackerBuilder::new().with_block_size(65536);
-        assert_eq!(builder.settings.block_size, 65536); // not yet sanitized
+    fn can_configure_solid_size() {
+        let builder = NxPackerBuilder::new().with_solid_size(65536);
+        assert_eq!(builder.settings.solid_size, 65536); // not yet sanitized
     }
 
     #[test]
@@ -692,9 +780,9 @@ mod tests {
 
     #[test]
     fn archival_preset_sets_correct_values() {
-        let builder = NxPackerBuilder::new().with_preset(PackerPreset::LocalArchival);
+        let builder = NxPackerBuilder::new().with_preset(PackerPreset::LocalArchivalSSD);
 
-        assert_eq!(builder.settings.block_size, 16777215);
+        assert_eq!(builder.settings.solid_size, 16777215);
         assert_eq!(builder.settings.chunk_size, 1 << 29);
         assert_eq!(builder.settings.solid_compression_level, 16);
         assert_eq!(builder.settings.chunked_compression_level, 16);
@@ -713,7 +801,7 @@ mod tests {
     fn low_latency_vfs_preset_sets_correct_values() {
         let builder = NxPackerBuilder::new().with_preset(PackerPreset::LowLatencyVFS);
 
-        assert_eq!(builder.settings.block_size, 0);
+        assert_eq!(builder.settings.solid_size, 0);
         assert_eq!(builder.settings.chunk_size, 131072);
         assert_eq!(builder.settings.solid_compression_level, 12);
         assert_eq!(builder.settings.chunked_compression_level, 12);
