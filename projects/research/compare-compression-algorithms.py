@@ -65,10 +65,18 @@ def compress_file(file_path: str, output_dir: str, compressor: str, input_base_p
             # Path to the file bzip3 will create
             input_bz3 = f"{file_path}.bz3"
         
-        elif compressor == 'kanzi':
+        elif compressor == 'kanzi 7':
             output_file = f"{output_path}.knz"
             cmd = ['kanzi', '-c', f'--input={file_path}', f'--output={output_file}', '-l', '7', '--force']
-        
+
+        elif compressor == 'kanzi 6':
+            output_file = f"{output_path}.knz"
+            cmd = ['kanzi', '-c', f'--input={file_path}', f'--output={output_file}', '-l', '6', '--force']
+
+        elif compressor == 'kanzi 5':
+            output_file = f"{output_path}.knz"
+            cmd = ['kanzi', '-c', f'--input={file_path}', f'--output={output_file}', '-l', '5', '--force']
+
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             print(f"Error compressing {file_path} with {compressor}:")
@@ -115,7 +123,7 @@ def main():
     # Create base output directory with timestamp beside the input directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     base_output_dir = os.path.join(parent_dir, f"{input_name}_compressed_{timestamp}")
-    compressors = ['7z', 'xz', 'bzip3', 'kanzi']
+    compressors = ['7z', 'xz', 'bzip3', 'kanzi 7']
 
     # Get list of all files
     files = get_files_list(input_dir)
