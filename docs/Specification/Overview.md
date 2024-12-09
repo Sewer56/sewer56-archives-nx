@@ -212,8 +212,10 @@ They currently include:
 
 - Local Archiving (SSD): Maximized Compression ratio with LZMA.
 - Local Archiving (NVMe): Compression at ZStandard Max Level.
-- Web Uploads (Generic): Maximized Compression ratio with BZip3.
-- Web Uploads (No SOLID): BZip3. For websites which wish to optimize their storage of Nx archives.
+- Web Uploads (Generic): Maximized Compression ratio with.
+  - BZip3 for specific file extensions (e.g. DDS)
+  - LZMA for other data
+- Web Uploads (No SOLID): BZip3 and LZMA, no ZStandard. For websites which wish to optimize their storage of Nx archives.
   - Split up Nx archives into blocks.
   - Store them deduplicated on CDN.
   - Reassemble archives upon user downloading a file.

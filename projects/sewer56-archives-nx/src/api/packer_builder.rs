@@ -424,7 +424,7 @@ impl<'a> NxPackerBuilder<'a> {
                 self.settings.chunked_file_algorithm = CompressionPreference::ZStandard;
                 self.settings.enable_per_extension_dictionary = true;
             }
-            PackerPreset::WebUpload => {
+            PackerPreset::WebUploadGeneric => {
                 self.settings.solid_size = 16777215; // 16MiB
                 self.settings.chunk_size = 16777216; // 16MiB
                 self.settings.solid_compression_level = 0;
@@ -433,7 +433,7 @@ impl<'a> NxPackerBuilder<'a> {
                 self.settings.chunked_file_algorithm = CompressionPreference::Bzip3;
                 self.settings.enable_per_extension_dictionary = false;
             }
-            PackerPreset::WebUploadNoSolid => {
+            PackerPreset::WebUploadSpecialized => {
                 self.settings.solid_size = 0; // Ensure server side deduplication.
                 self.settings.chunk_size = 16777216; // 16MiB
                 self.settings.solid_compression_level = 0;
@@ -588,17 +588,20 @@ pub enum PackerPreset {
     /// # Settings
     ///
     /// Uses a profile equal or similar to:
-    /// - 16MiB SOLID Blocks
-    /// - 16MiB File Chunks
-    /// - Uses BZip3 (minimized file size)
+    /// - 1MiB SOLID Blocks (BZip3/LZMA)
+    /// - 512MiB File Chunks (LZMA) [2.6Gi memory usage per thread w/ 256MiB dict].
+    ///     - BZip3 blocks are chunked into 16MiB.
+    /// - Uses a mix of BZip3 (specific file formats) and LZMA (others)
     ///
     /// # Remarks
     ///
-    /// If block count is low, this setting may default back to LZMA, sacrificing
+    /// If block count is low, this setting may default back to LZMA only, sacrificing
     /// a tiny bit of ratio for 5-7x decompression speed.
     ///
     /// Currently 'low' means 'under 8'.
-    WebUpload,
+    ///
+    /// This setting tries to strike a balance between using small blocks
+    WebUploadGeneric,
 
     /// Optimized for web uploads to specialized services with special handling of
     /// Nx.
@@ -611,8 +614,8 @@ pub enum PackerPreset {
     /// Uses a profile equal or similar to:
     /// - No SOLID Blocks
     /// - 16MiB File Chunks
-    /// - Uses BZip3 (minimized file size)
-    WebUploadNoSolid,
+    /// - Uses a mix of BZip3 (specific file formats) and LZMA
+    WebUploadSpecialized,
 
     /// Optimizes for a use case where files are loaded from a single directory in bulk.
     ///
