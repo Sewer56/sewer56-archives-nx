@@ -787,17 +787,17 @@ mod tests {
 
         assert_eq!(builder.settings.solid_size, 16777215);
         assert_eq!(builder.settings.chunk_size, 1 << 29);
-        assert_eq!(builder.settings.solid_compression_level, 16);
-        assert_eq!(builder.settings.chunked_compression_level, 16);
+        assert_eq!(builder.settings.solid_compression_level, 9);
+        assert_eq!(builder.settings.chunked_compression_level, 9);
         assert!(matches!(
             builder.settings.solid_block_algorithm,
-            CompressionPreference::ZStandard
+            CompressionPreference::LZMA
         ));
         assert!(matches!(
             builder.settings.chunked_file_algorithm,
-            CompressionPreference::ZStandard
+            CompressionPreference::LZMA
         ));
-        assert!(builder.settings.enable_per_extension_dictionary);
+        assert!(!builder.settings.enable_per_extension_dictionary);
     }
 
     #[test]
