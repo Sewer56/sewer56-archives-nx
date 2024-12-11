@@ -25,7 +25,7 @@ use std::io::{Read, Seek};
 /// ```no_run
 /// use sewer56_archives_nx::api::packer_builder::*;
 /// let builder = NxPackerBuilder::new()
-///     .with_block_size(1048576)
+///     .with_solid_size(1048576)
 ///     .with_chunk_size(4194304)
 ///     .with_chunked_deduplication(true);
 /// ```
