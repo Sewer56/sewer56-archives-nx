@@ -1,6 +1,7 @@
 use core::{cmp::max, hint::unreachable_unchecked, ptr::copy_nonoverlapping};
 
 use super::{copy, CompressionResult, DecompressionResult};
+use crate::prelude::*;
 use crate::utilities::compression::NxCompressionError;
 use derive_more::derive::{Deref, DerefMut};
 use derive_new::new;
@@ -95,6 +96,12 @@ pub fn compress(source: &[u8], destination: &mut [u8], used_copy: &mut bool) -> 
         return Err(Bzip3CompressionError::DataTooLarge.into());
     }
 
+    // If destination is too small, defer back to copy.
+    // bz3 doesn't do that check, so we need to do it.
+    if destination.len() < max_alloc_for_compress_size(source.len()) {
+        return copy::compress(source, destination, used_copy);
+    }
+
     // bzip3 has a min block size of 64K
     let block_size = max(source.len(), MIN_BLOCK_SIZE) as i32;
 
@@ -105,8 +112,6 @@ pub fn compress(source: &[u8], destination: &mut [u8], used_copy: &mut bool) -> 
     }
 
     // Encode single block
-    // SAFETY: Program will always use bound call before this
-    debug_assert!(destination.len() >= source.len());
     unsafe { copy_nonoverlapping(source.as_ptr(), destination.as_mut_ptr(), source.len()) };
     let result = unsafe { bz3_encode_block(*state, destination.as_mut_ptr(), source.len() as i32) };
 
@@ -164,7 +169,7 @@ where
 /// # Parameters
 ///
 /// * `source`: Source data to decompress.
-/// * `destination`: Destination buffer for decompressed data.
+/// * `destination`: Destination buffer for decompressed data. Should have length of the data inside.
 ///
 /// # Returns
 ///
@@ -185,14 +190,24 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
         return Err(Bzip3DecompressionError::InitFailed.into());
     }
 
+    // TODO: This is inefficient, but in some cases, it's not possible to give more bytes to destination
+    //       when calling this, for example when working with memory mapped files.
+    // It's not documented currently, but destination in bz3 needs to be bounded
+    let dest_num_bytes = unsafe { bz3_bound(destination.len()) };
+    let mut decomp_destination = unsafe { Box::new_uninit_slice(dest_num_bytes).assume_init() };
+
     // Decode single block
     let result = unsafe {
         // SAFETY: Program will always use bound call before this
-        debug_assert!(destination.len() >= source.len());
-        copy_nonoverlapping(source.as_ptr(), destination.as_mut_ptr(), source.len());
+        copy_nonoverlapping(
+            source.as_ptr(),
+            decomp_destination.as_mut_ptr(),
+            source.len(),
+        );
+
         bz3_decode_block(
             *state,
-            destination.as_mut_ptr(),
+            decomp_destination.as_mut_ptr(),
             source.len() as i32,
             destination.len() as i32,
         )
@@ -203,6 +218,15 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
         let error_code = unsafe { bz3_last_error(*state) };
         return Err(convert_error(error_code as i32).into());
     }
+
+    // Copy decompressed data to original destination
+    unsafe {
+        copy_nonoverlapping(
+            decomp_destination.as_ptr(),
+            destination.as_mut_ptr(),
+            result as usize,
+        )
+    };
 
     Ok(result as usize)
 }
@@ -220,5 +244,8 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
 ///
 /// The number of bytes written to the destination, or an error.
 pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
+    // Partial decompression is not supported in bzip3, we must emulate it by
+    // allocating a new buffer.
+
     decompress(source, destination)
 }

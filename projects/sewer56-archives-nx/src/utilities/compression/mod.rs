@@ -223,6 +223,8 @@ pub fn decompress_partial(
 
 #[cfg(test)]
 mod tests {
+    use std::io::Write;
+
     use super::*;
     use alloc::vec;
     use rstest::rstest;
@@ -234,9 +236,10 @@ mod tests {
     #[rstest]
     #[case::copy(CompressionPreference::Copy)]
     #[case::zstd(CompressionPreference::ZStandard)]
+    #[case::bzip3(CompressionPreference::Bzip3)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
-    //#[cfg_attr(feature = "bzip3", case::bzip3(CompressionPreference::Bzip3))]
-    #[cfg_attr(miri, ignore)]
+    #[cfg_attr(feature = "bzip3", case::bzip3(CompressionPreference::Bzip3))]
+    //#[cfg_attr(miri, ignore)]
     fn can_round_trip(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
         let mut decompressed = vec![0u8; TEST_DATA.len()];
@@ -245,6 +248,9 @@ mod tests {
         let compressed_size =
             compress(method, 0, TEST_DATA, &mut compressed, &mut used_copy).unwrap();
         compressed.truncate(compressed_size);
+        use std::fs::File;
+        let mut file = File::create("/home/sewer/Tools/bzip3/bzip3/examples/test.out").unwrap();
+        file.write_all(&compressed).unwrap();
 
         let decompressed_size = decompress(method, &compressed, &mut decompressed).unwrap();
         decompressed.truncate(decompressed_size);
@@ -256,7 +262,7 @@ mod tests {
     #[case::copy(CompressionPreference::Copy)]
     #[case::zstd(CompressionPreference::ZStandard)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
-    //#[cfg_attr(feature = "bzip3", case::bzip3(CompressionPreference::Bzip3))]
+    #[cfg_attr(feature = "bzip3", case::bzip3(CompressionPreference::Bzip3))]
     #[cfg_attr(miri, ignore)]
     fn incompressible_data_defaults_to_copy(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(INCOMPRESSIBLE_DATA.len())];
@@ -288,6 +294,13 @@ mod tests {
         case::lz4(
             CompressionPreference::Lz4,
             NxCompressionError::Lz4(Lz4CompressionError::CompressionFailed)
+        )
+    )]
+    #[cfg_attr(
+        feature = "bzip3",
+        case::bzip3(
+            CompressionPreference::Bzip3,
+            NxCompressionError::Copy(CopyCompressionError::DestinationTooSmall) // BZip3 delegates to copy, which then fails due to too small buffer.
         )
     )]
     #[cfg_attr(miri, ignore)]
@@ -348,6 +361,10 @@ mod tests {
         CompressionPreference::ZStandard,
         NxDecompressionError::ZStandard(ZSTD_ErrorCode::ZSTD_error_dstSize_tooSmall)
     )]
+    #[case::bzip3(
+        CompressionPreference::Bzip3,
+        NxDecompressionError::Bzip3(Bzip3CompressionError::CrcFailed)
+    )]
     #[cfg_attr(
         feature = "lz4",
         case::lz4(
@@ -355,7 +372,14 @@ mod tests {
             NxDecompressionError::Lz4(Lz4DecompressionError::DecompressionFailed)
         )
     )]
-    #[cfg_attr(miri, ignore)]
+    #[cfg_attr(
+        feature = "bzip3",
+        case::bzip3(
+            CompressionPreference::Bzip3,
+            NxDecompressionError::Bzip3(Bzip3CompressionError::CrcFailed)
+        )
+    )]
+    //#[cfg_attr(miri, ignore)]
     fn decompress_buffer_too_small_returns_error(
         #[case] method: CompressionPreference,
         #[case] expected_decompression_error: NxDecompressionError,
