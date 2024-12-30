@@ -104,6 +104,13 @@ def compress_file(file_path: str, output_dir: str, compressor: str, input_base_p
             cmd = ['zstd', '-22', '--ultra', '-T1', '-f', file_path, '-o', output_file]
             os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
+        elif compressor == 'zlib':
+            output_file = f"{output_path}.zz"
+            # pigz will add .zz to the input file
+            # 512MiB block size, larger than our input files in practice, thankfully.
+            input_zz = f"{file_path}.zz"
+            cmd = ['pigz', '-z', '-9', '-k', '-b', '512000', file_path]
+
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             print(f"Error compressing {file_path} with {compressor}:")
@@ -124,6 +131,13 @@ def compress_file(file_path: str, output_dir: str, compressor: str, input_base_p
                 shutil.move(input_xz, output_file)
             else:
                 print(f"Error: xz compressed file not found: {input_xz}")
+                return 0, 0
+        elif compressor == 'zlib':
+            if os.path.exists(input_zz):
+                os.makedirs(os.path.dirname(output_file), exist_ok=True)
+                shutil.move(input_zz, output_file)
+            else:
+                print(f"Error: zlib compressed file not found: {input_zz}")
                 return 0, 0
         
         compressed_size = os.path.getsize(output_file)
