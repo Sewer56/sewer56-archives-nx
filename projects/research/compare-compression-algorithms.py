@@ -164,7 +164,7 @@ def main():
     # Create base output directory with timestamp beside the input directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     base_output_dir = os.path.join(parent_dir, f"{input_name}_compressed_{timestamp}")
-    compressors = ['zstd 22', 'kanzi 7', 'bzip3 16m', '7z']
+    compressors = ['zstd 22', 'bzip3 16m', '7z']
 
     # Get list of all files
     files = get_files_list(input_dir)
