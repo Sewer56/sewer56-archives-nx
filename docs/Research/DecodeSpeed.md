@@ -443,6 +443,18 @@ zstd -b -d -i20 wrstonefloor01_0_1M.dds.nohuf.zst
 A minimal regression in decode speed.
 Same can be observed at lower levels.
 
+### No Checksum
+
+This applies only to zstd CLI, we don't hash compare the file in Nx unless requested.
+
+```
+zstd --no-check
+```
+
+When compressing with zstd, add `no-check` to the commandline, this will produce a file without a checksum.
+
+A no-checksum file will be faster during benchmarking, by around 5%.
+
 ## Decompress Speed Targets
 
 !!! info "How fast do we need to decode files?"
