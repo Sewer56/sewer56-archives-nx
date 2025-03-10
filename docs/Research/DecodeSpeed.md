@@ -551,10 +551,10 @@ dotnet ./cli/NexusMods.Archives.Nx.Cli.dll benchmark --source out-1M.nx --thread
 
     Worst case scenarios (1), we can expect decompression around ~20% slower than this.
 
-#### 1M Blocks
+#### 1M Chunks
 
 ```
-dotnet ./cli/NexusMods.Archives.Nx.Cli.dll pack --source "textures" --target "out-1M.nx" --solidlevel 16 --chunkedlevel 16 --blocksize 1048576
+dotnet ./cli/NexusMods.Archives.Nx.Cli.dll pack --source "textures" --target "out-1M.nx" --solidlevel 16 --chunkedlevel 16 --chunksize 1048576
 ```
 
 AMD Ryzen 9 5900X, 32GB DDR4-3200 (16-17-17-35)
@@ -570,10 +570,10 @@ AMD Ryzen 9 5900X, 32GB DDR4-3200 (16-17-17-35)
 | 12      | ~11.74 GiB/s  |
 | 24      | ~12.00 GiB/s  |
 
-#### 1M Blocks, Long Mode
+#### 1M Chunks, Long Mode
 
 ```
-dotnet ./cli/NexusMods.Archives.Nx.Cli.dll pack --source "textures" --target "out-1M-long.nx" --solidlevel 22 --chunkedlevel 22  --blocksize 1048576
+dotnet ./cli/NexusMods.Archives.Nx.Cli.dll pack --source "textures" --target "out-1M-long.nx" --solidlevel 22 --chunkedlevel 22  --chunksize 1048576
 ```
 
 AMD Ryzen 9 5900X, 32GB DDR4-3200 (16-17-17-35)
@@ -589,10 +589,10 @@ AMD Ryzen 9 5900X, 32GB DDR4-3200 (16-17-17-35)
 | 12      | ~10.65 GiB/s  |
 | 24      | ~11.49 GiB/s  |
 
-#### 16M Blocks
+#### 16M Chunks
 
 ```
-dotnet ./cli/NexusMods.Archives.Nx.Cli.dll pack --source "textures" --target "out-16M.nx" --solidlevel 16 --chunkedlevel 16 --blocksize 16777216
+dotnet ./cli/NexusMods.Archives.Nx.Cli.dll pack --source "textures" --target "out-16M.nx" --solidlevel 16 --chunkedlevel 16 --chunksize 16777216
 ```
 
 AMD Ryzen 9 5900X, 32GB DDR4-3200 (16-17-17-35)
@@ -612,10 +612,10 @@ AMD Ryzen 9 5900X, 32GB DDR4-3200 (16-17-17-35)
 
     To the best of my knowledge, increased CPU core cache misses.
 
-#### 16M Blocks, Long Mode
+#### 16M Chunks, Long Mode
 
 ```
-dotnet ./cli/NexusMods.Archives.Nx.Cli.dll pack --source "textures" --target "out-16M-long.nx" --solidlevel 22 --chunkedlevel 22 --blocksize 16777216
+dotnet ./cli/NexusMods.Archives.Nx.Cli.dll pack --source "textures" --target "out-16M-long.nx" --solidlevel 22 --chunkedlevel 22 --chunksize 16777216
 ```
 
 AMD Ryzen 9 5900X, 32GB DDR4-3200 (16-17-17-35)
