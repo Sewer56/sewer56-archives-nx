@@ -512,7 +512,7 @@ pub fn calculate_toc_size(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use allocator_api2::vec;
+    use crate::prelude::vec;
     use rstest::rstest;
 
     // Shared test setup

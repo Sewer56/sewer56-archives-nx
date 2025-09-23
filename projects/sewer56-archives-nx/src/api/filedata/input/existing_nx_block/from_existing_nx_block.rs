@@ -76,7 +76,7 @@ impl ReadOnlyFileData for DecompressedNxBlockFileData<'_> {
 mod tests {
     use super::*;
     use crate::api::{enums::CompressionPreference, filedata::FromStreamProvider};
-    use allocator_api2::vec;
+    use crate::prelude::vec;
     use std::io::Cursor;
 
     /// Helper function to create a test block with given data

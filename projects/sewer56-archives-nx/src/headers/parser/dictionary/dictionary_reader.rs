@@ -368,7 +368,7 @@ mod tests {
         implementation::pack::blocks::polyfills::NO_DICTIONARY_INDEX,
         utilities::tests::mock_block::create_mock_block,
     };
-    use allocator_api2::vec;
+    use crate::prelude::vec;
 
     #[rstest]
     #[case(false)]
@@ -483,7 +483,7 @@ mod invalid_data_tests {
     use rstest::rstest;
     use crate::utilities::tests::mock_block::create_mock_block;
     use super::*;
-    use allocator_api2::vec;    
+    use crate::prelude::vec;
 
     #[test]
     fn insufficient_dict_header_bytes() {

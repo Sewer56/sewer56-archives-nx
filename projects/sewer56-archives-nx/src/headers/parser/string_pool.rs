@@ -569,6 +569,7 @@ fn calc_raw_data_size<T: HasRelativePath>(items: &mut [T]) -> usize {
 #[cfg(test)]
 mod tests {
     use crate::headers::raw::toc::*;
+    use crate::prelude::vec;
     use crate::prelude::*;
     use crate::utilities::compression::zstd::force_compress;
     use crate::utilities::compression::NxDecompressionError;
@@ -579,7 +580,6 @@ mod tests {
             string_pool_common::StringPoolFormat::{self, *},
         },
     };
-    use allocator_api2::vec;
     use rstest::rstest;
     use zstd_sys::ZSTD_ErrorCode::ZSTD_error_srcSize_wrong;
 

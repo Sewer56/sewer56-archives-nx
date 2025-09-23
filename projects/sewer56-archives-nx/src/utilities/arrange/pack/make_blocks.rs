@@ -1,3 +1,4 @@
+use crate::prelude::vec;
 use crate::prelude::*;
 use crate::unsize_box2;
 use crate::{
@@ -8,7 +9,6 @@ use crate::{
 };
 use alloc::rc::Rc;
 use alloc::sync::Arc;
-use allocator_api2::vec;
 use core::mem::take;
 use hashbrown::HashMap; // esoteric platform safe
 
@@ -256,8 +256,8 @@ fn chunk_item<T>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::prelude::vec;
     use alloc::rc::Rc;
-    use allocator_api2::vec;
     use hashbrown::HashMap;
 
     #[derive(Clone)]
