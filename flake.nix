@@ -2,40 +2,62 @@
   description = "Development environment for sewer56-archives-nx";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
-    rust-overlay = {
-      url = "github:oxalica/rust-overlay";
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
+    fenix = {
+      url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = {
-    self, # Not unused, is required for flake.
-    nixpkgs,
-    flake-utils,
-    rust-overlay,
-  }:
-    flake-utils.lib.eachDefaultSystem (
-      system: let
-        overlays = [(import rust-overlay)];
-        pkgs = import nixpkgs {
-          inherit system overlays;
-        };
+  outputs = inputs: let
+    supportedSystems = [
+      "x86_64-linux"
+      "aarch64-linux"
+      "x86_64-darwin"
+      "aarch64-darwin"
+    ];
+    forEachSupportedSystem = f:
+      inputs.nixpkgs.lib.genAttrs supportedSystems (
+        system:
+          f {
+            pkgs = import inputs.nixpkgs {
+              inherit system;
+              overlays = [
+                inputs.self.overlays.default
+              ];
+            };
+          }
+      );
+  in {
+    overlays.default = final: prev: {
+      rustToolchain = with inputs.fenix.packages.${prev.stdenv.hostPlatform.system};
+        combine (
+          with latest; [
+            clippy
+            rustc
+            cargo
+            rustfmt
+            rust-src
+          ]
+        );
+    };
 
-        # Read rust-toolchain.toml to get the correct Rust version
-        rustToolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
-      in {
-        devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            # Rust toolchain
+    devShells = forEachSupportedSystem (
+      {pkgs}: {
+        default = pkgs.mkShell {
+          packages = with pkgs; [
             rustToolchain
+            openssl
+            pkg-config
+            cargo-deny
+            cargo-edit
+            cargo-watch
+            rust-analyzer
 
             # C/C++ build environment
             gcc
             clang
             cmake
-            pkg-config
 
             # C standard library headers
             glibc.dev
@@ -50,17 +72,23 @@
             python3
           ];
 
+          env = {
+            # Required by rust-analyzer
+            RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";
+
+            # Environment variables for C compilation
+            LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+            C_INCLUDE_PATH = "${pkgs.glibc.dev}/include";
+            CPLUS_INCLUDE_PATH = "${pkgs.glibc.dev}/include";
+          };
+
           shellHook = ''
             echo "🦀 Rust development environment loaded"
             echo "Rust version: $(rustc --version)"
             echo "Cargo version: $(cargo --version)"
           '';
-
-          # Environment variables for C compilation
-          LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
-          C_INCLUDE_PATH = "${pkgs.glibc.dev}/include";
-          CPLUS_INCLUDE_PATH = "${pkgs.glibc.dev}/include";
         };
       }
     );
+  };
 }

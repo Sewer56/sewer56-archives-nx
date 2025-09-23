@@ -109,8 +109,8 @@ pub(crate) mod tests {
     impl Dummy<Faker> for NativeFileEntryP0 {
         fn dummy_with_rng<R: Rng + ?Sized>(_: &Faker, rng: &mut R) -> Self {
             NativeFileEntryP0 {
-                hash: rng.gen::<u64>().into(),
-                decompressed_size: rng.gen(),
+                hash: rng.random::<u64>().into(),
+                decompressed_size: rng.random::<u32>(),
                 offset_path_index_tuple: Faker.fake(),
             }
         }

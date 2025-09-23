@@ -208,6 +208,7 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
         bz3_decode_block(
             *state,
             decomp_destination.as_mut_ptr(),
+            dest_num_bytes,
             source.len() as i32,
             destination.len() as i32,
         )
