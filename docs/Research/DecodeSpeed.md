@@ -289,6 +289,9 @@ But speeds up compared to no dict by 1.1x at higher levels.
 
 ### Disabling Huffman
 
+We're technically talking about 'entropy coding' here, rather than actually 'huffman', but the
+term 'huffman' is better known, and used in zstd's own docs.
+
 ???+ note "Dummy C code to compress without a file without huffman literals"
 
     ```c
@@ -440,6 +443,18 @@ zstd -b -d -i20 wrstonefloor01_0_1M.dds.nohuf.zst
 A minimal regression in decode speed.
 Same can be observed at lower levels.
 
+### No Checksum
+
+This applies only to zstd CLI, we don't hash compare the file in Nx unless requested.
+
+```
+zstd --no-check
+```
+
+When compressing with zstd, add `no-check` to the commandline, this will produce a file without a checksum.
+
+A no-checksum file will be faster during benchmarking, by around 5%.
+
 ## Decompress Speed Targets
 
 !!! info "How fast do we need to decode files?"
@@ -520,28 +535,115 @@ Difference is around 2%.
 
 ### Reference Numbers
 
-AMD Ryzen 9 5900X, 32GB DDR4-3000 (16-17-17-35)
+Speeds vary with block size, and depending on whether we use long mode for matching.
+
+For simplicity, I have [reuploaded the data set mentioned above][bench-dataset].
+
+To benchmark use original Nx CLI, example below:
+
+```
+dotnet ./cli/NexusMods.Archives.Nx.Cli.dll benchmark --source out-1M.nx --threads 12
+```
+
+!!! note "On a scale of 1-10, this is a '7' in terms of decompression speed."
+
+    As far as this dataset is concerned.
+
+    Worst case scenarios (1), we can expect decompression around ~20% slower than this.
+
+#### 1M Chunks
+
+```
+dotnet ./cli/NexusMods.Archives.Nx.Cli.dll pack --source "textures" --target "out-1M.nx" --solidlevel 16 --chunkedlevel 16 --chunksize 1048576
+```
+
+AMD Ryzen 9 5900X, 32GB DDR4-3200 (16-17-17-35)
 
 | Threads | Speed (GiB/s) |
 | ------- | ------------- |
-| 1       | ~1.01 GiB/s   |
-| 2       | ~1.99 GiB/s   |
-| 3       | ~2.87 GiB/s   |
-| 4       | ~3.70 GiB/s   |
-| 6       | ~5.15 GiB/s   |
-| 8       | ~6.35 GiB/s   |
-| 10      | ~7.38 GiB/s   |
-| 12      | ~8.01 GiB/s   |
-| 24      | ~7.30 GiB/s !!|
+| 1       | ~1.27 GiB/s   |
+| 2       | ~2.52 GiB/s   |
+| 3       | ~3.73 GiB/s   |
+| 4       | ~4.93 GiB/s   |
+| 6       | ~7.22 GiB/s   |
+| 8       | ~9.02 GiB/s   |
+| 12      | ~11.74 GiB/s  |
+| 24      | ~12.00 GiB/s  |
 
-13600K, 32GB DDR5-????
+#### 1M Chunks, Long Mode
+
+```
+dotnet ./cli/NexusMods.Archives.Nx.Cli.dll pack --source "textures" --target "out-1M-long.nx" --solidlevel 22 --chunkedlevel 22  --chunksize 1048576
+```
+
+AMD Ryzen 9 5900X, 32GB DDR4-3200 (16-17-17-35)
 
 | Threads | Speed (GiB/s) |
 | ------- | ------------- |
-| 1       | ~1.09 GiB/s   |
-| 2       | ~2.18 GiB/s   |
-| 4       | ~4.37 GiB/s   |
-| 8       | ~8.03 GiB/s   |
-| 12      | ~10.31 GiB/s  |
-| 14      | ~11.17 GiB/s  |
-| 20      | ~12.45 GiB/s  |
+| 1       | ~1.04 GiB/s   |
+| 2       | ~2.04 GiB/s   |
+| 3       | ~3.02 GiB/s   |
+| 4       | ~3.96 GiB/s   |
+| 6       | ~5.89 GiB/s   |
+| 8       | ~7.49 GiB/s   |
+| 12      | ~10.65 GiB/s  |
+| 24      | ~11.49 GiB/s  |
+
+#### 16M Chunks
+
+```
+dotnet ./cli/NexusMods.Archives.Nx.Cli.dll pack --source "textures" --target "out-16M.nx" --solidlevel 16 --chunkedlevel 16 --chunksize 16777216
+```
+
+AMD Ryzen 9 5900X, 32GB DDR4-3200 (16-17-17-35)
+
+| Threads | Speed (GiB/s) |
+| ------- | ------------- |
+| 1       | ~1.34 GiB/s   |
+| 2       | ~2.60 GiB/s   |
+| 3       | ~3.88 GiB/s   |
+| 4       | ~5.00 GiB/s   |
+| 6       | ~6.93 GiB/s   |
+| 8       | ~8.62 GiB/s   |
+| 12      | ~10.67 GiB/s  |
+| 24      | ~9.50 GiB/s ⚠ |
+
+!!! question "Why slower with max thread count?"
+
+    To the best of my knowledge, increased CPU core cache misses.
+
+#### 16M Chunks, Long Mode
+
+```
+dotnet ./cli/NexusMods.Archives.Nx.Cli.dll pack --source "textures" --target "out-16M-long.nx" --solidlevel 22 --chunkedlevel 22 --chunksize 16777216
+```
+
+AMD Ryzen 9 5900X, 32GB DDR4-3200 (16-17-17-35)
+
+| Threads | Speed (GiB/s) |
+| ------- | ------------- |
+| 1       | ~1.11 GiB/s   |
+| 2       | ~2.08 GiB/s   |
+| 3       | ~2.41 GiB/s   |
+| 4       | ~2.89 GiB/s   |
+| 6       | ~3.70 GiB/s   |
+| 8       | ~5.12 GiB/s   |
+| 12      | ~5.90 GiB/s   |
+| 24      | ~5.33 GiB/s ⚠ |
+
+!!! question "Why so slow here?"
+
+    The data consists of primarily BC7 files, which have multiple internal 'modes', with mode 0
+    and 1 generally representing ~70% of the data.
+
+    Because the modes have different structures, this means that in practice, data in a given mode
+    will only generally match data from the same mode earlier in the byte stream.
+
+    However, the interleaving of modes, increases the LZ offset distance, and often decreases LZ match length.
+    The offset distance increase in particular is harmful to decompression speed, as we're often
+    reading data that may not be in any of the CPU caches anymore.
+
+    [dxt-lossless-transform](https://github.com/Sewer56/dxt-lossless-transform) should resolve most
+    of this in the near future.
+
+[bench-dataset]: https://u.pcloud.link/publink/show?code=XZf6Tp5Z9CM99OirKGVSSTSQh13MLRBvhiMV
