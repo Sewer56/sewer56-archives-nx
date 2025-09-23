@@ -223,8 +223,6 @@ pub fn decompress_partial(
 
 #[cfg(test)]
 mod tests {
-    use std::io::Write;
-
     use super::*;
     use alloc::vec;
     use rstest::rstest;
@@ -248,9 +246,6 @@ mod tests {
         let compressed_size =
             compress(method, 0, TEST_DATA, &mut compressed, &mut used_copy).unwrap();
         compressed.truncate(compressed_size);
-        use std::fs::File;
-        let mut file = File::create("/home/sewer/Tools/bzip3/bzip3/examples/test.out").unwrap();
-        file.write_all(&compressed).unwrap();
 
         let decompressed_size = decompress(method, &compressed, &mut decompressed).unwrap();
         decompressed.truncate(decompressed_size);
