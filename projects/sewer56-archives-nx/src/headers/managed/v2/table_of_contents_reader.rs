@@ -133,7 +133,7 @@ where
 /// * `file_count` - Number of files in the table of contents.
 /// * `preset` - Preset number.
 /// * `has_hash` - Whether the preset variant of table of contents has a hash.
-///                [Applies only to variants where hash is optional]
+///   [Applies only to variants where hash is optional]
 /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
 /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
 ///

@@ -51,7 +51,7 @@ pub struct BuilderInfo<LongAlloc: Allocator + Clone> {
 /// # Type Parameters
 ///
 /// * `T`: Type of the items in the blocks, which must implement [HasFileSize],
-///        [CanProvideInputData], and [HasRelativePath].
+///   [CanProvideInputData], and [HasRelativePath].
 pub fn init_toc_creation<
     T: HasFileSize + CanProvideInputData + HasRelativePath,
     ShortAlloc: Allocator + Clone,

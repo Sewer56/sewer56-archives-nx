@@ -35,8 +35,8 @@ where
 ///
 /// # Arguments
 /// * `dictionary_data` - Slice of compressed dictionary data.
-///                       This begins at the dictionary header [`DictionariesHeader`] and must be
-///                       at least as long as the length of the dictionary segment.
+///   This begins at the dictionary header [`DictionariesHeader`] and must be
+///   at least as long as the length of the dictionary segment.
 ///
 /// # Remarks
 ///
@@ -56,8 +56,8 @@ pub unsafe fn deserialize_dictionary_data(
 ///
 /// # Arguments
 /// * `dictionary_data` - Slice of compressed dictionary data.
-///                       This begins at the dictionary header [`DictionariesHeader`] and must be
-///                       at least as long as the length of the dictionary segment.
+///   This begins at the dictionary header [`DictionariesHeader`] and must be
+///   at least as long as the length of the dictionary segment.
 ///
 /// # Remarks
 ///

@@ -50,8 +50,8 @@ impl StringPool {
     /// * `items` - The list of items to pack
     /// * `format` - The format of the string pool
     /// * `use_compression` - Whether to compress the string pool.
-    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
-    ///                       In actual archive use this is always 'true'.
+    ///   This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///   In actual archive use this is always 'true'.
     pub fn pack<T: HasRelativePath>(
         items: &mut [T],
         format: StringPoolFormat,
@@ -68,8 +68,8 @@ impl StringPool {
     /// # Arguments
     /// * `items` - The list of items to pack
     /// * `use_compression` - Whether to compress the string pool.
-    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
-    ///                       In actual archive use this is always 'true'.
+    ///   This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///   In actual archive use this is always 'true'.
     pub fn pack_v0<T: HasRelativePath>(
         items: &mut [T],
         use_compression: bool,
@@ -85,8 +85,8 @@ impl StringPool {
     /// * `file_count` - Number of files in the archive. This is equal to number of entries.
     /// * `format` - The (file) format of the string pool
     /// * `use_compression` - Whether to compress the string pool.
-    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
-    ///                       In actual archive use this is always 'true'.
+    ///   This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///   In actual archive use this is always 'true'.
     pub fn unpack(
         source: &[u8],
         file_count: usize,
@@ -105,8 +105,8 @@ impl StringPool {
     /// * `source` - The compressed data to unpack.
     /// * `file_count` - Number of files in the archive. This is equal to number of entries.
     /// * `use_compression` - Whether to compress the string pool.
-    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
-    ///                       In actual archive use this is always 'true'.
+    ///   This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///   In actual archive use this is always 'true'.
     pub fn unpack_v0(
         source: &[u8],
         file_count: usize,
@@ -206,8 +206,8 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
     /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
     /// * `use_compression` - Whether to compress the string pool.
-    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
-    ///                       In actual archive use this is always 'true'.
+    ///   This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///   In actual archive use this is always 'true'.
     pub fn pack_with_allocators<T: HasRelativePath>(
         items: &mut [T],
         short_alloc: ShortAlloc,
@@ -232,8 +232,8 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
     /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
     /// * `use_compression` - Whether to compress the string pool.
-    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
-    ///                       In actual archive use this is always 'true'.
+    ///   This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///   In actual archive use this is always 'true'.
     pub fn unpack_with_allocators(
         source: &[u8],
         file_count: usize,
@@ -261,8 +261,8 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
     /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
     /// * `use_compression` - Whether to compress the string pool.
-    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
-    ///                       In actual archive use this is always 'true'.
+    ///   This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///   In actual archive use this is always 'true'.
     ///
     /// # Remarks
     ///
@@ -334,8 +334,8 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
     /// * `short_alloc` - Allocator for short lived memory. Think pooled memory and rentals.
     /// * `long_alloc` - Allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
     /// * `use_compression` - Whether to compress the string pool.
-    ///                       This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
-    ///                       In actual archive use this is always 'true'.
+    ///   This is only set to 'false' in tests to skip non-rust code under 'miri', and benchmarks.
+    ///   In actual archive use this is always 'true'.
     ///
     /// # Remarks
     ///
@@ -402,7 +402,7 @@ impl<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone>
 
         // Validate the decompressed segment ends with a null terminator
         #[cfg(feature = "hardened")]
-        if decompressed.len() > 0 && decompressed[decompressed.len() - 1] != 0 {
+        if !decompressed.is_empty() && decompressed[decompressed.len() - 1] != 0 {
             return Err(StringPoolUnpackError::ShouldEndOnNullTerminator);
         }
 

@@ -40,7 +40,10 @@ impl FileEntry {
     pub fn get_chunk_count(&self, chunk_size_bytes: u32) -> u32 {
         // TODO: An optimized version of this with NativeFileHeader
         let mut count = self.decompressed_size / chunk_size_bytes as u64;
-        if self.decompressed_size % chunk_size_bytes as u64 != 0 {
+        if !self
+            .decompressed_size
+            .is_multiple_of(chunk_size_bytes as u64)
+        {
             count += 1;
         }
         count as u32
