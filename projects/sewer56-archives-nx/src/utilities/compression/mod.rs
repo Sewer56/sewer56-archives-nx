@@ -237,7 +237,7 @@ mod tests {
     #[case::bzip3(CompressionPreference::Bzip3)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
     #[cfg_attr(feature = "bzip3", case::bzip3(CompressionPreference::Bzip3))]
-    //#[cfg_attr(miri, ignore)]
+    #[cfg_attr(miri, ignore)]
     fn can_round_trip(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
         let mut decompressed = vec![0u8; TEST_DATA.len()];
