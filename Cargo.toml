@@ -20,6 +20,9 @@ members = [
 
     # Tool to test dictionary compression
     # Requires nightly compiler. Is skipped on stable.
-    "projects/research/dictionary-tester"
+    "projects/research/dictionary-tester",
+    
+    # Mod archive statistics research tool
+    "projects/research/mod-archive-stats/make-mod-stats"
 ]
 resolver = "2"
