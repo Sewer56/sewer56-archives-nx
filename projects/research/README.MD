@@ -34,7 +34,7 @@ python3 benchmark-single-file-dict.py /path/to/test_files -e bin --dict-size 655
 ```
 
 **Output:**
-```
+```text
 === Benchmark Summary ===
 Files processed: 7
 
@@ -77,7 +77,7 @@ python3 benchmark-dict-over-extension.py /path/to/files -e bin --mode small --di
 ```
 
 **Output:**
-```
+```text
 === Compression Summary ===
 Total original size: 16.00 KiB
 
@@ -122,7 +122,7 @@ python3 test-single-file-dict-size.py /path/to/large_file.bin --dict-size 131072
 ```
 
 **Output:**
-```
+```text
 Processing test_data/large_file.txt...
 Input file size: 85.40 KiB
 Target dictionary size: 110.00 KiB (110 KiB (fixed))
@@ -181,7 +181,7 @@ python3 compare-compression-algorithms.py /path/to/test_directory 8  # Use 8 thr
 ```
 
 **Output:**
-```
+```text
 Original size: 1.21 MiB
 Total files to process: 26
 Starting compression benchmark...
@@ -229,7 +229,7 @@ python3 compare-best-between-folders.py /path/to/compressed_dir1 /path/to/compre
 ```
 
 **Output:**
-```
+```text
 File Size Comparisons:
 =========================================
 Path    folder1 folder2 Best    Savings %
@@ -281,7 +281,7 @@ cargo run --features nightly -- -i /path/to/test_directory --no-solid-blocks
 ```
 
 **Output:**
-```
+```text
 Starting compression analysis:
 Input directory: ../test_data
 Block size: 1048575 bytes
