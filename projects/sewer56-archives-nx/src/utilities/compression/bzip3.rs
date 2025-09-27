@@ -337,11 +337,16 @@ mod tests {
     use super::*;
     use crate::utilities::compression::NxDecompressionError;
 
+    #[cfg(feature = "nightly")]
+    pub use alloc::vec;
+    #[cfg(not(feature = "nightly"))]
+    pub use allocator_api2::vec;
+
     #[test]
     fn decompress_partial_returns_error_when_max_block_size_not_provided() {
         // Create some dummy compressed data (we won't get far enough to decompress it)
-        let compressed_data = std::vec![0u8; 100];
-        let mut destination = std::vec![0u8; 50];
+        let compressed_data = vec![0u8; 100];
+        let mut destination = vec![0u8; 50];
 
         let result = decompress_partial(&compressed_data, &mut destination, 0);
 
@@ -360,8 +365,8 @@ mod tests {
     #[test]
     fn decompress_partial_returns_error_when_max_block_size_too_small() {
         // Create some dummy compressed data (we won't get far enough to decompress it)
-        let compressed_data = std::vec![0u8; 100];
-        let mut destination = std::vec![0u8; 50];
+        let compressed_data = vec![0u8; 100];
+        let mut destination = vec![0u8; 50];
         let max_block_size = 25; // Smaller than destination buffer
 
         let result = decompress_partial(&compressed_data, &mut destination, max_block_size);
@@ -375,6 +380,48 @@ mod tests {
                 // Expected error type
             }
             _ => panic!("Expected MaxBlockSizeTooSmall error"),
+        }
+    }
+
+    #[test]
+    fn decompress_partial_returns_error_when_max_block_size_insufficient_for_actual_data() {
+        // Create test data and compress it
+        let test_data = b"This is test data for BZip3 compression that should be longer than our max_block_size but shorter than destination";
+        let mut compressed = vec![0u8; super::max_alloc_for_compress_size(test_data.len())];
+        let mut used_copy = false;
+
+        let compressed_size = super::super::compress(
+            super::super::CompressionPreference::Bzip3,
+            0,
+            test_data,
+            &mut compressed,
+            &mut used_copy,
+        )
+        .unwrap();
+        compressed.truncate(compressed_size);
+
+        // Create destination buffer smaller than test_data
+        let mut destination = vec![0u8; test_data.len() / 2];
+        // Set max_block_size larger than destination but smaller than actual decompressed size
+        let max_block_size = destination.len() + 10; // Larger than destination but insufficient
+
+        let result = decompress_partial(&compressed, &mut destination, max_block_size);
+
+        assert!(
+            result.is_err(),
+            "Should return an error when max_block_size is insufficient for actual decompressed data"
+        );
+
+        // Should get a BZip3 decompression error, not our validation errors
+        match result.unwrap_err() {
+            NxDecompressionError::Bzip3(Bzip3CompressionError::MaxBlockSizeNotProvided)
+            | NxDecompressionError::Bzip3(Bzip3CompressionError::MaxBlockSizeTooSmall) => {
+                panic!("Should not get validation errors when max_block_size > destination.len()");
+            }
+            NxDecompressionError::Bzip3(_) => {
+                // Expected - some BZip3 decompression error due to insufficient buffer
+            }
+            _ => panic!("Expected BZip3 decompression error"),
         }
     }
 }
