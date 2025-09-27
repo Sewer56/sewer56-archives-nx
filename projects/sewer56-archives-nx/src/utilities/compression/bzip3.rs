@@ -115,14 +115,9 @@ pub fn max_alloc_for_compress_size(source_length: usize) -> usize {
 pub fn compress(source: &[u8], destination: &mut [u8], used_copy: &mut bool) -> CompressionResult {
     *used_copy = false;
 
-    // bzip3 has a max block size of 512MiB
-    // if we issue 512MiB blocks, that will fail.
-    if source.len() > MAX_BLOCK_SIZE {
-        return Err(Bzip3CompressionError::DataTooLarge.into());
-    }
-
     // If destination is too small, return high-level validation error.
-    // bz3 doesn't do that check, so we need to do it.
+    // For bz3, we need to copy the source into destination, and bz3 will work on the destination directly.
+    // Therefore, if our destination is too short, we need to guard against user error here.
     if destination.len() < max_alloc_for_compress_size(source.len()) {
         return Err(NxCompressionError::DestinationTooSmall);
     }
@@ -200,12 +195,6 @@ where
 ///
 /// The number of bytes written to the destination, or an error.
 pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
-    // bzip3 has a max block size of 512MiB
-    // if we issue 512MiB blocks, that will fail.
-    if destination.len() > MAX_BLOCK_SIZE {
-        return Err(Bzip3CompressionError::DataTooLarge.into());
-    }
-
     // bzip3 has a min block size of 65K
     let block_size = max(destination.len(), MIN_BLOCK_SIZE) as i32;
 
@@ -286,12 +275,6 @@ pub fn decompress_partial(
 
     if max_block_size < destination.len() {
         return Err(NxDecompressionError::MaxBlockSizeTooSmall);
-    }
-
-    // bzip3 has a max block size of 512MiB
-    // if we issue 512MiB blocks, that will fail.
-    if destination.len() > MAX_BLOCK_SIZE {
-        return Err(Bzip3CompressionError::DataTooLarge.into());
     }
 
     // Allocate temporary buffer using max_block_size for full decompression
