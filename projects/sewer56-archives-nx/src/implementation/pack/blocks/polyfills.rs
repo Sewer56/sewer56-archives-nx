@@ -186,7 +186,7 @@ where
     /// # Arguments
     ///
     /// * `start_offset` - The starting offset of the block
-    /// * `chunk_size` - The size of the block at [`Self::start_offset`].
+    /// * `chunk_size` - The size of the block at the start offset.
     /// * `chunk_index` - The index of the block
     /// * `state` - The shared state of all chunks
     pub fn new(

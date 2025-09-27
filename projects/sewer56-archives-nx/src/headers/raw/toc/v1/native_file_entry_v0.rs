@@ -7,7 +7,7 @@ use fake::*;
 /// Structure that represents the native serialized file entry.
 ///
 /// Remarks:
-/// V0 represents [`TableOfContentsVersion::V0`](crate::headers::enums::table_of_contents_version::TableOfContentsVersion::V0).
+/// V0 represents [`TableOfContentsVersion::V0`](crate::headers::enums::v1::TableOfContentsVersion::V0).
 #[repr(C, packed(4))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
 pub struct NativeFileEntryV0 {

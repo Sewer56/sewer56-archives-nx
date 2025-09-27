@@ -104,7 +104,7 @@ pub unsafe fn get_unchecked<'a>(raw_data: &'a [u8], offsets: &'a [u32], index: u
 }
 
 /// Represents an error obtained when trying to pack the string pool.
-/// To see the format details, see the [StringPoolFormat::V0] and [StringPoolFormat::V1]
+/// To see the format details, see the [`StringPoolFormat::V0`]
 /// documentation.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum StringPoolFormat {

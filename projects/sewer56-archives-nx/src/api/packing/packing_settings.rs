@@ -40,7 +40,7 @@ pub struct PackingSettings {
     /// Range is 32768 (32K) to 1073741824 (1 GiB).\
     /// Values are powers of 2.
     ///
-    /// Must be greater than [`Self::block_size`].
+    /// Must be greater than [`Self::solid_size`].
     pub chunk_size: u32,
 
     /// Set this to 'true' to store hashes in the ToC.

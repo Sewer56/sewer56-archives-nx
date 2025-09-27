@@ -36,9 +36,9 @@ pub struct BuilderInfo<LongAlloc: Allocator + Clone> {
 ///
 /// # Arguments
 ///
-/// * `blocks` - A slice of [Box<dyn Block<T>>] representing the blocks in the archive.
-/// * `chunk_size` - The maximum size of a chunk in the file. From [PackingSettings].
-/// * `max_block_size` - The maximum size of a SOLID block. From [PackingSettings].
+/// * `blocks` - A slice of [Box<dyn Block\<T\>>] representing the blocks in the archive.
+/// * `chunk_size` - The maximum size of a chunk in the file. From PackingSettings.
+/// * `max_block_size` - The maximum size of a SOLID block. From PackingSettings.
 /// * `need_hashes` - Whether to include hashes in the table of contents.
 /// * `short_alloc` - An allocator for short lived memory. Think pooled memory and rentals.
 /// * `long_alloc` - An allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.

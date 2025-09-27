@@ -7,7 +7,7 @@ pub struct FromSliceReferenceProvider<'a> {
 }
 
 impl<'a> FromSliceReferenceProvider<'a> {
-    /// Creates a new [`FromArrayProvider`] with the given slice reference.
+    /// Creates a new [`FromSliceReferenceProvider`] with the given slice reference.
     pub fn new(data: &'a [u8]) -> Self {
         Self { data }
     }

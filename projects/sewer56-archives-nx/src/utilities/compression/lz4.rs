@@ -28,7 +28,7 @@ pub enum Lz4CompressionError {
 ///
 /// This enum contains only errors that originate from the underlying LZ4 library
 /// and are passed through without interpretation. High-level validation
-/// errors are handled by [`NxDecompressionError`] variants.
+/// errors are handled by [`super::NxDecompressionError`] variants.
 ///
 /// # Error Code Mappings
 ///
