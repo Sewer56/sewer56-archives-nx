@@ -715,7 +715,7 @@ mod tests {
 
         unsafe {
             // Write header to buffer
-            (data.as_mut_ptr() as *mut u64).write_unaligned(header.0);
+            (data.as_mut_ptr() as *mut u64).write_unaligned(header.to_le().0);
 
             let result = TableOfContents::deserialize_v2xx(data.as_ptr(), 12);
             assert!(matches!(result,
