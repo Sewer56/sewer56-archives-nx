@@ -374,7 +374,7 @@ mod tests {
             NxDecompressionError::Bzip3(Bzip3CompressionError::CrcFailed)
         )
     )]
-    //#[cfg_attr(miri, ignore)]
+    #[cfg_attr(miri, ignore)]
     fn decompress_buffer_too_small_returns_error(
         #[case] method: CompressionPreference,
         #[case] expected_decompression_error: NxDecompressionError,
