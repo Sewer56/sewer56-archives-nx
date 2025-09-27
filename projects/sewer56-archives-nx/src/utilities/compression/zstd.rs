@@ -86,7 +86,7 @@ pub fn compress(
 /// * `level`: Compression level to use.
 /// * `source`: Source data to compress.
 /// * `destination`: Destination buffer for compressed data.
-/// * `terminate_early`: Optional callback that returns `Some(i32)` to terminate early
+/// * `terminate_early`: Optional callback that returns `Some(usize)` to terminate early
 ///   with that value, or `None` to continue compression.
 /// * `used_copy`: If this is true, Copy compression was used, due to uncompressible data.
 ///
