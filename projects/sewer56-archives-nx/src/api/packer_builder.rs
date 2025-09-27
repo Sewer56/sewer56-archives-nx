@@ -204,9 +204,10 @@ impl<'a> NxPackerBuilder<'a> {
     ///
     /// # Arguments
     ///
-    /// * `solid_size` - Size of SOLID blocks in bytes. Must be between
-    ///   [`MIN_BLOCK_SIZE`] and [`MAX_BLOCK_SIZE`]. The value will be
-    ///   automatically adjusted to the nearest power of 2 minus 1.
+    /// * `solid_size` - Size of SOLID blocks in bytes. Use `0` to disable SOLID
+    ///   blocks. Otherwise, it must be between [`MIN_BLOCK_SIZE`] and
+    ///   [`MAX_BLOCK_SIZE`]. The value is adjusted during sanitization to the
+    ///   nearest power of 2 minus 1.
     ///
     /// # Returns
     ///
