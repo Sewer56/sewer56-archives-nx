@@ -59,14 +59,14 @@ impl Drop for SafeState {
 fn convert_error(error_code: i32) -> Bzip3CompressionError {
     match error_code {
         0 => unsafe { unreachable_unchecked() }, // BZ3_OK
-        -1 => Bzip3CompressionError::OutOfBounds,
-        -2 => Bzip3CompressionError::BwtFailed,
-        -3 => Bzip3CompressionError::CrcFailed,
-        -4 => Bzip3CompressionError::MalformedHeader,
-        -5 => Bzip3CompressionError::TruncatedData,
-        -6 => Bzip3CompressionError::DataTooLarge,
-        -7 => Bzip3CompressionError::InitFailed,
-        -8 => Bzip3CompressionError::DataSizeTooSmall,
+        BZ3_ERR_OUT_OF_BOUNDS => Bzip3CompressionError::OutOfBounds,
+        BZ3_ERR_BWT => Bzip3CompressionError::BwtFailed,
+        BZ3_ERR_CRC => Bzip3CompressionError::CrcFailed,
+        BZ3_ERR_MALFORMED_HEADER => Bzip3CompressionError::MalformedHeader,
+        BZ3_ERR_TRUNCATED_DATA => Bzip3CompressionError::TruncatedData,
+        BZ3_ERR_DATA_TOO_BIG => Bzip3CompressionError::DataTooLarge,
+        BZ3_ERR_INIT => Bzip3CompressionError::InitFailed,
+        BZ3_ERR_DATA_SIZE_TOO_SMALL => Bzip3CompressionError::DataSizeTooSmall,
         _ => Bzip3CompressionError::InitFailed, // Default to init failed for unknown errors
     }
 }
@@ -194,13 +194,56 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
         return Err(Bzip3DecompressionError::InitFailed.into());
     }
 
-    // TODO: This is inefficient, but in some cases, it's not possible to give more bytes to destination
-    //       when calling this, for example when working with memory mapped files.
-    // It's not documented currently, but destination in bz3 needs to be bounded
+    // Attempt 1: Try direct decompression into destination buffer
+    //            This is possible *most* of the time, except some very rare cases.
+    //            https://github.com/iczelia/bzip3/pull/144/files#diff-e89cf2cf0812ad6cc411e32e39cd14f8a9fcbb5ff29abcdaff537949e6583164
+    //
+    // Namely:
+    //      Note(sewer): It's technically valid within the spec to create a bzip3 block
+    //      where the size after LZP/RLE is larger than the original input. Some earlier encoders
+    //      even (mistakenly?) were able to do this.
+    //
+    // Note: NX library itself will never produce cases where `destination >= source`, but
+    //       handcrafted malicious archives might. So we need to handle this case.
+    if destination.len() >= source.len() {
+        // Copy source data into destination buffer for direct decompression attempt
+        unsafe {
+            copy_nonoverlapping(source.as_ptr(), destination.as_mut_ptr(), source.len());
+        }
+
+        // Attempt direct decompression
+        let result = unsafe {
+            bz3_decode_block(
+                *state,
+                destination.as_mut_ptr(),
+                destination.len(),
+                source.len() as i32,
+                destination.len() as i32,
+            )
+        };
+
+        if result > 0 {
+            // Direct decompression succeeded
+            return Ok(result as usize);
+        }
+
+        // Check if the error is specifically DataSizeTooSmall
+        let error_code = unsafe { bz3_last_error(*state) };
+        if error_code as i32 != BZ3_ERR_DATA_SIZE_TOO_SMALL {
+            // For any error other than DataSizeTooSmall, return immediately
+            return Err(convert_error(error_code as i32).into());
+        }
+
+        // If DataSizeTooSmall, fall through to Phase 2
+    }
+
+    // Attempt 2: Allocate to temporary buffer `bz3_bound`.
+    //            This is a fallback in case the above fails.
+    //            e.g. an older encoder with a bug was used.
     let dest_num_bytes = unsafe { bz3_bound(destination.len()) };
     let mut decomp_destination = unsafe { Box::new_uninit_slice(dest_num_bytes).assume_init() };
 
-    // Decode single block
+    // Decode single block using allocated buffer
     let result = unsafe {
         // SAFETY: Program will always use bound call before this
         copy_nonoverlapping(
