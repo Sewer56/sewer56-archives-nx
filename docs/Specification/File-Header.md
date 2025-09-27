@@ -56,6 +56,8 @@ i.e.
 
 !!! warning "Chunk size is limited to 512MiB, as no ToC format currently supports larger"
 
+    Although the field encoding allows larger values (e.g., up to 1TiB), current ToC formats and implementations must clamp/reject values above 512MiB.
+
 ### Block Size
 
 The size of an individual [block](./Overview.md#terminology) is not standardized
