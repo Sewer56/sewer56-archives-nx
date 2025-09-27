@@ -185,7 +185,7 @@ where
 ///
 /// * `method`: Method we decompress with.
 /// * `source`: Source data to decompress.
-/// * `destination`: Destination buffer for decompressed data.
+/// * `destination`: Destination buffer for decompressed data. Must contain whole block.
 pub fn decompress(
     method: CompressionPreference,
     source: &[u8],
@@ -325,7 +325,7 @@ mod tests {
     #[case::copy(CompressionPreference::Copy)]
     #[case::zstd(CompressionPreference::ZStandard)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
-    #[cfg_attr(miri, ignore)]
+    #[cfg_attr(feature = "bzip3", case::bzip3(CompressionPreference::Bzip3))]
     fn partial_decompression_succeeds(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
         let mut used_copy = false;
@@ -400,6 +400,7 @@ mod tests {
     #[case::copy(CompressionPreference::Copy)]
     #[case::zstd(CompressionPreference::ZStandard)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
+    #[cfg_attr(feature = "bzip3", case::bzip3(CompressionPreference::Bzip3))]
     #[cfg_attr(miri, ignore)]
     fn can_round_trip_streamed(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
@@ -425,6 +426,7 @@ mod tests {
     #[rstest]
     #[case::zstd(CompressionPreference::ZStandard)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
+    #[cfg_attr(feature = "bzip3", case::bzip3(CompressionPreference::Bzip3))]
     #[cfg_attr(miri, ignore)]
     fn can_terminate_early_streamed(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
@@ -451,6 +453,7 @@ mod tests {
     #[case::copy(CompressionPreference::Copy)]
     #[case::zstd(CompressionPreference::ZStandard)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
+    #[cfg_attr(feature = "bzip3", case::bzip3(CompressionPreference::Bzip3))]
     #[cfg_attr(miri, ignore)]
     fn incompressible_data_defaults_to_copy_streamed(#[case] method: CompressionPreference) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(INCOMPRESSIBLE_DATA.len())];
@@ -484,6 +487,13 @@ mod tests {
         case::lz4(
             CompressionPreference::Lz4,
             NxCompressionError::Lz4(Lz4CompressionError::CompressionFailed)
+        )
+    )]
+    #[cfg_attr(
+        feature = "bzip3",
+        case::bzip3(
+            CompressionPreference::Bzip3,
+            NxCompressionError::Copy(CopyCompressionError::DestinationTooSmall)
         )
     )]
     #[cfg_attr(miri, ignore)]
