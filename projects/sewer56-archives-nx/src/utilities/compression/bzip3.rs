@@ -44,6 +44,10 @@ pub enum Bzip3CompressionError {
     /// Data size too small for processing
     #[error("Size of buffer `buffer_size` passed to the block decoder (bz3_decode_block) is too small. See function docs for details.")]
     DataSizeTooSmall,
+
+    /// Destination buffer too small for compression
+    #[error("Destination buffer too small for compression")]
+    DestinationTooSmall = 253,
     /// Max block size was not provided for partial decompression (error code 254)
     #[error("Max block size must be provided (non-zero) for BZip3 partial decompression")]
     MaxBlockSizeNotProvided = 254,
@@ -115,7 +119,7 @@ pub fn compress(source: &[u8], destination: &mut [u8], used_copy: &mut bool) -> 
     // If destination is too small, defer back to copy.
     // bz3 doesn't do that check, so we need to do it.
     if destination.len() < max_alloc_for_compress_size(source.len()) {
-        return copy::compress(source, destination, used_copy);
+        return Err(Bzip3CompressionError::DestinationTooSmall.into());
     }
 
     // bzip3 has a min block size of 65K
