@@ -130,6 +130,7 @@ impl LazyDecompressedSolidNxBlock {
                     self.compression,
                     compressed.data(),
                     &mut decompressed,
+                    0, // TODO: Pass a value here.
                 )?;
 
                 Ok(decompressed)

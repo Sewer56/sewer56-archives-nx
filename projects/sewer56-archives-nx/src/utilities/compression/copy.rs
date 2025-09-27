@@ -53,7 +53,12 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
 ///
 /// * `source`: Source data to decompress (copy).
 /// * `destination`: Destination buffer for decompressed data.
-pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
+/// * `max_block_size`: Maximum block size for decompression. Ignored for copy algorithm.
+pub fn decompress_partial(
+    source: &[u8],
+    destination: &mut [u8],
+    _max_block_size: usize,
+) -> DecompressionResult {
     let copy_length = min(source.len(), destination.len());
 
     unsafe { copy_nonoverlapping(source.as_ptr(), destination.as_mut_ptr(), copy_length) };

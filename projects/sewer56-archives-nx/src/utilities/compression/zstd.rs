@@ -303,7 +303,12 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
 ///
 /// * `source`: Source data to decompress.
 /// * `destination`: Destination buffer for decompressed data.
-pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
+/// * `max_block_size`: Maximum block size for decompression. Ignored for ZStandard algorithm.
+pub fn decompress_partial(
+    source: &[u8],
+    destination: &mut [u8],
+    _max_block_size: usize,
+) -> DecompressionResult {
     unsafe {
         let d_stream = ZSTD_createDStream();
 
@@ -502,7 +507,7 @@ mod tests {
         let invalid_compressed_data = vec![0xFFu8; 100];
         let mut destination = vec![0u8; 1000];
 
-        let result = decompress_partial(&invalid_compressed_data, &mut destination);
+        let result = decompress_partial(&invalid_compressed_data, &mut destination, 0);
 
         assert!(
             result.is_err(),

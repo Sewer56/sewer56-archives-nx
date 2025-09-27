@@ -209,18 +209,26 @@ pub fn decompress(
 /// * `method`: Method we decompress with.
 /// * `source`: Source data to decompress.
 /// * `destination`: Destination buffer for decompressed data.
+/// * `max_block_size`: Maximum block size for decompression. Used by block based algorithms such as BZip3. 0 means not provided (ignored by non-block algorithms).
 pub fn decompress_partial(
     method: CompressionPreference,
     source: &[u8],
     destination: &mut [u8],
+    max_block_size: usize,
 ) -> DecompressionResult {
     match method {
-        CompressionPreference::Copy => copy::decompress_partial(source, destination),
-        CompressionPreference::ZStandard => zstd::decompress_partial(source, destination),
+        CompressionPreference::Copy => {
+            copy::decompress_partial(source, destination, max_block_size)
+        }
+        CompressionPreference::ZStandard => {
+            zstd::decompress_partial(source, destination, max_block_size)
+        }
         #[cfg(feature = "lz4")]
-        CompressionPreference::Lz4 => lz4::decompress_partial(source, destination),
+        CompressionPreference::Lz4 => lz4::decompress_partial(source, destination, max_block_size),
         #[cfg(feature = "bzip3")]
-        CompressionPreference::Bzip3 => bzip3::decompress_partial(source, destination),
+        CompressionPreference::Bzip3 => {
+            bzip3::decompress_partial(source, destination, max_block_size)
+        }
         _ => panic!("Unsupported partial decompression method"), // TODO: Replace panic!
     }
 }
@@ -322,11 +330,15 @@ mod tests {
     }
 
     #[rstest]
-    #[case::copy(CompressionPreference::Copy)]
-    #[case::zstd(CompressionPreference::ZStandard)]
-    #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
-    #[cfg_attr(feature = "bzip3", case::bzip3(CompressionPreference::Bzip3))]
-    fn partial_decompression_succeeds(#[case] method: CompressionPreference) {
+    #[case::copy(CompressionPreference::Copy, 0)]
+    #[case::zstd(CompressionPreference::ZStandard, 0)]
+    #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4, 0))]
+    #[cfg_attr(feature = "bzip3", case::bzip3(CompressionPreference::Bzip3, TEST_DATA.len()))]
+    #[cfg_attr(miri, ignore)]
+    fn partial_decompression_succeeds(
+        #[case] method: CompressionPreference,
+        #[case] max_block_size: usize,
+    ) {
         let mut compressed = vec![0u8; max_alloc_for_compress_size(TEST_DATA.len())];
         let mut used_copy = false;
 
@@ -336,7 +348,7 @@ mod tests {
 
         let mut half_decomp_data = vec![0u8; TEST_DATA.len() / 2];
         let decompressed_size =
-            decompress_partial(method, &compressed, &mut half_decomp_data).unwrap();
+            decompress_partial(method, &compressed, &mut half_decomp_data, max_block_size).unwrap();
 
         assert_eq!(
             decompressed_size,

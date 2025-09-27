@@ -211,11 +211,16 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
 ///
 /// * `source`: Source data to decompress.
 /// * `destination`: Destination buffer for decompressed data.
+/// * `max_block_size`: Maximum block size for decompression. Ignored for LZ4 algorithm.
 ///
 /// # Returns
 ///
 /// The number of bytes written to the destination, or an error.
-pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
+pub fn decompress_partial(
+    source: &[u8],
+    destination: &mut [u8],
+    _max_block_size: usize,
+) -> DecompressionResult {
     let result = unsafe {
         LZ4_decompress_safe_partial(
             source.as_ptr() as *const c_char,

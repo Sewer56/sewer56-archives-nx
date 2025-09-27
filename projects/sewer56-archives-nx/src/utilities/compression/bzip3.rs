@@ -1,4 +1,8 @@
-use core::{cmp::max, hint::unreachable_unchecked, ptr::copy_nonoverlapping};
+use core::{
+    cmp::{max, min},
+    hint::unreachable_unchecked,
+    ptr::copy_nonoverlapping,
+};
 
 use super::{copy, CompressionResult, DecompressionResult};
 use crate::prelude::*;
@@ -38,6 +42,12 @@ pub enum Bzip3CompressionError {
     /// Data size too small for processing
     #[error("Size of buffer `buffer_size` passed to the block decoder (bz3_decode_block) is too small. See function docs for details.")]
     DataSizeTooSmall,
+    /// Max block size was not provided for partial decompression (error code 254)
+    #[error("Max block size must be provided (non-zero) for BZip3 partial decompression")]
+    MaxBlockSizeNotProvided = 254,
+    /// Max block size too small for partial decompression (error code 255)
+    #[error("Max block size must be at least as large as destination buffer size for partial decompression")]
+    MaxBlockSizeTooSmall = 255,
 }
 
 /// Represents an error specific to BZip3 decompression operations.
@@ -287,13 +297,84 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
 ///
 /// * `source`: Source data to decompress.
 /// * `destination`: Destination buffer for decompressed data.
+/// * `max_block_size`: Maximum block size for decompression. Used to allocate temporary buffer for full decompression.
 ///
 /// # Returns
 ///
 /// The number of bytes written to the destination, or an error.
-pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
-    // Partial decompression is not supported in bzip3, we must emulate it by
-    // allocating a new buffer.
+pub fn decompress_partial(
+    source: &[u8],
+    destination: &mut [u8],
+    max_block_size: usize,
+) -> DecompressionResult {
+    // Validate max_block_size parameter
+    if max_block_size == 0 {
+        return Err(Bzip3CompressionError::MaxBlockSizeNotProvided.into());
+    }
 
-    decompress(source, destination)
+    if max_block_size < destination.len() {
+        return Err(Bzip3CompressionError::MaxBlockSizeTooSmall.into());
+    }
+
+    // Allocate temporary buffer using max_block_size for full decompression
+    let mut temp_buffer = unsafe { Box::new_uninit_slice(max_block_size).assume_init() };
+
+    // Decompress into temporary buffer
+    let decompressed_size = decompress(source, &mut temp_buffer)?;
+
+    // Copy only the portion that fits into the destination buffer
+    let copy_len = min(decompressed_size, destination.len());
+
+    unsafe {
+        copy_nonoverlapping(temp_buffer.as_ptr(), destination.as_mut_ptr(), copy_len);
+    }
+
+    Ok(copy_len)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utilities::compression::NxDecompressionError;
+
+    #[test]
+    fn decompress_partial_returns_error_when_max_block_size_not_provided() {
+        // Create some dummy compressed data (we won't get far enough to decompress it)
+        let compressed_data = std::vec![0u8; 100];
+        let mut destination = std::vec![0u8; 50];
+
+        let result = decompress_partial(&compressed_data, &mut destination, 0);
+
+        assert!(
+            result.is_err(),
+            "Should return an error when max_block_size is 0"
+        );
+        match result.unwrap_err() {
+            NxDecompressionError::Bzip3(Bzip3CompressionError::MaxBlockSizeNotProvided) => {
+                // Expected error type
+            }
+            _ => panic!("Expected MaxBlockSizeNotProvided error"),
+        }
+    }
+
+    #[test]
+    fn decompress_partial_returns_error_when_max_block_size_too_small() {
+        // Create some dummy compressed data (we won't get far enough to decompress it)
+        let compressed_data = std::vec![0u8; 100];
+        let mut destination = std::vec![0u8; 50];
+        let max_block_size = 25; // Smaller than destination buffer
+
+        let result = decompress_partial(&compressed_data, &mut destination, max_block_size);
+
+        assert!(
+            result.is_err(),
+            "Should return an error when max_block_size < destination.len()"
+        );
+        match result.unwrap_err() {
+            NxDecompressionError::Bzip3(Bzip3CompressionError::MaxBlockSizeTooSmall) => {
+                // Expected error type
+            }
+            _ => panic!("Expected MaxBlockSizeTooSmall error"),
+        }
+    }
 }

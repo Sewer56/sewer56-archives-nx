@@ -52,6 +52,9 @@ i.e.
 - ChunkSize = 15 is `16777216` (16MiB, i.e. 2^24).
 - ChunkSize = 31 is `1099511627776` (1TiB, i.e. 2^40).
 
+<!-- TODO: Start this at 4KiB, since that's granularity and then this goes up to 8TiB; from there we store the short repr in the code. -->
+<!-- TODO: Add an error if 32-bit compiled version uses >4GiB chunk sizes; since we do `usize` in the codebase. -->
+
 !!! warning "Chunk size should always exceed Block size."
 
 !!! warning "Chunk size is limited to 512MiB, as no ToC format currently supports larger"
