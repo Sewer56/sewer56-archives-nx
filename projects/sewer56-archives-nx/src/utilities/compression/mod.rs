@@ -49,6 +49,10 @@ pub enum NxCompressionError {
 
     #[error("The operation was terminated during a stream operation with code: {0}")]
     TerminatedStream(usize),
+
+    /// The LZMA feature is not currently supported.
+    #[error("LZMA Feature not enabled")]
+    LzmaNotEnabled,
 }
 
 /// A result type around compression functions..
@@ -121,7 +125,7 @@ pub fn compress(
         CompressionPreference::NoPreference => {
             zstd::compress(level, source, destination, used_copy)
         }
-        CompressionPreference::LZMA => todo!(),
+        CompressionPreference::LZMA => Err(NxCompressionError::LzmaNotEnabled),
     }
 }
 
@@ -171,7 +175,7 @@ where
         CompressionPreference::NoPreference => {
             zstd::compress_streamed(level, source, destination, terminate_early, used_copy)
         }
-        CompressionPreference::LZMA => todo!(),
+        CompressionPreference::LZMA => Err(NxCompressionError::LzmaNotEnabled),
     }
 }
 
@@ -217,7 +221,7 @@ pub fn decompress_partial(
         CompressionPreference::Lz4 => lz4::decompress_partial(source, destination),
         #[cfg(feature = "bzip3")]
         CompressionPreference::Bzip3 => bzip3::decompress_partial(source, destination),
-        _ => panic!("Unsupported partial decompression method"), // TODO: Replace panic! 
+        _ => panic!("Unsupported partial decompression method"), // TODO: Replace panic!
     }
 }
 
