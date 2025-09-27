@@ -578,7 +578,7 @@ pub enum PackerPreset {
     ///
     /// Uses a profile equal or similar to:
     /// - 16MiB SOLID Blocks
-    /// - 512MiB File Chunks
+    /// - 16MiB File Chunks
     /// - ZStandard Compression (level 22/Max)
     /// - Per extension dictionary compression
     LocalArchivalNVME32BitTarget,
