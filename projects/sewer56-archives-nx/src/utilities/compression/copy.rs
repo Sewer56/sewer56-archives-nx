@@ -1,6 +1,23 @@
-use super::{CompressionResult, DecompressionResult, NxCompressionError, NxDecompressionError};
+use super::{CompressionResult, DecompressionResult, NxCompressionError};
 use core::{cmp::min, ptr::copy_nonoverlapping};
+use thiserror_no_std::Error;
 pub use zstd_sys::ZSTD_ErrorCode;
+
+/// Represents raw errors returned directly from the Copy (no compression) operations.
+///
+/// This enum contains only errors that originate from copy operations and maintains
+/// consistency with other compression algorithm error types. High-level validation
+/// errors are handled by [`NxDecompressionError`] variants.
+///
+/// # Error Mappings
+///
+/// - `DestinationTooSmall`: Destination buffer is too small to hold the copied data
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
+pub enum CopyDecompressionError {
+    /// Destination buffer too small for copy operation
+    #[error("Destination buffer too small for copy operation")]
+    DestinationTooSmall,
+}
 
 /// Determines maximum memory needed to alloc to compress data with copying.
 pub fn max_alloc_for_compress_size(source_length: usize) -> usize {
@@ -35,7 +52,7 @@ pub fn compress(source: &[u8], destination: &mut [u8], used_copy: &mut bool) -> 
 pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
     // Check if destination too small
     if destination.len() < source.len() {
-        return Err(NxDecompressionError::DestinationTooSmall);
+        return Err(CopyDecompressionError::DestinationTooSmall.into());
     }
 
     unsafe { copy_nonoverlapping(source.as_ptr(), destination.as_mut_ptr(), source.len()) };

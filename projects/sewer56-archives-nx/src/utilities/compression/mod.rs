@@ -97,6 +97,8 @@ pub type DecompressionResult = Result<usize, NxDecompressionError>;
 /// decompression algorithms in the Nx system.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
 pub enum NxDecompressionError {
+    #[error(transparent)]
+    Copy(#[from] CopyDecompressionError),
     #[error("ZStandard Error: {0:?}")]
     ZStandard(#[from] ZSTD_ErrorCode),
     #[cfg(feature = "lz4")]
@@ -113,10 +115,6 @@ pub enum NxDecompressionError {
     /// Max block size too small for partial decompression of block-based formats (high-level validation error)
     #[error("Max block size must be at least as large as destination buffer size for partial decompression of block-based formats")]
     MaxBlockSizeTooSmall,
-
-    /// Destination buffer too small for decompression (high-level validation error)
-    #[error("Destination buffer too small for decompression")]
-    DestinationTooSmall,
 }
 
 /// Determines maximum memory needed to alloc to compress data with any method.
@@ -403,7 +401,10 @@ mod tests {
     }
 
     #[rstest]
-    #[case::copy(CompressionPreference::Copy, NxDecompressionError::DestinationTooSmall)]
+    #[case::copy(
+        CompressionPreference::Copy,
+        NxDecompressionError::Copy(CopyDecompressionError::DestinationTooSmall)
+    )]
     #[case::zstd(
         CompressionPreference::ZStandard,
         NxDecompressionError::ZStandard(ZSTD_ErrorCode::ZSTD_error_dstSize_tooSmall)
