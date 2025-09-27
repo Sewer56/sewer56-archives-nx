@@ -16,6 +16,8 @@ pub const MIN_BLOCK_SIZE: usize = 65 * 1024; // 65 KiB
 pub const MAX_BLOCK_SIZE: usize = 511 * 1024 * 1024; // 511 MiB
 
 /// Represents an error specific to BZip3 compression operations.
+/// The low numbers have direct mappings to the bz3 error codes.
+/// The high numbers (254, 255) are custom errors for our wrapper.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
 pub enum Bzip3CompressionError {
     /// Out of bounds error occurred during compression
