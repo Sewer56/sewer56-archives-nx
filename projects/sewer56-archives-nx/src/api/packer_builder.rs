@@ -426,12 +426,12 @@ impl<'a> NxPackerBuilder<'a> {
                 self.settings.enable_per_extension_dictionary = true;
             }
             PackerPreset::WebUploadGeneric => {
-                self.settings.solid_size = 16777215; // 16MiB
-                self.settings.chunk_size = 16777216; // 16MiB
+                self.settings.solid_size = 1048575; // 1MiB
+                self.settings.chunk_size = 268435456; // 256MiB
                 self.settings.solid_compression_level = 0;
                 self.settings.chunked_compression_level = 0;
-                self.settings.solid_block_algorithm = CompressionPreference::Bzip3;
-                self.settings.chunked_file_algorithm = CompressionPreference::Bzip3;
+                self.settings.solid_block_algorithm = CompressionPreference::Bzip3; // TODO: Update this for 'hydra' mode.
+                self.settings.chunked_file_algorithm = CompressionPreference::Bzip3; // TODO: Update this for 'hydra' mode.
                 self.settings.enable_per_extension_dictionary = false;
             }
             PackerPreset::WebUploadSpecialized => {
@@ -586,29 +586,26 @@ pub enum PackerPreset {
     /// Optimized for web uploads to generic services with no special handling
     /// for Nx.
     ///
+    /// In this case, the web service treats the file as an opaque blob; and we bunch up small files
+    /// together to avoid repeated connections for each individual file.
+    ///
     /// # Settings
     ///
     /// Uses a profile equal or similar to:
     /// - 1MiB SOLID Blocks (BZip3/LZMA)
-    /// - 512MiB File Chunks (LZMA) [2.6Gi memory usage per thread w/ 256MiB dict].
-    ///     - BZip3 blocks are chunked into 16MiB.
-    /// - Uses a mix of BZip3 (specific file formats) and LZMA (others)
-    ///
-    /// # Remarks
-    ///
-    /// If block count is low, this setting may default back to LZMA only, sacrificing
-    /// a tiny bit of ratio for 5-7x decompression speed.
-    ///
-    /// Currently 'low' means 'under 8'.
-    ///
-    /// This setting tries to strike a balance between using small blocks
+    /// - Uses mixed chunks:
+    ///     - 256MiB for LZMA
+    ///     - 16MiB for BZip3
+    ///     - a.k.a. 'Hydra' mode; currently unimplemented.
+    ///         - Subject to change.
     WebUploadGeneric,
 
     /// Optimized for web uploads to specialized services with special handling of
     /// Nx.
     ///
     /// These 'specialized' services are ones that would split up the blocks
-    /// into an individual Nx archive into separate blocks.
+    /// of an individual Nx archive into separate blocks on a CDN server; reducing
+    /// redundant data.
     ///
     /// # Settings
     ///
