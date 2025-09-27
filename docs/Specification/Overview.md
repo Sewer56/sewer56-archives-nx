@@ -203,6 +203,75 @@ block size (typically 4 bytes) and checksum (4 bytes) are skipped.
 The removal of the checksum flag also speeds up decompression a tiny bit.
 In cases where a decompressed size is needed, such as in decompression,
 
+#### Added Packing Presets
+
+!!! info "This release adds various packing presets to the reference API implementation."
+
+The presets control the behaviour of how the blocks in the `.nx` archive are arranged.
+They currently include:
+
+- Local Archiving (SSD): Maximized Compression ratio with LZMA.
+- Local Archiving (NVMe): Compression at ZStandard Max Level.
+- Web Uploads (Generic): Maximized Compression ratio with.
+  - BZip3 for specific file extensions (e.g. DDS)
+  - LZMA for other data
+- Web Uploads (No SOLID): BZip3 and LZMA, no ZStandard. For websites which wish to optimize their storage of Nx archives.
+  - Split up Nx archives into blocks.
+  - Store them deduplicated on CDN.
+  - Reassemble archives upon user downloading a file.
+  - That allows mod updates to not double up storage server side.
+- Game Bulk Load: Compression with tweaked ZStandard Options for slightly better decompression speed.
+  - Use for loading multiple game files at once. e.g. a Stage
+- Low Latency VFS: Optimizes for low latency access of unknown data with small compression ratio sacarifice.
+
+#### Added BZip3 Compression
+
+!!! info "Added BZip3 Compression for Web Uploads"
+
+!!! warning "BZip3 is still experimental, and contains bugs."
+
+    It's still an experiment for now, it may be removed at a later date.
+
+[BZip3] is a relatively new algorithm for compressing data. Among the high compression algorithms
+that still have 'acceptable' decompression speeds, this one comes out as the one compressing the best
+on texture data. Justification for trying [BZip3] is below.
+
+According to [Steam Hardware Survey] largest bucket of users has a 6-core CPU.
+
+While the exact CPU is not specified, it is likely that this is of the class around Ryzen 5600
+or Intel 12600K. That should be approximately half of the performance of my 5900X.
+
+On my CPU, all thread decompression runs at around 125MB/s, so expect in around 60MB/s there, and 10MB/s
+on a single thread. Minor optimizations are also still possible, of course.
+
+On the [Steam Download Stats] page we can see that the top countries average around 150Mbps (18.75MB/s) today.
+Take into account a 1.4-ish compression ratio, we can extrapolate that a regular user should be able
+to decompress while downloading on 3 cores.
+
+[For some miscellaneous tests/notes, see issue 20][issue-20].
+
+!!! info "BZip3 also has a lot of opportunity to improve still"
+
+    There's plenty of opportunities for tiny optimizations all around.
+
+#### Added LZMA Compression
+
+!!! info "Added LZMA Compression for Local SSD Archiving"
+
+LZMA (known from 7zip / Igor Pavlov) is used for archiving local data to non-NVMe storage.
+
+On modern hardware, this achieves around 70MB/s of decompression speed per thread; exact scaling
+across multiple cores is currently unknown (TODO: update this), but it is hoped that on current
+hardware, it should exceed 500MB/s on 12 cores. Read speed limit of SATA SSDs is around 550MB/s, but
+tends to commonly be closer to 500MB/s.
+
+Accounting for a 1.4x compression ratio, a machine would need ~700MB/s decompression speed to max
+out the drive. A 7950X (16 core, 2022), 14900k (2022) or faster should be able to saturate this.
+
+When a the web upload preset is chosen, and there are very few blocks generated, the preset will
+fall back to LZMA. This improves decompression speed 5-7x, so updates to individual files on fast
+internet connections wouldn't be held back.
+
 #### String Pool Experiment
 
 !!! info "An alternative implementation of the [String Pool] was experimented with."
@@ -283,3 +352,7 @@ The [Table of Contents][ToC Header] has also received its own proper
 [Research: Decode Speed]: ../Research/DecodeSpeed.md
 [Stripping ZStandard Frame Headers]: #stripping-zstandard-frame-headers
 [Dictionary Header]: ./Dictionaries.md
+[issue-20]: https://github.com/Sewer56/sewer56-archives-nx/issues/20
+[Steam Hardware Survey]: https://store.steampowered.com/hwsurvey/cpus/
+[Steam Download Stats]: https://store.steampowered.com/stats/content/
+[BZip3]: https://github.com/kspalaiologos/bzip3

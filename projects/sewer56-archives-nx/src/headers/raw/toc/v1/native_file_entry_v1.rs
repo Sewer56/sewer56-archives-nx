@@ -107,8 +107,8 @@ mod tests {
     impl Dummy<Faker> for NativeFileEntryV1 {
         fn dummy_with_rng<R: Rng + ?Sized>(_: &Faker, rng: &mut R) -> Self {
             NativeFileEntryV1 {
-                hash: rng.gen(),
-                decompressed_size: rng.gen(),
+                hash: rng.random(),
+                decompressed_size: rng.random(),
                 offset_path_index_tuple: Faker.fake(),
             }
         }

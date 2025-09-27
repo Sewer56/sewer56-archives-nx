@@ -157,9 +157,9 @@ mod tests {
     impl Dummy<Faker> for OffsetPathIndexTuple {
         fn dummy_with_rng<R: Rng + ?Sized>(_: &Faker, rng: &mut R) -> Self {
             let mut tuple = OffsetPathIndexTuple::default();
-            tuple.set_decompressed_block_offset(rng.gen_range(0..0x3FFFFFF)); // 26 bits
-            tuple.set_file_path_index(rng.gen_range(0..0xFFFFF)); // 20 bits
-            tuple.set_first_block_index(rng.gen_range(0..0x3FFFF)); // 18 bits
+            tuple.set_decompressed_block_offset(rng.random_range(0..0x3FFFFFF)); // 26 bits
+            tuple.set_file_path_index(rng.random_range(0..0xFFFFF)); // 20 bits
+            tuple.set_first_block_index(rng.random_range(0..0x3FFFF)); // 18 bits
             tuple
         }
     }

@@ -404,13 +404,13 @@ impl DictionariesPayloadHeader {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::prelude::vec;
     use crate::{
         implementation::pack::blocks::polyfills::Block,
         utilities::tests::{
             mock_block::create_mock_block, packer_file_for_testing::PackerFileForTesting,
         },
     };
-    use allocator_api2::vec;
 
     #[test]
     fn calc_size_can_calculate_min_size_dictionary() {

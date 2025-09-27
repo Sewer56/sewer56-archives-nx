@@ -19,7 +19,7 @@ nightly = ["sewer56-archives-nx/nightly", "hashbrown/nightly"]
 
 [dependencies]
 sewer56-archives-nx = { path = "../../sewer56-archives-nx" }
-argh = "0.1.12"
-bytesize = "1.3.0"
-hashbrown = { version = "0.15.2" }
-rayon = "1.10.0"
+argh = "0.1.13"
+bytesize = "2.1.0"
+hashbrown = { version = "0.16.0" }
+rayon = "1.11.0"

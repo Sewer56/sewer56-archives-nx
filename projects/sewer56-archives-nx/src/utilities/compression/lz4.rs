@@ -1,16 +1,21 @@
 use core::cmp::min;
 
-use super::{CompressionResult, DecompressionResult};
-use crate::{
-    api::enums::*,
-    utilities::compression::{copy, NxCompressionError},
-};
+use super::{CompressionResult, DecompressionResult, NxCompressionError};
+use crate::{api::enums::*, utilities::compression::copy};
 use derive_more::derive::{Deref, DerefMut};
 use derive_new::new;
 use lz4_sys::*;
 use thiserror_no_std::Error;
 
-/// Represents an error specific to LZ4 compression operations.
+/// Represents raw errors returned directly from the LZ4 library.
+///
+/// This enum contains only errors that originate from the underlying LZ4 library
+/// and are passed through without interpretation. High-level validation
+/// errors are handled by [`NxCompressionError`] variants.
+///
+/// # Error Code Mappings
+///
+/// - `CompressionFailed`: LZ4 compression failed (library returns 0 with no specific error code)
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
 pub enum Lz4CompressionError {
     /// Compression has failed.
@@ -19,7 +24,15 @@ pub enum Lz4CompressionError {
     CompressionFailed,
 }
 
-/// Represents an error specific to LZ4 compression operations.
+/// Represents raw errors returned directly from the LZ4 library.
+///
+/// This enum contains only errors that originate from the underlying LZ4 library
+/// and are passed through without interpretation. High-level validation
+/// errors are handled by [`NxDecompressionError`] variants.
+///
+/// # Error Code Mappings
+///
+/// - `DecompressionFailed`: LZ4 decompression failed (library returns 0 with no specific error code)
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
 pub enum Lz4DecompressionError {
     /// Decompression has failed.
@@ -68,13 +81,22 @@ pub fn compress(
     };
 
     if result == 0 {
-        // LZ4 only has 1 error
+        // Check if failure was due to destination buffer being too small
+        let min_required_size = max_alloc_for_compress_size(source.len());
+        if destination.len() < min_required_size {
+            return Err(NxCompressionError::DestinationTooSmall);
+        }
+        // Otherwise return library-specific error
         return Err(Lz4CompressionError::CompressionFailed.into());
     }
 
     // Note: This code assumes that the user has properly used max_alloc_for_compress_size
     //       failure to do so will result in possible CompressionFailed error.
     if result > source.len() as i32 {
+        // Check if destination buffer was too small
+        if destination.len() < source.len() {
+            return Err(NxCompressionError::DestinationTooSmall);
+        }
         return super::compress(
             CompressionPreference::Copy,
             level,
@@ -98,7 +120,7 @@ pub fn compress(
 /// * `level`: Compression level to use.
 /// * `source`: Source data to compress.
 /// * `destination`: Destination buffer for compressed data.
-/// * `terminate_early`: Optional callback that returns `Some(i32)` to terminate early
+/// * `terminate_early`: Optional callback that returns `Some(usize)` to terminate early
 ///   with that value, or `None` to continue compression.
 /// * `used_copy`: If this is true, Copy compression was used, due to uncompressible data.
 ///
@@ -153,6 +175,12 @@ where
             );
 
             if num_compressed <= 0 {
+                // Check if failure was due to destination buffer being too small
+                let min_required_size = max_alloc_for_compress_size(source.len());
+                if destination.len() < min_required_size {
+                    return Err(NxCompressionError::DestinationTooSmall);
+                }
+                // Otherwise return library-specific error
                 return Err(Lz4CompressionError::CompressionFailed.into());
             }
 
@@ -211,11 +239,16 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
 ///
 /// * `source`: Source data to decompress.
 /// * `destination`: Destination buffer for decompressed data.
+/// * `max_block_size`: Maximum block size for decompression. Ignored for LZ4 algorithm.
 ///
 /// # Returns
 ///
 /// The number of bytes written to the destination, or an error.
-pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
+pub fn decompress_partial(
+    source: &[u8],
+    destination: &mut [u8],
+    _max_block_size: usize,
+) -> DecompressionResult {
     let result = unsafe {
         LZ4_decompress_safe_partial(
             source.as_ptr() as *const c_char,

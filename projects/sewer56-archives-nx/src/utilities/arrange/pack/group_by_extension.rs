@@ -44,7 +44,7 @@ fn extract_extension(path: &str) -> &str {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use allocator_api2::vec;
+    use crate::prelude::vec;
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     struct SortTestItem {

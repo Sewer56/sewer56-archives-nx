@@ -22,8 +22,12 @@ git clone -c core.symlinks=true https://github.com/Sewer56/sewer56-archives-nx.g
 ```
 
 ***Install Rust:***
-- Install the [Rust Toolchain.][rust-toolchain]***Setup IDE***
+- Install the [Rust Toolchain.][rust-toolchain]
+- Install [LLVM][LLVM] if necessary.
+
+***Setup IDE***
 - This repository is fully with VSCode. [Guidance below](#visual-studio-code-integration).
+
 ### Visual Studio Code Integration
 
 `Code`/`VSCode` is the de-facto Rust development environment.  
@@ -252,3 +256,4 @@ Licensed under [GPL v3 (with Reloaded FAQ)](./LICENSE).
 [reloaded-license]: https://reloaded-project.github.io/Reloaded.MkDocsMaterial.Themes.R2/Pages/license/
 [rust-analyzer]: https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer
 [rust-toolchain]: https://www.rust-lang.org/tools/install
+[LLVM]: https://rust-lang.github.io/rust-bindgen/requirements.html

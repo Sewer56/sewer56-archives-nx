@@ -325,8 +325,12 @@ mod tests {
     use super::*;
     use crate::api::packing::packing_settings::MAX_BLOCK_SIZE;
     use crate::utilities::tests::packer_file_for_testing::PackerFileForTesting;
-    use allocator_api2::vec;
     use rstest::rstest;
+
+    #[cfg(feature = "nightly")]
+    pub use alloc::vec;
+    #[cfg(not(feature = "nightly"))]
+    pub use allocator_api2::vec;
 
     #[rstest]
     #[case(TableOfContentsVersion::V0)]

@@ -65,7 +65,10 @@ pub fn compress(
     }
 
     let errcode = unsafe { ZSTD_getErrorCode(result) };
-    if result > source.len() || errcode == ZSTD_error_dstSize_tooSmall {
+    if errcode == ZSTD_error_dstSize_tooSmall {
+        return Err(NxCompressionError::DestinationTooSmall);
+    }
+    if result > source.len() {
         return copy::compress(source, destination, used_copy);
     }
 
@@ -86,7 +89,7 @@ pub fn compress(
 /// * `level`: Compression level to use.
 /// * `source`: Source data to compress.
 /// * `destination`: Destination buffer for compressed data.
-/// * `terminate_early`: Optional callback that returns `Some(i32)` to terminate early
+/// * `terminate_early`: Optional callback that returns `Some(usize)` to terminate early
 ///   with that value, or `None` to continue compression.
 /// * `used_copy`: If this is true, Copy compression was used, due to uncompressible data.
 ///
@@ -167,7 +170,10 @@ where
                 // If no bytes were compressed, that means destination buffer is too small.
                 let has_error = ZSTD_isError(result) != 0;
                 let dest_too_small = output.pos == last_out_pos;
-                if has_error || dest_too_small {
+                if dest_too_small {
+                    return Err(NxCompressionError::DestinationTooSmall);
+                }
+                if has_error {
                     return copy::compress(source, destination, used_copy);
                 }
                 last_out_pos = output.pos;
@@ -303,7 +309,12 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
 ///
 /// * `source`: Source data to decompress.
 /// * `destination`: Destination buffer for decompressed data.
-pub fn decompress_partial(source: &[u8], destination: &mut [u8]) -> DecompressionResult {
+/// * `max_block_size`: Maximum block size for decompression. Ignored for ZStandard algorithm.
+pub fn decompress_partial(
+    source: &[u8],
+    destination: &mut [u8],
+    _max_block_size: usize,
+) -> DecompressionResult {
     unsafe {
         let d_stream = ZSTD_createDStream();
 
@@ -502,7 +513,7 @@ mod tests {
         let invalid_compressed_data = vec![0xFFu8; 100];
         let mut destination = vec![0u8; 1000];
 
-        let result = decompress_partial(&invalid_compressed_data, &mut destination);
+        let result = decompress_partial(&invalid_compressed_data, &mut destination, 0);
 
         assert!(
             result.is_err(),

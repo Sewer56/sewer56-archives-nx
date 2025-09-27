@@ -56,6 +56,8 @@ impl NativeV1TocBlockEntry {
             CompressionPreference::Copy => 0,
             CompressionPreference::ZStandard => 1,
             CompressionPreference::Lz4 => 2,
+            CompressionPreference::Bzip3 => unsafe { unreachable_unchecked() },
+            CompressionPreference::LZMA => unsafe { unreachable_unchecked() },
         });
     }
 }

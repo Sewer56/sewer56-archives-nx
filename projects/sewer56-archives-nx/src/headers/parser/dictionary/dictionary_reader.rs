@@ -1,11 +1,14 @@
+use crate::prelude::*;
 use crate::{
     headers::{managed::InsufficientDataError, parser::*, types::xxh3sum::XXH3sum},
     implementation::pack::blocks::polyfills::NO_DICTIONARY_INDEX,
     utilities::compression::*,
 };
-use crate::prelude::*;
 use core::{
-    alloc::Layout, ops::{Deref, DerefMut}, ptr::copy_nonoverlapping, slice
+    alloc::Layout,
+    ops::{Deref, DerefMut},
+    ptr::copy_nonoverlapping,
+    slice,
 };
 use derive_new::new;
 use endian_writer::{ByteAlign, EndianReader, LittleEndianReader};
@@ -91,8 +94,8 @@ impl DictionaryData {
 ///
 /// # Arguments
 /// * `dictionary_data` - Slice of compressed dictionary data.
-///                       This begins at the dictionary header [`DictionariesHeader`] and must be
-///                       at least as long as the length of the dictionary segment.
+///   This begins at the dictionary header [`DictionariesHeader`] and must be
+///   at least as long as the length of the dictionary segment.
 ///
 /// # Remarks
 ///
@@ -109,7 +112,11 @@ pub unsafe fn extract_payload_with_allocator<ShortAlloc: Allocator + Clone>(
     // Validate we have enough bytes for the header
     #[cfg(feature = "hardened")]
     if dictionary_data.len() < DictionariesHeader::SIZE_BYTES {
-        return Err(InsufficientDataError::new(dictionary_data.len() as u32, DictionariesHeader::SIZE_BYTES as u32).into());
+        return Err(InsufficientDataError::new(
+            dictionary_data.len() as u32,
+            DictionariesHeader::SIZE_BYTES as u32,
+        )
+        .into());
     }
 
     let mut reader = LittleEndianReader::new(dictionary_data.as_ptr());
@@ -161,15 +168,16 @@ pub unsafe fn extract_payload_with_allocator<ShortAlloc: Allocator + Clone>(
                 return Err(InsufficientDataError::new(
                     dictionary_data.len() as u32,
                     (DictionariesHeader::SIZE_BYTES + decompressed_size as usize) as u32,
-                ).into());
+                )
+                .into());
             }
         }
-        
+
         unsafe {
             copy_nonoverlapping(
                 reader.ptr,
                 decompressed_data.as_mut_ptr(),
-                decompressed_size as usize
+                decompressed_size as usize,
             );
         }
     } else {
@@ -264,8 +272,8 @@ pub unsafe fn parse_payload_with_allocator<ShortAlloc: Allocator + Clone>(
         #[cfg(feature = "hardened")]
         {
             let write_end_ptr = dict_indices_ptr as usize + num_items as usize;
-            let allocated_end_ptr = dict_indices_for_block.as_ptr() as usize
-                + dict_indices_for_block.len();
+            let allocated_end_ptr =
+                dict_indices_for_block.as_ptr() as usize + dict_indices_for_block.len();
             if write_end_ptr > allocated_end_ptr {
                 return Err(DictionaryReadError::InvalidDictionaryBlockLengthData);
             }
@@ -279,11 +287,12 @@ pub unsafe fn parse_payload_with_allocator<ShortAlloc: Allocator + Clone>(
 
     // Validate that all dict_indices have been written to
     #[cfg(feature = "hardened")]
-    if dict_indices_ptr as *const u8
-        != dict_indices_for_block
+    if !core::ptr::eq(
+        dict_indices_ptr,
+        dict_indices_for_block
             .as_ptr()
-            .add(dict_indices_for_block.len())
-    {
+            .add(dict_indices_for_block.len()),
+    ) {
         return Err(DictionaryReadError::InvalidDictionaryBlockLengthData);
     }
 
@@ -321,12 +330,13 @@ pub unsafe fn parse_payload_with_allocator<ShortAlloc: Allocator + Clone>(
     {
         let expected_data_size = current_offset as usize;
         if remaining_bytes < expected_data_size {
-            return Err(
-                InsufficientDataError::new(remaining_bytes as u32, expected_data_size as u32).into(),
-            );
+            return Err(InsufficientDataError::new(
+                remaining_bytes as u32,
+                expected_data_size as u32,
+            )
+            .into());
         }
     }
-
 
     let raw_data = slice::from_raw_parts(raw_data_start as *const u8, remaining_bytes);
 
@@ -362,13 +372,13 @@ impl<ShortAlloc: Allocator> From<RawAlloc<ShortAlloc>> for Aligned8RawAlloc<Shor
 
 #[cfg(test)]
 mod tests {
-    use rstest::rstest;
     use super::*;
+    use crate::prelude::vec;
     use crate::{
         implementation::pack::blocks::polyfills::NO_DICTIONARY_INDEX,
         utilities::tests::mock_block::create_mock_block,
     };
-    use allocator_api2::vec;
+    use rstest::rstest;
 
     #[rstest]
     #[case(false)]
@@ -437,9 +447,15 @@ mod tests {
 
         // Verify dictionary content for each block
         unsafe {
-            assert!(deserialized.get_dictionary_for_block_unchecked(0).is_empty());
-            assert!(deserialized.get_dictionary_for_block_unchecked(1).is_empty());
-            assert!(deserialized.get_dictionary_for_block_unchecked(2).is_empty());
+            assert!(deserialized
+                .get_dictionary_for_block_unchecked(0)
+                .is_empty());
+            assert!(deserialized
+                .get_dictionary_for_block_unchecked(1)
+                .is_empty());
+            assert!(deserialized
+                .get_dictionary_for_block_unchecked(2)
+                .is_empty());
         }
     }
 
@@ -469,9 +485,13 @@ mod tests {
         // Verify dictionary content for each block
         unsafe {
             assert_eq!(deserialized.get_dictionary_for_block_unchecked(0), &dict1);
-            assert!(deserialized.get_dictionary_for_block_unchecked(1).is_empty());
+            assert!(deserialized
+                .get_dictionary_for_block_unchecked(1)
+                .is_empty());
             assert_eq!(deserialized.get_dictionary_for_block_unchecked(2), &dict1);
-            assert!(deserialized.get_dictionary_for_block_unchecked(3).is_empty());
+            assert!(deserialized
+                .get_dictionary_for_block_unchecked(3)
+                .is_empty());
             assert_eq!(deserialized.get_dictionary_for_block_unchecked(4), &dict1);
         }
     }
@@ -480,10 +500,10 @@ mod tests {
 #[cfg(test)]
 #[cfg(feature = "hardened")]
 mod invalid_data_tests {
-    use rstest::rstest;
-    use crate::utilities::tests::mock_block::create_mock_block;
     use super::*;
-    use allocator_api2::vec;    
+    use crate::prelude::vec;
+    use crate::utilities::tests::mock_block::create_mock_block;
+    use rstest::rstest;
 
     #[test]
     fn insufficient_dict_header_bytes() {
@@ -491,7 +511,7 @@ mod invalid_data_tests {
         let data = vec![1, 2, 3, 4, 5, 6, 7]; // Less than DictionariesHeader::SIZE_BYTES
 
         let result = unsafe { deserialize_dictionary_data(&data) };
-        assert!(matches!(result, 
+        assert!(matches!(result,
             Err(DictionaryReadError::InsufficientData(err)) if err.available == 7 && err.expected == DictionariesHeader::SIZE_BYTES as u32));
     }
 
@@ -503,12 +523,16 @@ mod invalid_data_tests {
         let dict1: Vec<u8> = vec![1, 2, 3];
         let dictionaries = vec![dict1.as_slice()];
         let blocks = vec![create_mock_block(0)];
-        
-        let mut serialized = serialize_dictionary_data(&dictionaries, &blocks, true, compress).unwrap();
+
+        let mut serialized =
+            serialize_dictionary_data(&dictionaries, &blocks, true, compress).unwrap();
         serialized.truncate(serialized.len() - 1); // Truncate to create insufficient data scenario
-        
+
         let result = unsafe { deserialize_dictionary_data(&serialized) };
-        assert!(matches!(result, Err(DictionaryReadError::InsufficientData(_))));
+        assert!(matches!(
+            result,
+            Err(DictionaryReadError::InsufficientData(_))
+        ));
     }
 
     #[rstest]
@@ -519,16 +543,21 @@ mod invalid_data_tests {
         let dict1: Vec<u8> = vec![];
         let dictionaries = vec![dict1.as_slice()];
         let blocks = vec![create_mock_block(0)];
-        
-        let mut serialized = serialize_dictionary_data(&dictionaries, &blocks, true, compress).unwrap();
-        
+
+        let mut serialized =
+            serialize_dictionary_data(&dictionaries, &blocks, true, compress).unwrap();
+
         // Corrupt the decompressed size in the header to be too small
-        let mut header = DictionariesHeader(u64::from_le_bytes(serialized[0..8].try_into().unwrap()));
+        let mut header =
+            DictionariesHeader(u64::from_le_bytes(serialized[0..8].try_into().unwrap()));
         header.set_decompressed_size(DictionariesPayloadHeader::SIZE_BYTES as u32 - 1); // Too small for payload header
         serialized[0..8].copy_from_slice(&header.0.to_le_bytes());
-        
+
         let result = unsafe { deserialize_dictionary_data(&serialized) };
-        assert!(matches!(result, Err(DictionaryReadError::InsufficientPayloadSize)));
+        assert!(matches!(
+            result,
+            Err(DictionaryReadError::InsufficientPayloadSize)
+        ));
     }
 
     #[test]
@@ -537,16 +566,17 @@ mod invalid_data_tests {
         let dict1: Vec<u8> = vec![1, 2, 3];
         let dictionaries = vec![dict1.as_slice()];
         let blocks = vec![create_mock_block(0)];
-        
+
         let mut serialized = serialize_dictionary_data(&dictionaries, &blocks, true, true).unwrap();
-        
+
         // Corrupt the decompressed size in the header
-        let mut header = DictionariesHeader(u64::from_le_bytes(serialized[0..8].try_into().unwrap()));
+        let mut header =
+            DictionariesHeader(u64::from_le_bytes(serialized[0..8].try_into().unwrap()));
         header.set_decompressed_size(1000); // Much larger than actual
         serialized[0..8].copy_from_slice(&header.0.to_le_bytes());
-        
+
         let result = unsafe { deserialize_dictionary_data(&serialized) };
-        assert!(matches!(result, 
+        assert!(matches!(result,
             Err(DictionaryReadError::DecompressedSizeMismatch(expected, _actual)) if expected == 1000));
     }
 
@@ -557,15 +587,15 @@ mod invalid_data_tests {
         // Create dictionary data with invalid dictionary index
         let dict1: Vec<u8> = vec![1, 2, 3];
         let dictionaries = vec![dict1.as_slice()];
-        
+
         // Create blocks referencing invalid dictionary index
         let blocks = vec![
             create_mock_block(2), // Invalid index, only 1 dictionary exists
         ];
-        
+
         let serialized = serialize_dictionary_data(&dictionaries, &blocks, true, compress).unwrap();
         let result = unsafe { deserialize_dictionary_data(&serialized) };
-        assert!(matches!(result, 
+        assert!(matches!(result,
             Err(DictionaryReadError::InvalidDictionaryIndex(index, num_dicts)) if index == 2 && num_dicts == 1));
     }
 
@@ -576,13 +606,16 @@ mod invalid_data_tests {
         let dict1: Vec<u8> = vec![1, 2, 3];
         let dictionaries = vec![dict1.as_slice()];
         let blocks = vec![create_mock_block(0)];
-        
+
         let serialized = serialize_dictionary_data(&dictionaries, &blocks, true, compress).unwrap();
         let dictionary_data = unsafe { deserialize_dictionary_data(&serialized) }.unwrap();
-        
+
         // Try to access block beyond the end
         let result = unsafe { dictionary_data.get_dictionary_for_block_unchecked(100) };
-        assert!(result.is_empty(), "Out of bounds access should return empty slice");
+        assert!(
+            result.is_empty(),
+            "Out of bounds access should return empty slice"
+        );
     }
 
     #[test]
@@ -590,31 +623,29 @@ mod invalid_data_tests {
         let dict1: Vec<u8> = vec![1, 2, 3];
         let dictionaries = vec![dict1.as_slice()];
         let blocks = vec![create_mock_block(0)];
-        
-        let mut serialized = serialize_dictionary_data(&dictionaries, &blocks, true, false).unwrap();
-        
+
+        let mut serialized =
+            serialize_dictionary_data(&dictionaries, &blocks, true, false).unwrap();
+
         // Extract the payload to modify it
-        let mut payload_result = unsafe { 
-            extract_payload_with_allocator(&serialized, Global).unwrap()
-        };
+        let mut payload_result =
+            unsafe { extract_payload_with_allocator(&serialized, Global).unwrap() };
 
         // Modify the block length to be invalid (too large)
         let decompressed_slice = payload_result.decompressed_data.as_mut_slice();
         decompressed_slice[9] = 255; // Modify first BlockDictionaryLength entry (see specification)
 
         // Reconstruct serialized data (no compression)
-        let header = DictionariesHeader::new(
-            0, 
-            0, 
-            0,
-            decompressed_slice.len() as u32
-        );
+        let header = DictionariesHeader::new(0, 0, 0, decompressed_slice.len() as u32);
         serialized = Vec::new();
         serialized.extend_from_slice(&header.0.to_le_bytes());
         serialized.extend_from_slice(decompressed_slice);
-        
+
         let result = unsafe { deserialize_dictionary_data(&serialized) };
-        assert!(matches!(result, Err(DictionaryReadError::InvalidDictionaryBlockLengthData)));
+        assert!(matches!(
+            result,
+            Err(DictionaryReadError::InvalidDictionaryBlockLengthData)
+        ));
     }
 
     #[test]
@@ -622,36 +653,34 @@ mod invalid_data_tests {
         let dict1: Vec<u8> = vec![1, 2, 3];
         let dictionaries = vec![dict1.as_slice()];
         let blocks = vec![create_mock_block(0)];
-        
-        let mut serialized = serialize_dictionary_data(&dictionaries, &blocks, true, false).unwrap();
-        
+
+        let mut serialized =
+            serialize_dictionary_data(&dictionaries, &blocks, true, false).unwrap();
+
         // Extract the payload to modify it
-        let mut payload_result = unsafe { 
-            extract_payload_with_allocator(&serialized, Global).unwrap()
-        };
+        let mut payload_result =
+            unsafe { extract_payload_with_allocator(&serialized, Global).unwrap() };
 
         // Modify payload header to claim more dictionaries than available
         let decompressed_slice = payload_result.decompressed_data.as_mut_slice();
-        let mut payload_header = DictionariesPayloadHeader(
-            u64::from_le_bytes(decompressed_slice[0..8].try_into().unwrap())
-        );
+        let mut payload_header = DictionariesPayloadHeader(u64::from_le_bytes(
+            decompressed_slice[0..8].try_into().unwrap(),
+        ));
         payload_header.set_num_dictionaries(1000); // Much larger than available data
         payload_header.set_num_mappings(2000);
         decompressed_slice[0..8].copy_from_slice(&payload_header.0.to_le_bytes());
 
         // Create new header with correct sizes
-        let header = DictionariesHeader::new(
-            0, 
-            0, 
-            0,
-            decompressed_slice.len() as u32
-        );
+        let header = DictionariesHeader::new(0, 0, 0, decompressed_slice.len() as u32);
         serialized = Vec::new();
         serialized.extend_from_slice(&header.0.to_le_bytes());
         serialized.extend_from_slice(decompressed_slice);
-        
+
         let result = unsafe { deserialize_dictionary_data(&serialized) };
-        assert!(matches!(result, Err(DictionaryReadError::InsufficientData(_))));
+        assert!(matches!(
+            result,
+            Err(DictionaryReadError::InsufficientData(_))
+        ));
     }
 
     #[test]
@@ -659,17 +688,17 @@ mod invalid_data_tests {
         let dict1: Vec<u8> = vec![1, 2, 3];
         let dictionaries = vec![dict1.as_slice()];
         let blocks = vec![create_mock_block(0)];
-        
-        let mut serialized = serialize_dictionary_data(&dictionaries, &blocks, true, false).unwrap();
-        
+
+        let mut serialized =
+            serialize_dictionary_data(&dictionaries, &blocks, true, false).unwrap();
+
         // Extract the payload to modify it
-        let mut payload_result = unsafe { 
-            extract_payload_with_allocator(&serialized, Global).unwrap()
-        };
+        let mut payload_result =
+            unsafe { extract_payload_with_allocator(&serialized, Global).unwrap() };
 
         // Get the decompressed data
         let decompressed_slice = payload_result.decompressed_data.as_mut_slice();
-        
+
         // Modify the dictionary size to be larger than available data [set DictionarySizes[0] to be very large, see spec)
         // Dictionary sizes start after block mappings, aligned to 4 bytes
         let dict_size_offset = 12; // 8 bytes header + 2 bytes (1 index, 1 legth) + aligned to 4 = 12
@@ -677,17 +706,15 @@ mod invalid_data_tests {
         dict_size_bytes.copy_from_slice(&(1000000u32.to_le_bytes())); // Set dictionary size to be very large
 
         // Create new header with correct sizes
-        let header = DictionariesHeader::new(
-            0, 
-            0, 
-            0,
-            decompressed_slice.len() as u32
-        );
+        let header = DictionariesHeader::new(0, 0, 0, decompressed_slice.len() as u32);
         serialized = Vec::new();
         serialized.extend_from_slice(&header.0.to_le_bytes());
         serialized.extend_from_slice(decompressed_slice);
-        
+
         let result = unsafe { deserialize_dictionary_data(&serialized) };
-        assert!(matches!(result, Err(DictionaryReadError::InsufficientData(_))));
+        assert!(matches!(
+            result,
+            Err(DictionaryReadError::InsufficientData(_))
+        ));
     }
 }

@@ -130,6 +130,7 @@ impl LazyDecompressedSolidNxBlock {
                     self.compression,
                     compressed.data(),
                     &mut decompressed,
+                    0, // TODO: Pass a value here.
                 )?;
 
                 Ok(decompressed)
@@ -142,7 +143,7 @@ impl LazyDecompressedSolidNxBlock {
 mod tests {
     use super::*;
     use crate::api::filedata::FromStreamProvider;
-    use allocator_api2::vec;
+    use crate::prelude::vec;
     use std::io::Cursor;
 
     #[test]

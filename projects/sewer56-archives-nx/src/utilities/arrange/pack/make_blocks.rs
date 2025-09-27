@@ -1,3 +1,4 @@
+use crate::prelude::vec;
 use crate::prelude::*;
 use crate::unsize_box2;
 use crate::{
@@ -8,7 +9,6 @@ use crate::{
 };
 use alloc::rc::Rc;
 use alloc::sync::Arc;
-use allocator_api2::vec;
 use core::mem::take;
 use hashbrown::HashMap; // esoteric platform safe
 
@@ -134,7 +134,7 @@ where
             }
 
             // Check if the item fits in the current block
-            // SAFETY: Block size is limited to 1GiB (fits in 32-bit range)
+            // SAFETY: Block size is limited to 512MiB (fits in 32-bit range)
             if current_block_size + item.file_size() <= block_size as u64 {
                 // [Hot Path] Add item to SOLID block
                 current_block.push(item.clone());
@@ -256,8 +256,8 @@ fn chunk_item<T>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::prelude::vec;
     use alloc::rc::Rc;
-    use allocator_api2::vec;
     use hashbrown::HashMap;
 
     #[derive(Clone)]

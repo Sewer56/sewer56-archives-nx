@@ -10,11 +10,11 @@ bitfield! {
     impl Debug;
     u32;
 
-    /// `u30` The compressed size of the block.
-    pub compressed_block_size, set_compressed_block_size: 31, 2;
+    /// `u29` The compressed size of the block.
+    pub compressed_block_size, set_compressed_block_size: 31, 3;
 
-    // `u2` Compression preference. Keep the raw getter/setter, but make them private
-    compression_raw, set_compression_raw: 1, 0;
+    // `u3` Compression preference. Keep the raw getter/setter, but make them private
+    compression_raw, set_compression_raw: 2, 0;
 }
 
 impl NativeV2TocBlockEntry {
@@ -45,6 +45,8 @@ impl NativeV2TocBlockEntry {
             0 => CompressionPreference::Copy,
             1 => CompressionPreference::ZStandard,
             2 => CompressionPreference::Lz4,
+            3 => CompressionPreference::Bzip3,
+            4 => CompressionPreference::LZMA,
             _ => unsafe { unreachable_unchecked() },
         }
     }
@@ -57,6 +59,8 @@ impl NativeV2TocBlockEntry {
             CompressionPreference::Copy => 0,
             CompressionPreference::ZStandard => 1,
             CompressionPreference::Lz4 => 2,
+            CompressionPreference::Bzip3 => 3,
+            CompressionPreference::LZMA => 4,
         });
     }
 }
