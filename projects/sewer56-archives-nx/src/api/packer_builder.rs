@@ -204,7 +204,7 @@ impl<'a> NxPackerBuilder<'a> {
     ///
     /// # Arguments
     ///
-    /// * `block_size` - Size of SOLID blocks in bytes. Must be between
+    /// * `solid_size` - Size of SOLID blocks in bytes. Must be between
     ///   [`MIN_BLOCK_SIZE`] and [`MAX_BLOCK_SIZE`]. The value will be
     ///   automatically adjusted to the nearest power of 2 minus 1.
     ///
@@ -214,8 +214,8 @@ impl<'a> NxPackerBuilder<'a> {
     ///
     /// [`MIN_BLOCK_SIZE`]: crate::api::packing::packing_settings::MIN_BLOCK_SIZE
     /// [`MAX_BLOCK_SIZE`]: crate::api::packing::packing_settings::MAX_BLOCK_SIZE
-    pub fn with_solid_size(mut self, block_size: u32) -> Self {
-        self.settings.solid_size = block_size;
+    pub fn with_solid_size(mut self, solid_size: u32) -> Self {
+        self.settings.solid_size = solid_size;
         self
     }
 
