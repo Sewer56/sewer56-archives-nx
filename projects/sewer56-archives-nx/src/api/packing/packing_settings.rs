@@ -144,7 +144,7 @@ impl PackingSettings {
             CompressionPreference::ZStandard => level.clamp(-5, 22),
             CompressionPreference::Lz4 => level.clamp(1, 12),
             CompressionPreference::LZMA => level.clamp(0, 0),
-            CompressionPreference::Bzip3 => level.clamp(1, 9), // bzip3 does not use levels
+            CompressionPreference::Bzip3 => 1, // bzip3 does not use levels
             CompressionPreference::NoPreference => unsafe { unreachable_unchecked() },
         }
     }
