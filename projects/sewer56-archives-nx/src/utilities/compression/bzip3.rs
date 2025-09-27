@@ -215,7 +215,9 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
     //      might fail.
     //
     // Note: NX library itself will never produce cases where `destination >= source`, but
-    //       handcrafted malicious archives might. So we need to handle this case.
+    //       handcrafted malicious archives might.
+    //       Therefore, because it's 'impossible', we explicitly decide not to handle the buggy case here;
+    //       instead we error.
     if destination.len() >= source.len() {
         // Copy source data into destination buffer for direct decompression attempt
         unsafe {
@@ -240,10 +242,7 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
 
         // Check if the error is specifically DataSizeTooSmall
         let error_code = unsafe { bz3_last_error(*state) };
-        if error_code as i32 != BZ3_ERR_DATA_SIZE_TOO_SMALL {
-            // For any error other than DataSizeTooSmall, return immediately
-            return Err(convert_error(error_code as i32).into());
-        }
+        return Err(convert_error(error_code as i32).into());
     }
 
     // Note: Past buggy encoder is unsupported.
