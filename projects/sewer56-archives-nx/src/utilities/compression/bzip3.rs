@@ -222,7 +222,8 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
     // Namely:
     //      Note(sewer): It's technically valid within the spec to create a bzip3 block
     //      where the size after LZP/RLE is larger than the original input. Some earlier encoders
-    //      even (mistakenly?) were able to do this.
+    //      even (mistakenly?) were able to do this; and that's the edge case here where `bz3_decode_block`
+    //      might fail.
     //
     // Note: NX library itself will never produce cases where `destination >= source`, but
     //       handcrafted malicious archives might. So we need to handle this case.
@@ -254,54 +255,10 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
             // For any error other than DataSizeTooSmall, return immediately
             return Err(convert_error(error_code as i32).into());
         }
-
-        // If DataSizeTooSmall, fall through to Phase 2
     }
 
-    // Attempt 2: Allocate to temporary buffer `bz3_bound`.
-    //            This is a fallback in case the above fails.
-    //            e.g. an older encoder with a bug was used.
-    let dest_num_bytes = unsafe { bz3_bound(destination.len()) };
-    let mut decomp_destination = unsafe { Box::new_uninit_slice(dest_num_bytes).assume_init() };
-    if dest_num_bytes < source.len() {
-        // This should never happen, but just in case
-        return Err(Bzip3DecompressionError::DataSizeTooSmall.into());
-    }
-
-    // Decode single block using allocated buffer
-    let result = unsafe {
-        // SAFETY: Program will always use bound call before this
-        copy_nonoverlapping(
-            source.as_ptr(),
-            decomp_destination.as_mut_ptr(),
-            source.len(),
-        );
-
-        bz3_decode_block(
-            *state,
-            decomp_destination.as_mut_ptr(),
-            dest_num_bytes,
-            source.len() as i32,
-            destination.len() as i32,
-        )
-    };
-
-    if result <= 0 {
-        // Get specific error from state
-        let error_code = unsafe { bz3_last_error(*state) };
-        return Err(convert_error(error_code as i32).into());
-    }
-
-    // Copy decompressed data to original destination
-    unsafe {
-        copy_nonoverlapping(
-            decomp_destination.as_ptr(),
-            destination.as_mut_ptr(),
-            result as usize,
-        )
-    };
-
-    Ok(result as usize)
+    // Note: Past buggy encoder is unsupported.
+    Err(Bzip3DecompressionError::DataSizeTooSmall.into())
 }
 
 /// Partially decompresses data with BZip3.

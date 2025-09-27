@@ -419,7 +419,7 @@ mod tests {
         feature = "bzip3",
         case::bzip3(
             CompressionPreference::Bzip3,
-            NxDecompressionError::Bzip3(Bzip3CompressionError::CrcFailed)
+            NxDecompressionError::Bzip3(Bzip3CompressionError::DataSizeTooSmall)
         )
     )]
     #[cfg_attr(miri, ignore)]
