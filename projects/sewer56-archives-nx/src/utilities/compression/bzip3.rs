@@ -116,7 +116,7 @@ pub fn compress(source: &[u8], destination: &mut [u8], used_copy: &mut bool) -> 
         return copy::compress(source, destination, used_copy);
     }
 
-    // bzip3 has a min block size of 64K
+    // bzip3 has a min block size of 65K
     let block_size = max(source.len(), MIN_BLOCK_SIZE) as i32;
 
     // Create new BZip3 state
@@ -195,7 +195,7 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
         return Err(Bzip3CompressionError::DataTooLarge.into());
     }
 
-    // bzip3 has a min block size of 64K
+    // bzip3 has a min block size of 65K
     let block_size = max(destination.len(), MIN_BLOCK_SIZE) as i32;
 
     // Create new BZip3 state
