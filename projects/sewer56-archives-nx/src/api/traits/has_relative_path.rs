@@ -10,7 +10,7 @@ pub trait HasRelativePath {
     fn relative_path(&self) -> &str;
 }
 
-/// Automatic implementation of [HasRelativePath] for [Rc<T>]
+/// Automatic implementation of [`HasRelativePath`] for [`Rc<T>`]
 impl<T: HasRelativePath> HasRelativePath for Rc<T> {
     fn relative_path(&self) -> &str {
         self.as_ref().relative_path()

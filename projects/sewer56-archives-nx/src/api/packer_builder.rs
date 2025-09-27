@@ -489,7 +489,7 @@ pub struct AddFileParams {
     pub relative_path: String,
 
     /// Preferred algorithm to compress the item with. This setting is only
-    /// honored if [`SolidPreference::NoSolid`] is set in [`solid_type`].
+    /// honored if [`SolidPreference::NoSolid`] is set in [`Self::solid_type`].
     ///
     /// If no preference is specified (`NoPreference`), the archive's default
     /// compression algorithm will be used.

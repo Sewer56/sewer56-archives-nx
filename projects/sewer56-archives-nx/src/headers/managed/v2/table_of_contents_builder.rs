@@ -36,9 +36,9 @@ pub struct BuilderInfo<LongAlloc: Allocator + Clone> {
 ///
 /// # Arguments
 ///
-/// * `blocks` - A slice of [Box<dyn Block<T>>] representing the blocks in the archive.
-/// * `chunk_size` - The maximum size of a chunk in the file. From [PackingSettings].
-/// * `max_block_size` - The maximum size of a SOLID block. From [PackingSettings].
+/// * `blocks` - A slice of [Box<dyn Block\<T\>>] representing the blocks in the archive.
+/// * `chunk_size` - The maximum size of a chunk in the file. From PackingSettings.
+/// * `max_block_size` - The maximum size of a SOLID block. From PackingSettings.
 /// * `need_hashes` - Whether to include hashes in the table of contents.
 /// * `short_alloc` - An allocator for short lived memory. Think pooled memory and rentals.
 /// * `long_alloc` - An allocator for longer lived memory. Think same lifetime as creating Nx archive creator/unpacker.
@@ -715,7 +715,7 @@ mod tests {
 
         unsafe {
             // Write header to buffer
-            (data.as_mut_ptr() as *mut u64).write_unaligned(header.0);
+            (data.as_mut_ptr() as *mut u64).write_unaligned(header.to_le().0);
 
             let result = TableOfContents::deserialize_v2xx(data.as_ptr(), 12);
             assert!(matches!(result,

@@ -21,7 +21,7 @@ const MAX_FILE_COUNT_V0V1: usize = 1048575; // 2^20 - 1
 ///
 /// # Arguments
 ///
-/// * `blocks` - A slice of [Box<dyn Block<T>>] representing the blocks in the archive.
+/// * `blocks` - A slice of [`Box<dyn Block<T>>`] representing the blocks in the archive.
 ///
 /// # Returns
 ///
@@ -139,8 +139,8 @@ pub fn pack_string_pool_with_allocators<
 /// # Errors
 ///
 /// This function will return an error if:
-/// - The number of blocks exceeds [MAX_BLOCK_COUNT_V0V1].
-/// - The number of file entries exceeds [MAX_FILE_COUNT_V0V1].
+/// - The number of blocks exceeds MAX_BLOCK_COUNT_V0V1.
+/// - The number of file entries exceeds MAX_FILE_COUNT_V0V1.
 #[allow(dead_code)] // TODO: This is temporary
 pub(crate) unsafe fn serialize_table_of_contents_from_state(
     builder_state: &TableOfContentsBuilderState,
@@ -189,8 +189,8 @@ pub(crate) unsafe fn serialize_table_of_contents_from_state(
 /// # Errors
 ///
 /// This function will return an error if:
-/// - The number of blocks exceeds [MAX_BLOCK_COUNT_V0V1].
-/// - The number of file entries exceeds [MAX_FILE_COUNT_V0V1].
+/// - The number of blocks exceeds MAX_BLOCK_COUNT_V0V1.
+/// - The number of file entries exceeds MAX_FILE_COUNT_V0V1.
 pub unsafe fn serialize_table_of_contents(
     block_compressions: &[CompressionPreference],
     blocks: &[BlockSize],

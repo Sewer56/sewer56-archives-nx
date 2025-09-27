@@ -8,8 +8,8 @@
 //! The compression system uses a two-tier error handling approach:
 //!
 //! ## Raw Library Errors
-//! Each compression algorithm has its own error type (e.g., [`bzip3::Bzip3CompressionError`],
-//! [`lz4::Lz4CompressionError`]) that contains **only** raw errors returned directly from
+//! Each compression algorithm has its own error type (e.g., [`Bzip3CompressionError`],
+//! [`Lz4CompressionError`]) that contains **only** raw errors returned directly from
 //! the underlying compression libraries. These errors are passed through without
 //! interpretation and represent low-level library failures.
 //!
@@ -22,6 +22,14 @@
 //!
 //! This separation ensures that validation logic is consistent across all algorithms
 //! while preserving the ability to handle algorithm-specific library errors.
+//!
+//! [`Bzip3CompressionError`]: crate::utilities::compression::bzip3::Bzip3CompressionError
+//! [`Lz4CompressionError`]: crate::utilities::compression::lz4::Lz4CompressionError
+//! [`NxCompressionError`]: crate::utilities::compression::NxCompressionError
+//! [`NxDecompressionError`]: crate::utilities::compression::NxDecompressionError
+//! [`NxCompressionError::DestinationTooSmall`]: crate::utilities::compression::NxCompressionError::DestinationTooSmall
+//! [`NxDecompressionError::MaxBlockSizeNotProvided`]: crate::utilities::compression::NxDecompressionError::MaxBlockSizeNotProvided
+//! [`NxDecompressionError::MaxBlockSizeTooSmall`]: crate::utilities::compression::NxDecompressionError::MaxBlockSizeTooSmall
 
 // Compression modules
 pub mod copy;

@@ -43,6 +43,12 @@ jobs:
           - { os: ubuntu-latest, target: x86_64-pc-windows-gnu, use-pgo: false, use-cross: true, toolchain: stable } # test only, and has issues
           - { os: ubuntu-latest, target: i686-pc-windows-gnu, use-pgo: false, use-cross: true, toolchain: stable } # test only, and has issues
 
+          # Big Endian
+          - { os: ubuntu-latest, target: powerpc-unknown-linux-gnu, use-pgo: false, use-cross: true, toolchain: nightly, features: nightly } # 32-bit big endian
+          - { os: ubuntu-latest, target: powerpc64-unknown-linux-gnu, use-pgo: false, use-cross: true, toolchain: nightly, features: nightly } # 64-bit big endian
+          - { os: ubuntu-latest, target: powerpc-unknown-linux-gnu, use-pgo: false, use-cross: true, toolchain: stable } # 32-bit big endian
+          - { os: ubuntu-latest, target: powerpc64-unknown-linux-gnu, use-pgo: false, use-cross: true, toolchain: stable } # 64-bit big endian
+
     runs-on: ${{ matrix.os }}
 
     steps:

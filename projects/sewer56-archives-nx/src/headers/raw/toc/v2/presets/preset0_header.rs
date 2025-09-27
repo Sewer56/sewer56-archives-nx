@@ -89,7 +89,7 @@ impl Preset0TocHeader {
     ///
     /// A new `Preset0TocHeader` instance.
     pub fn from_raw(raw: u64) -> Self {
-        Preset0TocHeader(raw.to_le())
+        Preset0TocHeader(raw)
     }
 
     /// Converts the `Preset0TocHeader` to little-endian format.
@@ -178,7 +178,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_endian = "big", ignore = "currently fails on big endian")]
     fn from_raw_creates_correct_header() {
         let raw: u64 = 0x000123456789ABCDE;
         let header = Preset0TocHeader::from_raw(raw);

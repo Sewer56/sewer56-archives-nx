@@ -24,7 +24,7 @@ pub fn has_enough_samples_for_dictionary(num_samples: usize) -> bool {
 /// # Returns
 ///
 /// The trained dictionary data on success.
-/// May return [`ZSTD_error_srcSize_wrong`] if there are not enough samples.
+/// May return `ZSTD_error_srcSize_wrong` if there are not enough samples.
 pub fn train_dictionary(
     samples: &[&[u8]],
     dict_size: usize,

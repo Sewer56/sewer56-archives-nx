@@ -7,7 +7,7 @@ pub struct FromBoxedSliceProvider {
 }
 
 impl FromBoxedSliceProvider {
-    /// Creates a new [`FromArrayProvider`] with the given boxed byte slice.
+    /// Creates a new [`FromBoxedSliceProvider`] with the given boxed byte slice.
     pub fn new(data: Box<[u8]>) -> Self {
         Self { data }
     }

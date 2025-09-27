@@ -7,7 +7,7 @@ pub use zstd_sys::ZSTD_ErrorCode;
 ///
 /// This enum contains only errors that originate from copy operations and maintains
 /// consistency with other compression algorithm error types. High-level validation
-/// errors are handled by [`NxDecompressionError`] variants.
+/// errors are handled by [`super::NxDecompressionError`] variants.
 ///
 /// # Error Mappings
 ///

@@ -32,13 +32,18 @@
     overlays.default = final: prev: {
       rustToolchain = with inputs.fenix.packages.${prev.stdenv.hostPlatform.system};
         combine (
-          with latest; [
-            clippy
-            rustc
-            cargo
-            rustfmt
-            rust-src
-          ]
+          with latest;
+            [
+              clippy
+              rustc
+              cargo
+              rustfmt
+              rust-src
+            ]
+            ++ [
+              targets.powerpc64-unknown-linux-gnu.latest.rust-std
+              targets.powerpc-unknown-linux-gnu.latest.rust-std
+            ]
         );
     };
 
@@ -80,6 +85,7 @@
             LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
             C_INCLUDE_PATH = "${pkgs.glibc.dev}/include";
             CPLUS_INCLUDE_PATH = "${pkgs.glibc.dev}/include";
+            CROSS_CUSTOM_TOOLCHAIN = "1";
           };
 
           shellHook = ''
