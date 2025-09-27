@@ -322,6 +322,12 @@ pub fn decompress_partial(
         return Err(Bzip3CompressionError::MaxBlockSizeTooSmall.into());
     }
 
+    // bzip3 has a max block size of 512MiB
+    // if we issue 512MiB blocks, that will fail.
+    if destination.len() > MAX_BLOCK_SIZE {
+        return Err(Bzip3CompressionError::DataTooLarge.into());
+    }
+
     // Allocate temporary buffer using max_block_size for full decompression
     let mut temp_buffer = unsafe { Box::new_uninit_slice(max_block_size).assume_init() };
 
