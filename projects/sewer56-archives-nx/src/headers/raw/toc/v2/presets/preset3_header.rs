@@ -89,7 +89,7 @@ impl Preset3TocHeader {
     /// A new `Preset3TocHeader` instance.
     #[cfg_attr(feature = "nightly", coverage(off))]
     pub fn from_raw(raw: u64) -> Self {
-        Preset3TocHeader(raw.to_le())
+        Preset3TocHeader(raw)
     }
 
     /// Converts the `Preset3TocHeader` to little-endian format.

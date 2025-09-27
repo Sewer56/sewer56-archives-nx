@@ -93,7 +93,7 @@ impl Fef64TocHeader {
     ///
     /// A new `TocHeader` instance.
     pub fn from_raw(raw: u64) -> Self {
-        Fef64TocHeader(raw.to_le())
+        Fef64TocHeader(raw)
     }
 
     /// Converts the `TocHeader` to little-endian format.
