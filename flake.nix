@@ -80,6 +80,7 @@
             LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
             C_INCLUDE_PATH = "${pkgs.glibc.dev}/include";
             CPLUS_INCLUDE_PATH = "${pkgs.glibc.dev}/include";
+            CROSS_CUSTOM_TOOLCHAIN = "1";
           };
 
           shellHook = ''
