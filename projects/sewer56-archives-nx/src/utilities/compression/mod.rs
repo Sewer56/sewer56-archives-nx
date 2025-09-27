@@ -217,7 +217,7 @@ pub fn decompress_partial(
         CompressionPreference::Lz4 => lz4::decompress_partial(source, destination),
         #[cfg(feature = "bzip3")]
         CompressionPreference::Bzip3 => bzip3::decompress_partial(source, destination),
-        _ => panic!("Unsupported partial decompression method"),
+        _ => panic!("Unsupported partial decompression method"), // TODO: Replace panic! 
     }
 }
 
