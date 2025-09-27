@@ -234,7 +234,6 @@ mod tests {
     #[rstest]
     #[case::copy(CompressionPreference::Copy)]
     #[case::zstd(CompressionPreference::ZStandard)]
-    #[case::bzip3(CompressionPreference::Bzip3)]
     #[cfg_attr(feature = "lz4", case::lz4(CompressionPreference::Lz4))]
     #[cfg_attr(feature = "bzip3", case::bzip3(CompressionPreference::Bzip3))]
     #[cfg_attr(miri, ignore)]
@@ -355,10 +354,6 @@ mod tests {
     #[case::zstd(
         CompressionPreference::ZStandard,
         NxDecompressionError::ZStandard(ZSTD_ErrorCode::ZSTD_error_dstSize_tooSmall)
-    )]
-    #[case::bzip3(
-        CompressionPreference::Bzip3,
-        NxDecompressionError::Bzip3(Bzip3CompressionError::CrcFailed)
     )]
     #[cfg_attr(
         feature = "lz4",
