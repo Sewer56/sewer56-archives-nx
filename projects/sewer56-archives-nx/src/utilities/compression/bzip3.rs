@@ -15,26 +15,29 @@ pub const MAX_BLOCK_SIZE: usize = 511 * 1024 * 1024; // 511 MiB
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
 pub enum Bzip3CompressionError {
     /// Out of bounds error occurred during compression
-    #[error("BZip3 Out of Bounds Error")]
+    #[error("Data index out of bounds")]
     OutOfBounds,
     /// BWT transform failed
-    #[error("BZip3 BWT Transform Failed")]
+    #[error("Burrows-Wheeler transform failed")]
     BwtFailed,
     /// CRC check failed
-    #[error("BZip3 CRC Check Failed")]
+    #[error("CRC32 check failed")]
     CrcFailed,
     /// Malformed header detected
-    #[error("BZip3 Malformed Header")]
+    #[error("Malformed header")]
     MalformedHeader,
     /// Data was truncated
-    #[error("BZip3 Truncated Data")]
+    #[error("Truncated data")]
     TruncatedData,
     /// Data too large for processing
-    #[error("BZip3 Data Too Large")]
+    #[error("Too much data")]
     DataTooLarge,
     /// Initialization failed
-    #[error("BZip3 Initialization Failed")]
+    #[error("Initialization failed")]
     InitFailed,
+    /// Data size too small for processing
+    #[error("Size of buffer `buffer_size` passed to the block decoder (bz3_decode_block) is too small. See function docs for details.")]
+    DataSizeTooSmall,
 }
 
 /// Represents an error specific to BZip3 decompression operations.
@@ -63,6 +66,7 @@ fn convert_error(error_code: i32) -> Bzip3CompressionError {
         -5 => Bzip3CompressionError::TruncatedData,
         -6 => Bzip3CompressionError::DataTooLarge,
         -7 => Bzip3CompressionError::InitFailed,
+        -8 => Bzip3CompressionError::DataSizeTooSmall,
         _ => Bzip3CompressionError::InitFailed, // Default to init failed for unknown errors
     }
 }
