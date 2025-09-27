@@ -1,3 +1,28 @@
+//! Compression utilities for the Nx archive format.
+//!
+//! This module provides a unified interface for multiple compression algorithms
+//! including Copy (no compression), ZStandard, LZ4, and BZip3.
+//!
+//! # Error Handling Architecture
+//!
+//! The compression system uses a two-tier error handling approach:
+//!
+//! ## Raw Library Errors
+//! Each compression algorithm has its own error type (e.g., [`bzip3::Bzip3CompressionError`],
+//! [`lz4::Lz4CompressionError`]) that contains **only** raw errors returned directly from
+//! the underlying compression libraries. These errors are passed through without
+//! interpretation and represent low-level library failures.
+//!
+//! ## High-Level Validation Errors  
+//! The [`NxCompressionError`] and [`NxDecompressionError`] enums contain high-level
+//! validation errors that are common across all compression algorithms:
+//! - [`NxCompressionError::DestinationTooSmall`]: Destination buffer too small for compression
+//! - [`NxDecompressionError::MaxBlockSizeNotProvided`]: Max block size required for partial decompression
+//! - [`NxDecompressionError::MaxBlockSizeTooSmall`]: Max block size insufficient for destination buffer
+//!
+//! This separation ensures that validation logic is consistent across all algorithms
+//! while preserving the ability to handle algorithm-specific library errors.
+
 // Compression modules
 pub mod copy;
 pub mod dictionary;
@@ -25,10 +50,12 @@ use thiserror_no_std::Error;
 pub type CompressionResult = Result<usize, NxCompressionError>;
 
 /// Represents an error returned from the Nx compression APIs.
+///
+/// This enum contains both library-specific errors (which wrap raw errors from underlying
+/// compression libraries) and high-level validation errors that are common across all
+/// compression algorithms in the Nx system.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
 pub enum NxCompressionError {
-    #[error(transparent)]
-    Copy(#[from] CopyCompressionError),
     #[error("ZStandard Error: {0:?}")]
     ZStandard(#[from] ZSTD_ErrorCode),
     #[cfg(feature = "lz4")]
@@ -53,21 +80,43 @@ pub enum NxCompressionError {
     /// The LZMA feature is not currently supported.
     #[error("LZMA Feature not enabled")]
     LzmaNotEnabled,
+
+    /// Destination buffer too small for compression (high-level validation error)
+    #[error("Destination buffer too small for compression")]
+    DestinationTooSmall,
 }
 
 /// A result type around compression functions..
 /// Either a success code (number of bytes decompressed), or an error code.
 pub type DecompressionResult = Result<usize, NxDecompressionError>;
 
-/// Represents an error returned from the Nx compression APIs.
+/// Represents an error returned from the Nx decompression APIs.
+///
+/// This enum contains both library-specific errors (which wrap raw errors from underlying
+/// compression libraries) and high-level validation errors that are common across all
+/// decompression algorithms in the Nx system.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
 pub enum NxDecompressionError {
-    Copy(#[from] CopyDecompressionError),
+    #[error("ZStandard Error: {0:?}")]
     ZStandard(#[from] ZSTD_ErrorCode),
     #[cfg(feature = "lz4")]
+    #[error(transparent)]
     Lz4(#[from] Lz4DecompressionError),
     #[cfg(feature = "bzip3")]
+    #[error(transparent)]
     Bzip3(#[from] Bzip3DecompressionError),
+
+    /// Max block size must be provided for partial decompression of block-based formats (high-level validation error)
+    #[error("Max block size must be provided (non-zero) for partial decompression of block-based formats")]
+    MaxBlockSizeNotProvided,
+
+    /// Max block size too small for partial decompression of block-based formats (high-level validation error)
+    #[error("Max block size must be at least as large as destination buffer size for partial decompression of block-based formats")]
+    MaxBlockSizeTooSmall,
+
+    /// Destination buffer too small for decompression (high-level validation error)
+    #[error("Destination buffer too small for decompression")]
+    DestinationTooSmall,
 }
 
 /// Determines maximum memory needed to alloc to compress data with any method.
@@ -287,27 +336,18 @@ mod tests {
     }
 
     #[rstest]
-    #[case::copy(
-        CompressionPreference::Copy,
-        NxCompressionError::Copy(CopyCompressionError::DestinationTooSmall)
-    )]
+    #[case::copy(CompressionPreference::Copy, NxCompressionError::DestinationTooSmall)]
     #[case::zstd(
         CompressionPreference::ZStandard,
-        NxCompressionError::Copy(CopyCompressionError::DestinationTooSmall) // ZStd delegates to copy, which then fails due to too small buffer.
+        NxCompressionError::DestinationTooSmall
     )]
     #[cfg_attr(
         feature = "lz4",
-        case::lz4(
-            CompressionPreference::Lz4,
-            NxCompressionError::Lz4(Lz4CompressionError::CompressionFailed)
-        )
+        case::lz4(CompressionPreference::Lz4, NxCompressionError::DestinationTooSmall)
     )]
     #[cfg_attr(
         feature = "bzip3",
-        case::bzip3(
-            CompressionPreference::Bzip3,
-            NxCompressionError::Copy(CopyCompressionError::DestinationTooSmall) // BZip3 delegates to copy, which then fails due to too small buffer.
-        )
+        case::bzip3(CompressionPreference::Bzip3, NxCompressionError::DestinationTooSmall)
     )]
     #[cfg_attr(miri, ignore)]
     fn destination_too_small_returns_err(
@@ -363,10 +403,7 @@ mod tests {
     }
 
     #[rstest]
-    #[case::copy(
-        CompressionPreference::Copy,
-        NxDecompressionError::Copy(CopyDecompressionError::DestinationTooSmall)
-    )]
+    #[case::copy(CompressionPreference::Copy, NxDecompressionError::DestinationTooSmall)]
     #[case::zstd(
         CompressionPreference::ZStandard,
         NxDecompressionError::ZStandard(ZSTD_ErrorCode::ZSTD_error_dstSize_tooSmall)
@@ -486,27 +523,18 @@ mod tests {
     }
 
     #[rstest]
-    #[case::copy(
-        CompressionPreference::Copy,
-        NxCompressionError::Copy(CopyCompressionError::DestinationTooSmall)
-    )]
+    #[case::copy(CompressionPreference::Copy, NxCompressionError::DestinationTooSmall)]
     #[case::zstd(
         CompressionPreference::ZStandard,
-        NxCompressionError::Copy(CopyCompressionError::DestinationTooSmall)
+        NxCompressionError::DestinationTooSmall
     )]
     #[cfg_attr(
         feature = "lz4",
-        case::lz4(
-            CompressionPreference::Lz4,
-            NxCompressionError::Lz4(Lz4CompressionError::CompressionFailed)
-        )
+        case::lz4(CompressionPreference::Lz4, NxCompressionError::DestinationTooSmall)
     )]
     #[cfg_attr(
         feature = "bzip3",
-        case::bzip3(
-            CompressionPreference::Bzip3,
-            NxCompressionError::Copy(CopyCompressionError::DestinationTooSmall)
-        )
+        case::bzip3(CompressionPreference::Bzip3, NxCompressionError::DestinationTooSmall)
     )]
     #[cfg_attr(miri, ignore)]
     fn destination_too_small_returns_err_streamed(

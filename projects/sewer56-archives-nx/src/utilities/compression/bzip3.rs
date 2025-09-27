@@ -4,9 +4,10 @@ use core::{
     ptr::copy_nonoverlapping,
 };
 
-use super::{copy, CompressionResult, DecompressionResult};
+use super::{
+    copy, CompressionResult, DecompressionResult, NxCompressionError, NxDecompressionError,
+};
 use crate::prelude::*;
-use crate::utilities::compression::NxCompressionError;
 use derive_more::derive::{Deref, DerefMut};
 use derive_new::new;
 use libbzip3_sys::*;
@@ -15,9 +16,23 @@ use thiserror_no_std::Error;
 pub const MIN_BLOCK_SIZE: usize = 65 * 1024; // 65 KiB
 pub const MAX_BLOCK_SIZE: usize = 511 * 1024 * 1024; // 511 MiB
 
-/// Represents an error specific to BZip3 compression operations.
-/// The low numbers have direct mappings to the bz3 error codes.
-/// The high numbers (254, 255) are custom errors for our wrapper.
+/// Represents raw errors returned directly from the BZip3 library.
+///
+/// This enum contains only errors that originate from the underlying libbzip3-sys
+/// library and are passed through without interpretation. High-level validation
+/// errors are handled by [`NxCompressionError`] and [`NxDecompressionError`] variants.
+///
+/// # Error Code Mappings
+///
+/// Each variant corresponds to a specific error code from the BZip3 library:
+/// - `OutOfBounds` → `BZ3_ERR_OUT_OF_BOUNDS`: Data index out of bounds
+/// - `BwtFailed` → `BZ3_ERR_BWT`: Burrows-Wheeler transform failed  
+/// - `CrcFailed` → `BZ3_ERR_CRC`: CRC32 check failed
+/// - `MalformedHeader` → `BZ3_ERR_MALFORMED_HEADER`: Malformed header detected
+/// - `TruncatedData` → `BZ3_ERR_TRUNCATED_DATA`: Data was truncated
+/// - `DataTooLarge` → `BZ3_ERR_DATA_TOO_BIG`: Data too large for processing
+/// - `InitFailed` → `BZ3_ERR_INIT`: Initialization failed
+/// - `DataSizeTooSmall` → `BZ3_ERR_DATA_SIZE_TOO_SMALL`: Buffer size too small for block decoder
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Error)]
 pub enum Bzip3CompressionError {
     /// Out of bounds error occurred during compression
@@ -44,16 +59,6 @@ pub enum Bzip3CompressionError {
     /// Data size too small for processing
     #[error("Size of buffer `buffer_size` passed to the block decoder (bz3_decode_block) is too small. See function docs for details.")]
     DataSizeTooSmall,
-
-    /// Destination buffer too small for compression
-    #[error("Destination buffer too small for compression")]
-    DestinationTooSmall = 253,
-    /// Max block size was not provided for partial decompression (error code 254)
-    #[error("Max block size must be provided (non-zero) for BZip3 partial decompression")]
-    MaxBlockSizeNotProvided = 254,
-    /// Max block size too small for partial decompression (error code 255)
-    #[error("Max block size must be at least as large as destination buffer size for partial decompression")]
-    MaxBlockSizeTooSmall = 255,
 }
 
 /// Represents an error specific to BZip3 decompression operations.
@@ -116,10 +121,10 @@ pub fn compress(source: &[u8], destination: &mut [u8], used_copy: &mut bool) -> 
         return Err(Bzip3CompressionError::DataTooLarge.into());
     }
 
-    // If destination is too small, defer back to copy.
+    // If destination is too small, return high-level validation error.
     // bz3 doesn't do that check, so we need to do it.
     if destination.len() < max_alloc_for_compress_size(source.len()) {
-        return Err(Bzip3CompressionError::DestinationTooSmall.into());
+        return Err(NxCompressionError::DestinationTooSmall);
     }
 
     // bzip3 has a min block size of 65K
@@ -258,6 +263,10 @@ pub fn decompress(source: &[u8], destination: &mut [u8]) -> DecompressionResult 
     //            e.g. an older encoder with a bug was used.
     let dest_num_bytes = unsafe { bz3_bound(destination.len()) };
     let mut decomp_destination = unsafe { Box::new_uninit_slice(dest_num_bytes).assume_init() };
+    if dest_num_bytes < source.len() {
+        // This should never happen, but just in case
+        return Err(Bzip3DecompressionError::DataSizeTooSmall.into());
+    }
 
     // Decode single block using allocated buffer
     let result = unsafe {
@@ -315,11 +324,11 @@ pub fn decompress_partial(
 ) -> DecompressionResult {
     // Validate max_block_size parameter
     if max_block_size == 0 {
-        return Err(Bzip3CompressionError::MaxBlockSizeNotProvided.into());
+        return Err(NxDecompressionError::MaxBlockSizeNotProvided);
     }
 
     if max_block_size < destination.len() {
-        return Err(Bzip3CompressionError::MaxBlockSizeTooSmall.into());
+        return Err(NxDecompressionError::MaxBlockSizeTooSmall);
     }
 
     // bzip3 has a max block size of 512MiB
@@ -367,8 +376,8 @@ mod tests {
             "Should return an error when max_block_size is 0"
         );
         match result.unwrap_err() {
-            NxDecompressionError::Bzip3(Bzip3CompressionError::MaxBlockSizeNotProvided) => {
-                // Expected error type
+            NxDecompressionError::MaxBlockSizeNotProvided => {
+                // Expected error
             }
             _ => panic!("Expected MaxBlockSizeNotProvided error"),
         }
@@ -388,8 +397,8 @@ mod tests {
             "Should return an error when max_block_size < destination.len()"
         );
         match result.unwrap_err() {
-            NxDecompressionError::Bzip3(Bzip3CompressionError::MaxBlockSizeTooSmall) => {
-                // Expected error type
+            NxDecompressionError::MaxBlockSizeTooSmall => {
+                // Expected error
             }
             _ => panic!("Expected MaxBlockSizeTooSmall error"),
         }
@@ -426,8 +435,8 @@ mod tests {
 
         // Should get a BZip3 decompression error, not our validation errors
         match result.unwrap_err() {
-            NxDecompressionError::Bzip3(Bzip3CompressionError::MaxBlockSizeNotProvided)
-            | NxDecompressionError::Bzip3(Bzip3CompressionError::MaxBlockSizeTooSmall) => {
+            NxDecompressionError::MaxBlockSizeNotProvided
+            | NxDecompressionError::MaxBlockSizeTooSmall => {
                 panic!("Should not get validation errors when max_block_size > destination.len()");
             }
             NxDecompressionError::Bzip3(_) => {

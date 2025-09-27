@@ -65,7 +65,10 @@ pub fn compress(
     }
 
     let errcode = unsafe { ZSTD_getErrorCode(result) };
-    if result > source.len() || errcode == ZSTD_error_dstSize_tooSmall {
+    if errcode == ZSTD_error_dstSize_tooSmall {
+        return Err(NxCompressionError::DestinationTooSmall);
+    }
+    if result > source.len() {
         return copy::compress(source, destination, used_copy);
     }
 
@@ -167,7 +170,10 @@ where
                 // If no bytes were compressed, that means destination buffer is too small.
                 let has_error = ZSTD_isError(result) != 0;
                 let dest_too_small = output.pos == last_out_pos;
-                if has_error || dest_too_small {
+                if dest_too_small {
+                    return Err(NxCompressionError::DestinationTooSmall);
+                }
+                if has_error {
                     return copy::compress(source, destination, used_copy);
                 }
                 last_out_pos = output.pos;
