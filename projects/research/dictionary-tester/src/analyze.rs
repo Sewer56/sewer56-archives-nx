@@ -10,7 +10,6 @@ use sewer56_archives_nx::{
         traits::{CanProvideInputData, HasFileSize, HasSolidType},
     },
     implementation::pack::blocks::polyfills::{Block, PtrEntry},
-    prelude::*,
     utilities::{
         arrange::pack::{group_by_extension::*, make_blocks::*},
         compression::{
@@ -19,12 +18,13 @@ use sewer56_archives_nx::{
         },
         io::file_finder::find_files,
     },
+    Vec,
 };
 use std::{rc::Rc, time::Instant};
 
 #[derive(Debug)]
 struct AnalyzerStats<'a: 'static> {
-    groups: Vec<FileGroup<'a>>,
+    groups: std::vec::Vec<FileGroup<'a>>,
 }
 
 #[derive(Debug)]
@@ -44,9 +44,9 @@ struct BlockAnalysis {
     compressed_with_dict_size: usize,
 }
 
-pub fn analyze_directory(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
+pub fn analyze_directory(args: &Args) -> Result<(), std::boxed::Box<dyn std::error::Error>> {
     // Collect files from directory
-    let mut files = Vec::new();
+    let mut files = std::vec::Vec::new();
     find_files(&args.input, |file| files.push(file)).unwrap();
 
     // Set the files to non-SOLID if requested
@@ -68,7 +68,7 @@ pub fn analyze_directory(args: &Args) -> Result<(), Box<dyn std::error::Error>> 
     let files: Vec<Rc<PackerFile>> = files.into_iter().map(Rc::new).collect();
 
     // Create per-extension stats
-    let mut groups = Vec::new();
+    let mut groups = std::vec::Vec::new();
     let file_groups = group_files(&files);
     for (ext, files) in file_groups {
         let total_size: u64 = files.iter().map(|f| f.file_size()).sum();
@@ -105,11 +105,11 @@ pub fn analyze_directory(args: &Args) -> Result<(), Box<dyn std::error::Error>> 
 fn read_block_data(
     block: &dyn Block<PackerFile>,
     seen: &mut HashTable<PtrEntry>,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+) -> Result<std::vec::Vec<u8>, std::boxed::Box<dyn std::error::Error>> {
     let mut items = Vec::new();
     block.append_items(&mut items, seen);
 
-    let mut block_data = Vec::new();
+    let mut block_data = std::vec::Vec::new();
     for item in items {
         let provider = item.input_data_provider();
         let file_size = item.file_size();
@@ -124,19 +124,21 @@ fn read_block_data(
     Ok(block_data)
 }
 
-fn read_file_train_data(file: &PackerFile) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+fn read_file_train_data(
+    file: &PackerFile,
+) -> Result<std::vec::Vec<u8>, std::boxed::Box<dyn std::error::Error>> {
     let provider = file.input_data_provider();
     let file_data = provider
         .get_file_data(0, min(file.file_size(), 131072))
         .unwrap();
-    Ok(Vec::from(file_data.data()))
+    Ok(std::vec::Vec::from(file_data.data()))
 }
 
 fn analyze_compression(
     args: &Args,
     stats: &AnalyzerStats,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let mut results_by_ext: HashMap<String, Vec<BlockAnalysis>> = HashMap::new();
+) -> Result<(), std::boxed::Box<dyn std::error::Error>> {
+    let mut results_by_ext: HashMap<String, std::vec::Vec<BlockAnalysis>> = HashMap::new();
     let mut total_improvement: i64 = 0;
     let mut total_original_size: u64 = 0;
     let mut total_compressed_size: u64 = 0;
@@ -148,7 +150,7 @@ fn analyze_compression(
         print!("Processing {} files.", group.extension);
 
         // First, collect all file samples for dictionary training
-        let mut samples = Vec::new();
+        let mut samples = std::vec::Vec::new();
         for file in &group.files {
             let file_data = read_file_train_data(file.as_ref())?;
             samples.push(file_data);
@@ -173,7 +175,7 @@ fn analyze_compression(
 
         let start = Instant::now();
         let dict_data = if samples.len() >= 7 {
-            let samples: Vec<&[u8]> = samples.iter().map(|v| v.as_slice()).collect();
+            let samples: std::vec::Vec<&[u8]> = samples.iter().map(|v| v.as_slice()).collect();
             print!(
                 " Dict Content size {}",
                 ByteSize(samples.iter().map(|s| s.len() as u64).sum())
@@ -196,19 +198,19 @@ fn analyze_compression(
 
         // First read all block data
         let mut seen = HashTable::with_capacity(blocks.len());
-        let block_data: Vec<_> = blocks
+        let block_data: std::vec::Vec<_> = blocks
             .iter()
             .map(|block| read_block_data(block.as_ref(), &mut seen).unwrap())
             .collect();
 
         // Now parallelize the compression step
-        let analyses: Vec<BlockAnalysis> = block_data
+        let analyses: std::vec::Vec<BlockAnalysis> = block_data
             .par_iter()
             .map(|block_data| {
                 let original_size = block_data.len();
 
                 // Test normal compression
-                let mut compressed = vec![0u8; max_alloc_for_compress_size(original_size)];
+                let mut compressed = std::vec![0u8; max_alloc_for_compress_size(original_size)];
                 let mut used_copy = false;
                 let compressed_size =
                     compress(args.level, block_data, &mut compressed, &mut used_copy).unwrap();
@@ -216,7 +218,7 @@ fn analyze_compression(
                 // Test compression with dictionary if available
                 let compressed_with_dict_size = if let Some(dict) = dict.as_ref() {
                     let mut compressed_with_dict =
-                        vec![0u8; max_alloc_for_compress_size(original_size)];
+                        std::vec![0u8; max_alloc_for_compress_size(original_size)];
                     let mut used_copy = false;
                     compress_with_dictionary(
                         dict,

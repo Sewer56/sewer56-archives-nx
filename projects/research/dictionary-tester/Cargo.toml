@@ -8,14 +8,12 @@ license-file = "LICENSE"
 include = ["**/*"]
 
 [[bin]]
-required-features = ["nightly"]
 name = "nx-dictionary-tester"
 
-# This crate only builds in nightly, because I'm lazy to fix for allocator_api2
+# This crate now builds on stable Rust
 
 [features]
 default = []
-nightly = ["sewer56-archives-nx/nightly", "hashbrown/nightly"]
 
 [dependencies]
 sewer56-archives-nx = { path = "../../sewer56-archives-nx" }
