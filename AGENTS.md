@@ -75,7 +75,7 @@ The project is organized into several main directories:
 
 **CRITICAL: After making any code changes, ALWAYS perform these verification steps in order:**
 
-1. **Run Tests**: Execute `cargo test --all-features` to ensure all functionality works correctly
+1. **Run Tests**: Execute `cargo test --all-features` to ensure all functionality works correctly. Pass the `--workspace` flag if making changes to anything in `/projects/research/`.
 2. **Auto-fix Clippy Issues**: Run `cargo clippy --workspace --fix --allow-dirty --all-features` to automatically fix linting issues
 3. **Check Remaining Lints**: Run `cargo clippy --workspace --all-features -- -D warnings` to catch any remaining warnings
 4. **Verify Documentation**: Run `cargo doc --workspace --all-features --no-deps` to check for documentation errors

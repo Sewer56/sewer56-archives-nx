@@ -14,6 +14,12 @@ strip = true  # Automatically strip symbols from the binary.
 panic = "abort"
 
 [workspace]
+# Default workspace members - typical commands (build, test, cross) operate on these only
+default-members = [
+    "projects/sewer56-archives-nx",
+]
+
+# All workspace members - research tools accessible via --workspace flag or by navigating to directories
 members = [
     # Main Project Directory
     "projects/sewer56-archives-nx",
