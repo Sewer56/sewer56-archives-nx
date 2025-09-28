@@ -67,14 +67,14 @@ libbzip3-sys = { version = "0.5.0", optional = true, features = ["bundled"] }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dev-dependencies]
-criterion = "0.5.1"          # Don't update. pprof not updated
+criterion = "0.5.1" # Please do not upgrade. PProf is not yet updated for 0.6.0 and above.
 rstest = "0.26.0"
 fake = { version = "4.4.0" }
 itertools = "0.14.0"
 tempfile = "3.14.0"
 
 [target.'cfg(unix)'.dev-dependencies]
-pprof = { version = "0.14", features = ["flamegraph", "criterion"] }
+pprof = { version = "0.14.1", features = ["flamegraph", "criterion"] }
 
 # Benchmark Stuff
 [[bench]]

@@ -22,6 +22,9 @@
           f {
             pkgs = import inputs.nixpkgs {
               inherit system;
+              config = {
+                allowUnfree = true;
+              };
               overlays = [
                 inputs.self.overlays.default
               ];
@@ -65,6 +68,7 @@
 
             # Python for some of the research scripts
             python3
+            _7zz-rar
           ];
 
           env = {

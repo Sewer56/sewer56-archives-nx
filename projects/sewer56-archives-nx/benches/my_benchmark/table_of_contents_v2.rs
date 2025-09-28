@@ -1,11 +1,12 @@
 use crate::generate_test_data;
 use allocator_api2::vec;
-use criterion::{black_box, Criterion};
+use criterion::Criterion;
 use sewer56_archives_nx::headers::{
     managed::{v2::*, TableOfContents},
     raw::toc::*,
 };
 use sewer56_archives_nx::prelude::*;
+use std::hint::black_box;
 
 pub fn bench_serialize_toc_v2(c: &mut Criterion) {
     let mut group = c.benchmark_group("serialize_table_of_contents_v2");

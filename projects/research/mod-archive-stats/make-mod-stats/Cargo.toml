@@ -12,19 +12,20 @@ research-tests = []
 tokio = { version = "1.0", features = ["full"] }
 
 # HTTP and JSON
-reqwest = { version = "0.11", features = ["json", "stream"] }
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "stream",
+    "rustls-tls", # We want to disable the system one, else we'll have problems with cross and nix.
+    "charset",
+    "http2",
+] }
+futures-util = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 # Compression
-brotli = "3.4"
+brotli = "8.0"
 zstd = "0.13"
-
-# Archive handling
-zip = "0.6"
-sevenz-rust = "0.4"
-tar = "0.4"
-flate2 = "1.0"
 
 # File system utilities
 tempfile = "3.8"
@@ -34,6 +35,9 @@ sewer56-archives-nx = { path = "../../../sewer56-archives-nx" }
 
 # Hashing
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
+
+# Date/time utilities
+chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["full"] }
