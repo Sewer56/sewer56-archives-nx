@@ -1,11 +1,9 @@
-#![feature(coverage_attribute)]
-#![coverage(off)]
+#![cfg(not(tarpaulin_include))]
 
 mod analyze;
 
 use analyze::analyze_directory;
 use argh::FromArgs;
-use sewer56_archives_nx::prelude::*;
 use std::path::PathBuf;
 
 /// Analyzer for dictionary compression in Nx format
