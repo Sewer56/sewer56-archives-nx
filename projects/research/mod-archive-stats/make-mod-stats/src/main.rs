@@ -180,8 +180,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Save results to compressed file
     println!("\n💾 Saving final results...");
-    let output_path = Path::new("../mod-stats.json.zst");
-    save_results(&results, output_path)?;
+    let output_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .join("mod-stats.json.zst");
+    save_results(&results, &output_path)?;
 
     println!("\n🎉 Pipeline complete!");
     println!("📊 Final Statistics:");
