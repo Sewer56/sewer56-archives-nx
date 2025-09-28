@@ -26,7 +26,7 @@ pub async fn download_and_extract_package(
     };
 
     // Download the archive to a temporary file
-    let temp_archive = match download_with_retry(client, &package.download_url, 5, errors).await {
+    let temp_archive = match download_with_retry(client, &package.download_url, 9, errors).await {
         Ok(temp_file) => temp_file,
         Err(e) => {
             let error_msg = format!("Download failed: {}", e);

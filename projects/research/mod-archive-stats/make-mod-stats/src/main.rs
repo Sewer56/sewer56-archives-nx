@@ -61,8 +61,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Thread-safe processing statistics
     let stats = Arc::new(Mutex::new(ProcessingStats::default()));
 
-    // Create a semaphore to limit concurrent operations to 8
-    let semaphore = Arc::new(Semaphore::new(8));
+    // Create a semaphore to limit concurrent operations to 16
+    let semaphore = Arc::new(Semaphore::new(16));
 
     // Create a completion counter for sequential numbering
     let completion_counter = Arc::new(AtomicUsize::new(0));
