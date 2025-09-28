@@ -13,7 +13,10 @@ use print_manager::PrintManager;
 use reqwest::Client;
 use std::fs;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc, Mutex,
+};
 use std::time::Duration;
 use tempfile::TempDir;
 use tokio::sync::Semaphore;
@@ -61,11 +64,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a semaphore to limit concurrent operations to 8
     let semaphore = Arc::new(Semaphore::new(8));
 
+    // Create a completion counter for sequential numbering
+    let completion_counter = Arc::new(AtomicUsize::new(0));
+
     // Process each package concurrently with async tasks
     let total_packages = packages.packages.len();
     let mut tasks = Vec::new();
 
-    for (index, package) in packages.packages.iter().enumerate() {
+    for package in packages.packages.iter() {
         let client = client.clone();
         let package = package.clone();
         let temp_path = temp_path.to_path_buf();
@@ -73,6 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let print_manager = print_manager.clone();
         let stats = stats.clone();
         let semaphore = semaphore.clone();
+        let completion_counter = completion_counter.clone();
 
         let task = tokio::spawn(async move {
             // Acquire semaphore permit to limit concurrency to 8
@@ -88,7 +95,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &temp_path,
                 &seven_zip_tool,
                 &mut process_errors,
-            ).await;
+            )
+            .await;
 
             let analysis_result = match &process_result.successful_extraction {
                 Some(extraction) => analyze_extracted_package(extraction, &mut analysis_errors),
@@ -103,6 +111,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cleanup_package(extraction, &print_manager);
             }
 
+            // Get completion number (increments atomically)
+            let completion_number = completion_counter.fetch_add(1, Ordering::Relaxed) + 1;
+
             // Create simple one-line summary
             let mut summary_lines = Vec::new();
 
@@ -111,10 +122,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let files_count = mod_metadata.files.len();
                     let archive_size = mod_metadata.original_archive_size;
 
-                    // One line: ✅ [index/total] ModName - Size: X, Files: Y
+                    // One line: ✅ [completion_number/total] ModName - Size: X, Files: Y
                     summary_lines.push(format!(
                         "✅ [{}/{}] {} - Size: {}, Files: {}",
-                        index + 1,
+                        completion_number,
                         total_packages,
                         package.name,
                         ByteSize(archive_size),
@@ -132,9 +143,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // One line summary with error
                     summary_lines.push(format!(
                         "❌ [{}/{}] {} - FAILED",
-                        index + 1,
-                        total_packages,
-                        package.name
+                        completion_number, total_packages, package.name
                     ));
                     summary_lines.push(format!("   Error: {}", error));
 
