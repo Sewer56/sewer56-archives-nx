@@ -137,7 +137,7 @@ pub fn save_results(
     println!("💾 Saving results to: {}", output_path.display());
 
     // Serialize to JSON
-    let json_data = serde_json::to_string_pretty(results)?;
+    let json_data = serde_json::to_string(results)?;
 
     // Create compressed output file
     let output_file = fs::File::create(output_path)?;
