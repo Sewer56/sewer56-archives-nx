@@ -1,5 +1,4 @@
 use brotli::Decompressor;
-use bytesize::ByteSize;
 use reqwest;
 use serde::{Deserialize, Serialize};
 use std::io::Read;
@@ -66,8 +65,6 @@ struct RawPackage {
 pub async fn download_and_parse_packages(
     url: &str,
 ) -> Result<PackageList, Box<dyn std::error::Error>> {
-    println!("🌐 Starting download from: {}", url);
-
     // Download the brotli-compressed file
     let response = reqwest::get(url).await?;
     if !response.status().is_success() {
@@ -75,44 +72,27 @@ pub async fn download_and_parse_packages(
     }
 
     let compressed_data = response.bytes().await?;
-    println!(
-        "✅ Downloaded {} of compressed data",
-        ByteSize(compressed_data.len() as u64)
-    );
 
     // Decompress using brotli
-    println!("🗜️  Decompressing brotli data...");
     let mut decompressor = Decompressor::new(&compressed_data[..], compressed_data.len());
     let mut decompressed = Vec::new();
     decompressor.read_to_end(&mut decompressed)?;
-    println!("✅ Decompressed to {}", ByteSize(decompressed.len() as u64));
 
     // Parse JSON
-    println!("📄 Parsing JSON structure...");
     let json_str = String::from_utf8(decompressed)?;
     let all_packages: AllPackagesJson = serde_json::from_str(&json_str)?;
+
     // Process and validate packages
-    println!("🔍 Processing and validating packages...");
     let mut valid_packages = Vec::new();
-    let mut skipped_count = 0;
     let packages = all_packages.packages.clone();
-    let total_packages = packages.len();
 
-    println!("✅ Found {} raw packages in JSON", total_packages);
-
-    for (idx, raw_package) in packages.into_iter().enumerate() {
-        if (idx + 1) % 500 == 0 {
-            println!("   Processed {}/{} packages...", idx + 1, total_packages);
-        }
-
+    for raw_package in packages.into_iter() {
         // Validate required fields
         let Some(name) = raw_package.name else {
-            skipped_count += 1;
             continue;
         };
 
         let Some(download_url) = raw_package.download_url else {
-            skipped_count += 1;
             continue;
         };
 
@@ -126,17 +106,6 @@ pub async fn download_and_parse_packages(
     }
 
     let processed_at = chrono::Utc::now().to_rfc3339();
-
-    println!(
-        "✅ Successfully processed {} packages",
-        valid_packages.len()
-    );
-    if skipped_count > 0 {
-        println!(
-            "⚠️  Skipped {} packages due to missing required fields",
-            skipped_count
-        );
-    }
 
     Ok(PackageList {
         total_count: valid_packages.len(),
@@ -178,11 +147,6 @@ mod tests {
         assert!(!first_package.name.is_empty());
         assert!(!first_package.download_url.is_empty());
         assert!(first_package.project_uri.is_some());
-
-        println!(
-            "✅ Successfully validated {} packages",
-            packages.total_count
-        );
     }
 
     #[test]

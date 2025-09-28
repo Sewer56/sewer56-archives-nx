@@ -11,6 +11,9 @@ research-tests = []
 # Async runtime
 tokio = { version = "1.0", features = ["full"] }
 
+# Async utilities
+futures = "0.3"
+
 # HTTP and JSON
 reqwest = { version = "0.12", default-features = false, features = [
     "json",

@@ -45,6 +45,7 @@ pub async fn download_with_retry(
     client: &Client,
     url: &str,
     max_retries: u32,
+    errors: &mut Vec<String>,
 ) -> Result<NamedTempFile, Box<dyn std::error::Error>> {
     let mut retry_count = 0;
     let mut delay = Duration::from_secs(1);
@@ -65,13 +66,13 @@ pub async fn download_with_retry(
                     );
                 }
 
-                println!(
-                    "   ⏳ Retry {}/{} for download after {} seconds... (Error: {})",
+                errors.push(format!(
+                    "❌ Retry {}/{} for download after {} seconds (Error: {})",
                     retry_count + 1,
                     max_retries,
                     delay.as_secs(),
                     e
-                );
+                ));
             }
         }
 

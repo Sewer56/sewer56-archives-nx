@@ -87,7 +87,10 @@ fn analyze_file(
 }
 
 /// Recursively analyzes all files in a directory
-pub fn analyze_directory(mod_root: &Path) -> Result<Vec<FileMetadata>, Box<dyn std::error::Error>> {
+pub fn analyze_directory(
+    mod_root: &Path,
+    errors: &mut Vec<String>,
+) -> Result<Vec<FileMetadata>, Box<dyn std::error::Error>> {
     let mut file_metadata = Vec::new();
     let mut files_to_process = Vec::new();
 
@@ -116,11 +119,11 @@ pub fn analyze_directory(mod_root: &Path) -> Result<Vec<FileMetadata>, Box<dyn s
         match analyze_file(&file_path, mod_root) {
             Ok(metadata) => file_metadata.push(metadata),
             Err(e) => {
-                println!(
-                    "   ⚠️  Warning: Failed to analyze file {}: {}",
+                errors.push(format!(
+                    "❌ Failed to analyze file {}: {}",
                     file_path.display(),
                     e
-                );
+                ));
                 // Continue processing other files instead of failing completely
             }
         }
@@ -134,8 +137,6 @@ pub fn save_results(
     results: &AnalysisResults,
     output_path: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("💾 Saving results to: {}", output_path.display());
-
     // Serialize to JSON
     let json_data = serde_json::to_string(results)?;
 
@@ -145,7 +146,6 @@ pub fn save_results(
     encoder.write_all(json_data.as_bytes())?;
     encoder.finish()?;
 
-    println!("✅ Results saved successfully");
     Ok(())
 }
 
@@ -196,7 +196,8 @@ mod tests {
         fs::create_dir_all(&subdir).unwrap();
         fs::write(subdir.join("file2.txt"), b"content2").unwrap();
 
-        let result = analyze_directory(&mod_root).unwrap();
+        let mut errors = Vec::new();
+        let result = analyze_directory(&mod_root, &mut errors).unwrap();
 
         assert_eq!(result.len(), 2);
 
