@@ -31,7 +31,7 @@ pub async fn process_package(
 
     // Download the archive to a temporary file
     println!("   ⬇️  Downloading archive...");
-    let temp_archive = match download_with_retry(client, &package.download_url, 3).await {
+    let temp_archive = match download_with_retry(client, &package.download_url, 5).await {
         Ok(temp_file) => temp_file,
         Err(e) => {
             let error_msg = format!("Download failed: {}", e);
