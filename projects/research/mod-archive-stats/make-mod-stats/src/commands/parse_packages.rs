@@ -1,6 +1,7 @@
 use brotli::Decompressor;
 use reqwest;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::io::Read;
 
 /// Essential mod package information extracted from AllPackages.json.br
@@ -82,27 +83,41 @@ pub async fn download_and_parse_packages(
     let json_str = String::from_utf8(decompressed)?;
     let all_packages: AllPackagesJson = serde_json::from_str(&json_str)?;
 
-    // Process and validate packages
+    // Process, validate, and deduplicate packages in one pass
     let mut valid_packages = Vec::new();
-    let packages = all_packages.packages.clone();
+    let mut seen_ids = HashSet::new();
 
-    for raw_package in packages.into_iter() {
+    for raw_package in &all_packages.packages {
         // Validate required fields
-        let Some(name) = raw_package.name else {
+        let Some(ref name) = raw_package.name else {
             continue;
         };
 
-        let Some(download_url) = raw_package.download_url else {
+        let Some(ref download_url) = raw_package.download_url else {
             continue;
         };
 
-        // Create valid package (id and project_uri are optional)
-        valid_packages.push(Package {
-            name,
-            id: raw_package.id,
-            download_url,
-            project_uri: raw_package.project_uri,
-        });
+        let package = Package {
+            name: name.clone(),
+            id: raw_package.id.clone(),
+            download_url: download_url.clone(),
+            project_uri: raw_package.project_uri.clone(),
+        };
+
+        // Deduplicate by ID during validation
+        match &raw_package.id {
+            // Keep packages without ID (can't deduplicate them)
+            None => {
+                valid_packages.push(package);
+            }
+            // For packages with ID, only keep if we haven't seen this ID before
+            Some(id) => {
+                if seen_ids.insert(id.as_str()) {
+                    valid_packages.push(package);
+                }
+                // If insert returns false, we've already seen this ID, so skip
+            }
+        }
     }
 
     let processed_at = chrono::Utc::now().to_rfc3339();
