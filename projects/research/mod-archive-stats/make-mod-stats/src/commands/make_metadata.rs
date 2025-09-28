@@ -42,6 +42,8 @@ pub struct AnalysisSummary {
     pub total_files_analyzed: usize,
     /// Number of processing errors encountered
     pub processing_errors: usize,
+    /// Total size of all downloaded archives in bytes
+    pub total_download_size: u64,
 }
 
 /// Complete output structure for the analysis
@@ -230,6 +232,7 @@ mod tests {
                 total_mods_processed: 1,
                 total_files_analyzed: 1,
                 processing_errors: 0,
+                total_download_size: 12345,
             },
         };
 

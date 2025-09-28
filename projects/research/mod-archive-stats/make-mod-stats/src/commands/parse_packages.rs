@@ -1,4 +1,5 @@
 use brotli::Decompressor;
+use bytesize::ByteSize;
 use reqwest;
 use serde::{Deserialize, Serialize};
 use std::io::Read;
@@ -75,8 +76,8 @@ pub async fn download_and_parse_packages(
 
     let compressed_data = response.bytes().await?;
     println!(
-        "✅ Downloaded {} bytes of compressed data",
-        compressed_data.len()
+        "✅ Downloaded {} of compressed data",
+        ByteSize(compressed_data.len() as u64)
     );
 
     // Decompress using brotli
@@ -84,7 +85,7 @@ pub async fn download_and_parse_packages(
     let mut decompressor = Decompressor::new(&compressed_data[..], compressed_data.len());
     let mut decompressed = Vec::new();
     decompressor.read_to_end(&mut decompressed)?;
-    println!("✅ Decompressed to {} bytes", decompressed.len());
+    println!("✅ Decompressed to {}", ByteSize(decompressed.len() as u64));
 
     // Parse JSON
     println!("📄 Parsing JSON structure...");

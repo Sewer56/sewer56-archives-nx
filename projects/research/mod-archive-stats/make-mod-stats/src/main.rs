@@ -1,6 +1,7 @@
 // main.rs
 mod commands;
 
+use bytesize::ByteSize;
 use commands::make_metadata::{
     analyze_directory, save_results, AnalysisResults, AnalysisSummary, ModMetadata,
 };
@@ -137,6 +138,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut mods = Vec::new();
     let mut total_files_analyzed = 0;
+    let mut total_download_size = 0u64;
     let mut successful_packages = 0;
     let mut failed_packages = 0;
 
@@ -148,6 +150,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         match process_single_package(&client, package, temp_path, &seven_zip_tool).await {
             Ok(Some(mod_metadata)) => {
                 total_files_analyzed += mod_metadata.files.len();
+                total_download_size += mod_metadata.original_archive_size;
                 mods.push(mod_metadata);
                 successful_packages += 1;
             }
@@ -171,6 +174,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             total_mods_processed: successful_packages,
             total_files_analyzed,
             processing_errors: failed_packages,
+            total_download_size,
         },
     };
 
@@ -187,6 +191,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     println!("   ❌ Packages failed: {}", failed_packages);
     println!("   📁 Total files analyzed: {}", total_files_analyzed);
+    println!(
+        "   📦 Total download size: {}",
+        ByteSize(total_download_size)
+    );
     println!("   📂 Results saved to: {}", output_path.display());
 
     Ok(())

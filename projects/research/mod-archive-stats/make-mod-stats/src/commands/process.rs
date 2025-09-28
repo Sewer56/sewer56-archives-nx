@@ -2,6 +2,7 @@ use super::download::{create_mod_directory, download_with_retry};
 use super::extract::extract_with_7z_tool;
 use super::shared::{ProcessResult, SuccessfulExtraction};
 use crate::commands::parse_packages::Package;
+use bytesize::ByteSize;
 use reqwest::Client;
 use std::path::Path;
 
@@ -47,7 +48,7 @@ pub async fn process_package(
         Ok(metadata) => metadata.len(),
         Err(_) => 0, // If we can't get metadata, use 0 as fallback
     };
-    println!("   ✅ Downloaded {} bytes", archive_size);
+    println!("   ✅ Downloaded {}", ByteSize(archive_size));
 
     // Extract the archive using the temporary file path
     println!("   📂 Extracting archive...");
