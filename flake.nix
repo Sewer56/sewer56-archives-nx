@@ -83,6 +83,24 @@
             echo "Cargo version: $(cargo --version)"
           '';
         };
+
+        # For running the research tools, do the following steps:
+        #
+        # 1. Enter the shell: `nix develop .#fhs`
+        # 2. Re-enter the default shell to setup env vars and build tools `nix develop`
+        # 3. Re-enter shell if needed e.g. `zsh`
+        # 4. Run the tools, e.g. `cargo run --release -p analyze-mod-stats`
+        fhs =
+          (pkgs.buildFHSEnv {
+            name = "sewer56-archives-nx-fhs";
+            targetPkgs = pkgs:
+              with pkgs; [
+                fontconfig
+                fontconfig.lib
+                freetype
+              ];
+            runScript = "bash";
+          }).env;
       }
     );
   };
