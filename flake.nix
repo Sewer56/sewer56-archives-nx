@@ -69,6 +69,7 @@
             # Python for some of the research scripts
             python3
             _7zz-rar
+            fontconfig # plotters
           ];
 
           env = {
