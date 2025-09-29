@@ -65,3 +65,19 @@ ZStandard-compressed JSON containing:
 ```bash
 cargo test --features research-tests
 ```
+
+## Plot Unit Representation
+
+The analysis tool generates cumulative distribution plots with specific unit conventions:
+
+**X-axis Labels:** Use base-10 (decimal) units for consistency
+- 1 kB = 1,000 bytes
+- 1 MB = 1,000,000 bytes  
+- 1 GB = 1,000,000,000 bytes
+- 1 TB = 1,000,000,000,000 bytes
+
+**Why base-10?** This follows the SI standard for decimal prefixes and ensures plot labels accurately represent the byte values being displayed.
+
+**Example:** 1000 bytes displays as "1kB" on plots, while binary interpretation would show 1024 bytes as "1 KiB" (kibibyte).
+
+**Note:** This applies only to plot X-axis labels. The underlying data remains in bytes, and console statistics output may use different formatting conventions.

@@ -29,6 +29,9 @@ members = [
     "projects/research/dictionary-tester",
     
     # Mod archive statistics research tool
-    "projects/research/mod-archive-stats/make-mod-stats"
+    "projects/research/mod-archive-stats/make-mod-stats",
+    
+    # Mod archive statistics analyzer tool
+    "projects/research/mod-archive-stats/analyze-mod-stats"
 ]
 resolver = "2"
