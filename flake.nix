@@ -78,6 +78,14 @@
           };
 
           shellHook = ''
+            # Auto activate nix-ld if configured, to avoid manual `fhs` shell switch.
+            # I (sewer) am lazy to go fix my small problem of my system config being in /etc/nixos
+            # and thus that folder being inaccessible when accessing devshell.
+            # Maybe sometime that will change, but for now, nix-ld for convenience.
+            if [ -n "$NIX_LD_LIBRARY_PATH" ]; then
+              export LD_LIBRARY_PATH=$NIX_LD_LIBRARY_PATH
+            fi
+
             echo "🦀 Rust development environment loaded"
             echo "Rust version: $(rustc --version)"
             echo "Cargo version: $(cargo --version)"
