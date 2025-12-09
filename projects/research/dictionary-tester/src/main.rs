@@ -1,3 +1,5 @@
+#![cfg(not(tarpaulin_include))]
+
 mod analyze;
 
 use analyze::analyze_directory;

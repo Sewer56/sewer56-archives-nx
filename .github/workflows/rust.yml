@@ -24,9 +24,9 @@ jobs:
           - { os: ubuntu-latest, target: armv7-unknown-linux-gnueabihf, use-pgo: false, use-cross: true, toolchain: nightly, features: nightly } # no native runner
           - { os: windows-latest, target: x86_64-pc-windows-msvc, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly }
           - { os: windows-latest, target: i686-pc-windows-msvc, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly }
-          - { os: windows-latest, target: aarch64-pc-windows-msvc, use-pgo: false, use-cross: false, toolchain: nightly, features: nightly } # no native runner
-          - { os: macos-13, target: x86_64-apple-darwin, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly } # x86
-          - { os: macos-14, target: aarch64-apple-darwin, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly } # M1
+          # - { os: windows-latest, target: aarch64-pc-windows-msvc, use-pgo: false, use-cross: false, toolchain: nightly, features: nightly } # no native runner
+          - { os: macos-15-intel, target: x86_64-apple-darwin, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly } # x86
+          - { os: macos-latest, target: aarch64-apple-darwin, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly } # M1
           - { os: ubuntu-latest, target: x86_64-pc-windows-gnu, use-pgo: false, use-cross: true, toolchain: nightly, features: nightly } # test only, and has issues
           - { os: ubuntu-latest, target: i686-pc-windows-gnu, use-pgo: false, use-cross: true, toolchain: nightly, features: nightly } # test only, and has issues
 
@@ -37,9 +37,9 @@ jobs:
           - { os: ubuntu-latest, target: armv7-unknown-linux-gnueabihf, use-pgo: false, use-cross: true, toolchain: stable } # no native runner
           - { os: windows-latest, target: x86_64-pc-windows-msvc, use-pgo: true, use-cross: false, toolchain: stable }
           - { os: windows-latest, target: i686-pc-windows-msvc, use-pgo: true, use-cross: false, toolchain: stable }
-          - { os: windows-latest, target: aarch64-pc-windows-msvc, use-pgo: false, use-cross: false, toolchain: stable } # no native runner
-          - { os: macos-13, target: x86_64-apple-darwin, use-pgo: true, use-cross: false, toolchain: stable } # x86
-          - { os: macos-14, target: aarch64-apple-darwin, use-pgo: true, use-cross: false, toolchain: stable } # M1
+          # - { os: windows-latest, target: aarch64-pc-windows-msvc, use-pgo: false, use-cross: false, toolchain: stable } # no native runner
+          - { os: macos-15-intel, target: x86_64-apple-darwin, use-pgo: true, use-cross: false, toolchain: stable } # x86
+          - { os: macos-latest, target: aarch64-apple-darwin, use-pgo: true, use-cross: false, toolchain: stable } # M1
           - { os: ubuntu-latest, target: x86_64-pc-windows-gnu, use-pgo: false, use-cross: true, toolchain: stable } # test only, and has issues
           - { os: ubuntu-latest, target: i686-pc-windows-gnu, use-pgo: false, use-cross: true, toolchain: stable } # test only, and has issues
 

@@ -21,3 +21,6 @@ argh = "0.1.13"
 bytesize = "2.1.0"
 hashbrown = { version = "0.16.0" }
 rayon = "1.11.0"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
