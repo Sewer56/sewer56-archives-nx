@@ -14,24 +14,10 @@ strip = true  # Automatically strip symbols from the binary.
 panic = "abort"
 
 [workspace]
-# Default workspace members - typical commands (build, test, cross) operate on these only
-default-members = [
-    "projects/sewer56-archives-nx",
-]
-
-# All workspace members - research tools accessible via --workspace flag or by navigating to directories
 members = [
-    # Main Project Directory
     "projects/sewer56-archives-nx",
-
-    # Tool to test dictionary compression
-    # Requires nightly compiler. Is skipped on stable.
-    "projects/research/dictionary-tester",
-    
-    # Mod archive statistics research tool
-    "projects/research/mod-archive-stats/make-mod-stats",
-    
-    # Mod archive statistics analyzer tool
-    "projects/research/mod-archive-stats/analyze-mod-stats"
 ]
 resolver = "2"
+
+# Research tools are in a separate workspace: projects/research/
+# See projects/research/README.MD for system requirements and usage.

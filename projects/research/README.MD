@@ -2,6 +2,49 @@
 
 This folder contains various research tools written by an LLM and verified by only quick looks.
 
+## Separate Workspace
+
+This directory is a **separate Cargo workspace** from the main `sewer56-archives-nx` library.
+This is intentional to avoid imposing additional system dependencies on users of the main library.
+
+To build these tools, navigate to this directory first:
+
+```bash
+cd projects/research
+cargo build --release
+```
+
+## System Requirements
+
+Building the research tools requires additional system dependencies:
+
+### Linux (Debian/Ubuntu)
+
+```bash
+# For fontconfig (required by plotters ttf feature in analyze-mod-stats)
+sudo apt-get install libfontconfig1-dev
+
+# For libclang (required by bindgen in libbzip3-sys)
+sudo apt-get install libclang-dev
+```
+
+### Linux (Fedora/RHEL)
+
+```bash
+sudo dnf install fontconfig-devel clang-devel
+```
+
+### macOS
+
+```bash
+brew install fontconfig llvm
+```
+
+### Windows
+
+- Install LLVM from https://releases.llvm.org/ or via `winget install LLVM.LLVM`
+- Fontconfig is typically not required on Windows (plotters uses GDI)
+
 ## Quick Overview
 
 | Tool                                | Description                                                                                      |
