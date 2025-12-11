@@ -66,6 +66,8 @@ jobs:
           rust-toolchain: ${{ matrix.toolchain }}
           features: ${{ matrix.features }}
           use-cross: ${{ matrix.use-cross }}
+          use-binstall: false
+          install-binstall: false
 
       # Note: The GitHub Runner Images will contain an up to date Rust Stable Toolchain
       #       thus as per recommendation of cargo-semver-checks, we're using stable here.
@@ -117,6 +119,8 @@ jobs:
           rust-project-path: "projects/research"
           rust-toolchain: stable
           upload-coverage: false
+          use-binstall: false
+          install-binstall: false
           pre-test-command: |
             sudo apt-get update
             sudo apt-get install -y libfontconfig1-dev
