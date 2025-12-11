@@ -75,10 +75,10 @@ The project is organized into several main directories:
 
 **CRITICAL: After making any code changes, ALWAYS perform these verification steps in order:**
 
-1. **Run Tests**: Execute `cargo test --all-features` to ensure all functionality works correctly
-2. **Auto-fix Clippy Issues**: Run `cargo clippy --workspace --fix --allow-dirty --all-features` to automatically fix linting issues
-3. **Check Remaining Lints**: Run `cargo clippy --workspace --all-features -- -D warnings` to catch any remaining warnings
-4. **Verify Documentation**: Run `cargo doc --workspace --all-features --no-deps` to check for documentation errors
+1. **Run Tests**: Execute `cd project-directory` && `cargo test --all-features -q` to ensure all functionality works correctly. Test only the project where code was changed.
+2. **Auto-fix Clippy Issues**: Run `cargo clippy --workspace --fix --allow-dirty --all-features -q` to automatically fix linting issues
+3. **Check Remaining Lints**: Run `cargo clippy --workspace --all-features -q -- -D warnings` to catch any remaining warnings
+4. **Verify Documentation**: Run `cargo doc --workspace --all-features --no-deps -q` to check for documentation errors
 5. **Fix Documentation Links**: For any broken doc links, use the proper format: `` [`function_name`]: crate::function_name ``
 6. **Big Endian Testing** If `cross` is installed, run:
    ```

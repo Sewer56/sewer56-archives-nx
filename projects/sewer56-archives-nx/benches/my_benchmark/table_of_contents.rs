@@ -1,8 +1,9 @@
-use criterion::{black_box, Criterion};
+use criterion::Criterion;
 use sewer56_archives_nx::{
     api::enums::*,
     headers::{enums::v1::*, managed::*},
 };
+use std::hint::black_box;
 use v1::*;
 
 pub(crate) fn generate_test_data(

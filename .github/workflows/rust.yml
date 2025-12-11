@@ -2,11 +2,11 @@ name: Test, Upload Coverage and Release Rust
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     tags:
-      - '*'
+      - "*"
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -66,6 +66,8 @@ jobs:
           rust-toolchain: ${{ matrix.toolchain }}
           features: ${{ matrix.features }}
           use-cross: ${{ matrix.use-cross }}
+          use-binstall: false
+          install-binstall: false
 
       # Note: The GitHub Runner Images will contain an up to date Rust Stable Toolchain
       #       thus as per recommendation of cargo-semver-checks, we're using stable here.
@@ -105,16 +107,34 @@ jobs:
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
           use-cross: true
 
+  # Research tools are in a separate workspace with additional system dependencies
+  build-research-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Tests for Research Tools
+        uses: Reloaded-Project/devops-rust-test-and-coverage@v1
+        with:
+          rust-project-path: "projects/research"
+          rust-toolchain: stable
+          upload-coverage: false
+          use-binstall: false
+          install-binstall: false
+          pre-test-command: |
+            sudo apt-get update
+            sudo apt-get install -y libfontconfig1-dev
+
   publish-crate:
     permissions:
       contents: write
 
-    needs: [build-and-test,test-on-wine]
+    needs: [build-and-test, test-on-wine]
     # Publish only on tags
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
-      - name: Publish Rust Crate and Artifacts  
+      - name: Publish Rust Crate and Artifacts
         uses: Reloaded-Project/devops-publish-action@v1
         with:
           crates-io-token: ${{ secrets.CRATES_IO_TOKEN }}

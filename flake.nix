@@ -22,6 +22,9 @@
           f {
             pkgs = import inputs.nixpkgs {
               inherit system;
+              config = {
+                allowUnfree = true;
+              };
               overlays = [
                 inputs.self.overlays.default
               ];
@@ -65,6 +68,8 @@
 
             # Python for some of the research scripts
             python3
+            _7zz-rar
+            fontconfig # plotters
           ];
 
           env = {
@@ -73,11 +78,37 @@
           };
 
           shellHook = ''
+            # Auto activate nix-ld if configured, to avoid manual `fhs` shell switch.
+            # I (sewer) am lazy to go fix my small problem of my system config being in /etc/nixos
+            # and thus that folder being inaccessible when accessing devshell.
+            # Maybe sometime that will change, but for now, nix-ld for convenience.
+            if [ -n "$NIX_LD_LIBRARY_PATH" ]; then
+              export LD_LIBRARY_PATH=$NIX_LD_LIBRARY_PATH
+            fi
+
             echo "🦀 Rust development environment loaded"
             echo "Rust version: $(rustc --version)"
             echo "Cargo version: $(cargo --version)"
           '';
         };
+
+        # For running the research tools, do the following steps:
+        #
+        # 1. Enter the shell: `nix develop .#fhs`
+        # 2. Re-enter the default shell to setup env vars and build tools `nix develop`
+        # 3. Re-enter shell if needed e.g. `zsh`
+        # 4. Run the tools, e.g. `cargo run --release -p analyze-mod-stats`
+        fhs =
+          (pkgs.buildFHSEnv {
+            name = "sewer56-archives-nx-fhs";
+            targetPkgs = pkgs:
+              with pkgs; [
+                fontconfig
+                fontconfig.lib
+                freetype
+              ];
+            runScript = "bash";
+          }).env;
       }
     );
   };

@@ -2,6 +2,7 @@
     "[rust]": {
         "editor.formatOnSave": true
     },
+    "yaml.format.printWidth": 999999,
     "coverage-gutters.coverageFileNames": [
         "cobertura.xml"
     ],
@@ -13,5 +14,7 @@
     },
     "discord.enabled": true,
     "rust-analyzer.check.command": "clippy",
-    "rust-analyzer.cargo.features": "all"
+    "rust-analyzer.cargo.features": "all",
+    "nixEnvSelector.suggestion": false,
+    "nixEnvSelector.nixFile": "${workspaceFolder}/flake.nix"
 }

@@ -1,0 +1,38 @@
+[package]
+name = "analyze-mod-stats"
+version = "0.1.0"
+edition = "2021"
+description = "Statistical analysis and visualization tool for mod archive statistics"
+repository = "https://github.com/Sewer56/sewer56-archives-nx"
+license = "GPL-3.0-or-later"
+include = ["Cargo.toml", "src/**"]
+
+[[bin]]
+name = "analyze-mod-stats"
+
+[features]
+default = []
+
+[dependencies]
+# Plotting and visualization (disable default features to avoid native dependencies)
+plotters = { version = "0.3", default-features = false, features = [
+    "bitmap_backend",
+    "line_series",
+    "bitmap_encoder",
+    "ttf",
+] }
+
+# Compression and JSON parsing
+zstd = "0.13"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Enhanced output formatting
+tabled = "0.20"
+bytesize = "2.1"
+
+# User feedback and progress
+indicatif = "0.18"
+
+# Error handling
+thiserror = "2.0"

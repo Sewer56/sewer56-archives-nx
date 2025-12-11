@@ -1,8 +1,9 @@
-use criterion::{black_box, Criterion};
+use criterion::Criterion;
 use sewer56_archives_nx::api::traits::*;
 use sewer56_archives_nx::headers::parser::string_pool::StringPool;
 use sewer56_archives_nx::headers::parser::string_pool_common::StringPoolFormat;
 use sewer56_archives_nx::prelude::*;
+use std::hint::black_box;
 
 use crate::assets;
 

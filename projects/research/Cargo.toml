@@ -1,0 +1,29 @@
+# Research Tools Workspace
+#
+# This is a separate workspace for research and experimentation tools.
+# These tools have additional system dependencies and are not built by default.
+#
+# See README.MD for system requirements (fontconfig, libclang, etc.)
+
+[workspace]
+members = [
+    "dictionary-tester",
+    "mod-archive-stats/make-mod-stats",
+    "mod-archive-stats/analyze-mod-stats",
+]
+resolver = "2"
+
+# Profile Build
+[profile.profile]
+inherits = "release"
+debug = true
+codegen-units = 1
+lto = true
+strip = false
+
+# Optimized Release Build
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true
+panic = "abort"
