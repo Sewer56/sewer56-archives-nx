@@ -18,7 +18,7 @@ nightly = ["hashbrown/nightly", "safe-allocator-api/nightly"]
 pgo = []
 
 # Enables support for LZ4 compression/decompression
-lz4 = ["lz4-sys"]
+lz4 = ["dep:lz4-sys"]
 
 # Enables support for BZip3 compression/decompression
 bzip3 = ["dep:libbzip3-sys"]

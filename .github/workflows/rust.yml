@@ -17,37 +17,155 @@ jobs:
     strategy:
       matrix:
         include:
-          # Nightly (nightly feature)
-          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly }
-          - { os: ubuntu-latest, target: i686-unknown-linux-gnu, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly }
-          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu, use-pgo: false, use-cross: true, toolchain: nightly, features: nightly } # no native runner
-          - { os: ubuntu-latest, target: armv7-unknown-linux-gnueabihf, use-pgo: false, use-cross: true, toolchain: nightly, features: nightly } # no native runner
-          - { os: windows-latest, target: x86_64-pc-windows-msvc, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly }
-          - { os: windows-latest, target: i686-pc-windows-msvc, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly }
-          # - { os: windows-latest, target: aarch64-pc-windows-msvc, use-pgo: false, use-cross: false, toolchain: nightly, features: nightly } # no native runner
-          - { os: macos-15-intel, target: x86_64-apple-darwin, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly } # x86
-          - { os: macos-latest, target: aarch64-apple-darwin, use-pgo: true, use-cross: false, toolchain: nightly, features: nightly } # M1
-          - { os: ubuntu-latest, target: x86_64-pc-windows-gnu, use-pgo: false, use-cross: true, toolchain: nightly, features: nightly } # test only, and has issues
-          - { os: ubuntu-latest, target: i686-pc-windows-gnu, use-pgo: false, use-cross: true, toolchain: nightly, features: nightly } # test only, and has issues
+          # Nightly (all features via --all-features)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            use-pgo: true
+            use-cross: false
+            toolchain: nightly
+            extra-test-args: --all-features
+          - os: ubuntu-latest
+            target: i686-unknown-linux-gnu
+            use-pgo: true
+            use-cross: false
+            toolchain: nightly
+            extra-test-args: --all-features
+          - os: ubuntu-latest # no native runner
+            target: aarch64-unknown-linux-gnu
+            use-pgo: false
+            use-cross: true
+            toolchain: nightly
+            extra-test-args: --all-features
+          - os: ubuntu-latest # no native runner
+            target: armv7-unknown-linux-gnueabihf
+            use-pgo: false
+            use-cross: true
+            toolchain: nightly
+            extra-test-args: --all-features
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            use-pgo: true
+            use-cross: false
+            toolchain: nightly
+            extra-test-args: --all-features
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+            use-pgo: true
+            use-cross: false
+            toolchain: nightly
+            extra-test-args: --all-features
+          - os: macos-15-intel # x86
+            target: x86_64-apple-darwin
+            use-pgo: true
+            use-cross: false
+            toolchain: nightly
+            extra-test-args: --all-features
+          - os: macos-latest # M1
+            target: aarch64-apple-darwin
+            use-pgo: true
+            use-cross: false
+            toolchain: nightly
+            extra-test-args: --all-features
+          - os: ubuntu-latest
+            target: x86_64-pc-windows-gnu
+            use-pgo: false
+            use-cross: true
+            toolchain: nightly
+            extra-test-args: --all-features
+          - os: ubuntu-latest
+            target: i686-pc-windows-gnu
+            use-pgo: false
+            use-cross: true
+            toolchain: nightly
+            extra-test-args: --all-features
 
-          # Stable (no nightly feature)
-          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, use-pgo: true, use-cross: false, toolchain: stable }
-          - { os: ubuntu-latest, target: i686-unknown-linux-gnu, use-pgo: true, use-cross: false, toolchain: stable }
-          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu, use-pgo: false, use-cross: true, toolchain: stable } # no native runner
-          - { os: ubuntu-latest, target: armv7-unknown-linux-gnueabihf, use-pgo: false, use-cross: true, toolchain: stable } # no native runner
-          - { os: windows-latest, target: x86_64-pc-windows-msvc, use-pgo: true, use-cross: false, toolchain: stable }
-          - { os: windows-latest, target: i686-pc-windows-msvc, use-pgo: true, use-cross: false, toolchain: stable }
-          # - { os: windows-latest, target: aarch64-pc-windows-msvc, use-pgo: false, use-cross: false, toolchain: stable } # no native runner
-          - { os: macos-15-intel, target: x86_64-apple-darwin, use-pgo: true, use-cross: false, toolchain: stable } # x86
-          - { os: macos-latest, target: aarch64-apple-darwin, use-pgo: true, use-cross: false, toolchain: stable } # M1
-          - { os: ubuntu-latest, target: x86_64-pc-windows-gnu, use-pgo: false, use-cross: true, toolchain: stable } # test only, and has issues
-          - { os: ubuntu-latest, target: i686-pc-windows-gnu, use-pgo: false, use-cross: true, toolchain: stable } # test only, and has issues
+          # Stable (explicit feature list, no nightly feature)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            use-pgo: true
+            use-cross: false
+            toolchain: stable
+            features: "lz4,bzip3,hardened,no_format,detect_num_cores,pgo"
+          - os: ubuntu-latest
+            target: i686-unknown-linux-gnu
+            use-pgo: true
+            use-cross: false
+            toolchain: stable
+            features: "lz4,bzip3,hardened,no_format,detect_num_cores,pgo"
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            use-pgo: false
+            use-cross: true
+            toolchain: stable # no native runner
+            features: "lz4,bzip3,hardened,no_format,detect_num_cores,pgo"
+          - os: ubuntu-latest
+            target: armv7-unknown-linux-gnueabihf # no native runner
+            use-pgo: false
+            use-cross: true
+            toolchain: stable
+            features: "lz4,bzip3,hardened,no_format,detect_num_cores,pgo"
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            use-pgo: true
+            use-cross: false
+            toolchain: stable
+            features: "lz4,bzip3,hardened,no_format,detect_num_cores,pgo"
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+            use-pgo: true
+            use-cross: false
+            toolchain: stable
+            features: "lz4,bzip3,hardened,no_format,detect_num_cores,pgo"
+          - os: macos-15-intel # x86
+            target: x86_64-apple-darwin
+            use-pgo: true
+            use-cross: false
+            toolchain: stable
+            features: "lz4,bzip3,hardened,no_format,detect_num_cores,pgo"
+          - os: macos-latest # M1
+            target: aarch64-apple-darwin
+            use-pgo: true
+            use-cross: false
+            toolchain: stable
+            features: "lz4,bzip3,hardened,no_format,detect_num_cores,pgo"
+          - os: ubuntu-latest
+            target: x86_64-pc-windows-gnu
+            use-pgo: false
+            use-cross: true
+            toolchain: stable
+            features: "lz4,bzip3,hardened,no_format,detect_num_cores,pgo"
+          - os: ubuntu-latest
+            target: i686-pc-windows-gnu
+            use-pgo: false
+            use-cross: true
+            toolchain: stable
+            features: "lz4,bzip3,hardened,no_format,detect_num_cores,pgo"
 
           # Big Endian
-          - { os: ubuntu-latest, target: powerpc-unknown-linux-gnu, use-pgo: false, use-cross: true, toolchain: nightly, features: nightly } # 32-bit big endian
-          - { os: ubuntu-latest, target: powerpc64-unknown-linux-gnu, use-pgo: false, use-cross: true, toolchain: nightly, features: nightly } # 64-bit big endian
-          - { os: ubuntu-latest, target: powerpc-unknown-linux-gnu, use-pgo: false, use-cross: true, toolchain: stable } # 32-bit big endian
-          - { os: ubuntu-latest, target: powerpc64-unknown-linux-gnu, use-pgo: false, use-cross: true, toolchain: stable } # 64-bit big endian
+          - os: ubuntu-latest # 32-bit big endian
+            target: powerpc-unknown-linux-gnu
+            use-pgo: false
+            use-cross: true
+            toolchain: nightly
+            extra-test-args: --all-features
+          - os: ubuntu-latest # 64-bit big endian
+            target: powerpc64-unknown-linux-gnu
+            use-pgo: false
+            use-cross: true
+            toolchain: nightly
+            extra-test-args: --all-features
+          - os: ubuntu-latest # 32-bit big endian
+            target: powerpc-unknown-linux-gnu
+            use-pgo: false
+            use-cross: true
+            toolchain: stable
+            features: "lz4,bzip3,hardened,no_format,detect_num_cores,pgo"
+          - os: ubuntu-latest # 64-bit big endian
+            target: powerpc64-unknown-linux-gnu
+            use-pgo: false
+            use-cross: true
+            toolchain: stable
+            features: "lz4,bzip3,hardened,no_format,detect_num_cores,pgo"
 
     runs-on: ${{ matrix.os }}
 
@@ -66,6 +184,7 @@ jobs:
           target: ${{ matrix.target }}
           rust-toolchain: ${{ matrix.toolchain }}
           features: ${{ matrix.features }}
+          additional-test-args: ${{ matrix.extra-test-args }}
           use-cross: ${{ matrix.use-cross }}
           use-binstall: false
           install-binstall: false
@@ -75,7 +194,9 @@ jobs:
       #
       # Note to reader. If adding this to a new repo, please clear cache.
       - name: Run cargo-semver-checks
-        if: (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.toolchain == 'stable' && matrix.use-cross == false
+        if:
+          (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.toolchain == 'stable'
+          && matrix.use-cross == false
         working-directory: src
         shell: bash
         run: |
@@ -84,26 +205,33 @@ jobs:
 
           if echo "$SEARCH_RESULT" | grep -q "^{{project-name}} "; then
             cargo install cargo-semver-checks
-            cargo semver-checks --target ${{ matrix.target }} --only-explicit-features --features "lz4,detect_num_cores,hardened"
+            cargo semver-checks --target ${{ matrix.target }} --only-explicit-features --features "${{ matrix.features }}"
           else
             echo "No previous version found on crates.io. Skipping semver checks."
           fi
 
       - name: Check documentation is valid
-        if: (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.toolchain == 'stable' && matrix.use-cross == false
+        if:
+          (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.toolchain == 'stable'
+          && matrix.use-cross == false
         working-directory: src
         env:
           RUSTDOCFLAGS: "-D warnings"
-        run: cargo doc --workspace ${{ matrix.features && format('--features {0}', matrix.features) || '' }} --document-private-items --target ${{ matrix.target }}
+        run:
+          cargo doc --workspace --features "${{ matrix.features }}" --document-private-items --target ${{ matrix.target
+          }}
 
       - name: Run linter
-        if: (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.toolchain == 'stable' && matrix.use-cross == false
+        if:
+          (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.toolchain == 'stable'
+          && matrix.use-cross == false
         working-directory: src
-        run: cargo clippy --workspace ${{ matrix.features && format('--features {0}', matrix.features) || '' }} --target ${{ matrix.target }} -- -D warnings
+        run: cargo clippy --workspace --features "${{ matrix.features }}" --target ${{ matrix.target }} -- -D warnings
 
       - name: Run formatter check
         uses: actions-rust-lang/rustfmt@v1
-        if: (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.toolchain == 'stable'
+        if:
+          (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.toolchain == 'stable'
         with:
           manifest-path: src/Cargo.toml
 
@@ -125,6 +253,7 @@ jobs:
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
           use-cross: true
           additional-test-args: --release
+          features: lz4,bzip3,hardened,no_format,detect_num_cores,pgo
 
   # Research tools are in a separate workspace with additional system dependencies
   build-research-tools:
@@ -162,9 +291,9 @@ jobs:
             src/sewer56-archives-nx
           compression-tool: 7z
           artifact-groups-file: .github/artifact-groups.yml
-          changelog-enabled: 'true'
+          changelog-enabled: "true"
           changelog-template: .github/changelog.hbs
           changelog-is-release: ${{ startsWith(github.ref, 'refs/tags/') }}
           changelog-release-tag: ${{ github.ref_name }}
-          changelog-override-starting-version: 'true'
-          changelog-hide-credit: 'true'
+          changelog-override-starting-version: "true"
+          changelog-hide-credit: "true"
