@@ -27,10 +27,12 @@ pub fn extract_with_7z_tool(
     fs::create_dir_all(extract_path)?;
 
     // Run 7z extraction command
+    // Set working directory to extract_path instead of using -o flag
+    // to avoid issues with paths containing spaces
     let output = Command::new(tool)
+        .current_dir(extract_path)
         .arg("x") // Extract command
         .arg("-y") // Yes to all prompts
-        .arg(format!("-o{}", extract_path.display())) // Output directory
         .arg(archive_path) // Input archive file
         .output()?;
 
@@ -220,5 +222,94 @@ mod tests {
             subdir_path.exists() && subdir_path.is_dir(),
             "Subdirectory should be preserved"
         );
+    }
+
+    #[test]
+    fn test_extract_archive_with_spaces_in_path() {
+        use std::io::Write;
+
+        // Try to detect 7z tool first
+        let tool = match detect_7z_tool() {
+            Ok(tool) => tool,
+            Err(_) => {
+                // 7z tool is not available, skip the test
+                println!("Skipping test: 7z tool not available");
+                return;
+            }
+        };
+
+        // Create a temporary directory for our test files
+        let temp_dir = TempDir::new().unwrap();
+        let source_dir = temp_dir.path().join("source");
+        fs::create_dir_all(&source_dir).unwrap();
+
+        // Create test files
+        let test_files = vec![("file1.txt", "Content 1"), ("file2.txt", "Content 2")];
+
+        for (filename, content) in &test_files {
+            let file_path = source_dir.join(filename);
+            let mut file = fs::File::create(&file_path).unwrap();
+            file.write_all(content.as_bytes()).unwrap();
+        }
+
+        // Create a 7z archive
+        let archive_path = temp_dir.path().join("test_archive.7z");
+        let output = Command::new(&tool)
+            .arg("a")
+            .arg("-y")
+            .arg(&archive_path)
+            .arg(format!("{}/*", source_dir.display()))
+            .output()
+            .expect("Failed to create test archive");
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            panic!(
+                "Failed to create test archive. Exit code: {:?}\nStderr: {}\nStdout: {}",
+                output.status.code(),
+                stderr,
+                stdout
+            );
+        }
+
+        // Create extraction directory with spaces in the name
+        let extract_dir = temp_dir.path().join("extract with spaces");
+
+        // Test the extraction function with a path containing spaces
+        let result = extract_with_7z_tool(&archive_path, &extract_dir, &tool);
+
+        // Verify extraction was successful
+        assert!(
+            result.is_ok(),
+            "Archive extraction should succeed with path containing spaces: {:?}",
+            result.err()
+        );
+
+        let file_count = result.unwrap();
+        assert_eq!(
+            file_count,
+            test_files.len(),
+            "Should extract exactly {} files",
+            test_files.len()
+        );
+
+        // Verify that the files were actually extracted with correct content
+        for (filename, expected_content) in &test_files {
+            let extracted_file_path = extract_dir.join(filename);
+            assert!(
+                extracted_file_path.exists(),
+                "Extracted file {} should exist",
+                filename
+            );
+
+            let actual_content = fs::read_to_string(&extracted_file_path)
+                .expect("Should be able to read extracted file");
+            assert_eq!(
+                &actual_content, expected_content,
+                "File {} should have correct content",
+                filename
+            );
+        }
     }
 }

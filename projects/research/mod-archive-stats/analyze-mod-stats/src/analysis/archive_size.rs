@@ -131,6 +131,18 @@ fn generate_storage_insights(archive_sizes: &[u64]) -> String {
     let total_mods = archive_sizes.len();
     let total_storage: u128 = archive_sizes.iter().map(|&size| size as u128).sum();
 
+    // Guard against division by zero
+    let safe_total_mods = if total_mods == 0 {
+        1.0
+    } else {
+        total_mods as f64
+    };
+    let safe_total_storage = if total_storage == 0 {
+        1.0
+    } else {
+        total_storage as f64
+    };
+
     // Calculate distribution across size categories
     let very_small = archive_sizes.iter().filter(|&&size| size < MB).count();
     let small = archive_sizes
@@ -152,27 +164,27 @@ fn generate_storage_insights(archive_sizes: &[u64]) -> String {
     output.push_str(&format!(
         "  Very small mods (<1MB): {} ({:.1}%) - Minimal storage impact\n",
         very_small,
-        (very_small as f64 / total_mods as f64) * 100.0
+        (very_small as f64 / safe_total_mods) * 100.0
     ));
     output.push_str(&format!(
         "  Small mods (1MB-10MB): {} ({:.1}%) - Low storage requirements\n",
         small,
-        (small as f64 / total_mods as f64) * 100.0
+        (small as f64 / safe_total_mods) * 100.0
     ));
     output.push_str(&format!(
         "  Medium mods (10MB-100MB): {} ({:.1}%) - Moderate storage needs\n",
         medium,
-        (medium as f64 / total_mods as f64) * 100.0
+        (medium as f64 / safe_total_mods) * 100.0
     ));
     output.push_str(&format!(
         "  Large mods (100MB-1GB): {} ({:.1}%) - Significant storage consumers\n",
         large,
-        (large as f64 / total_mods as f64) * 100.0
+        (large as f64 / safe_total_mods) * 100.0
     ));
     output.push_str(&format!(
         "  Very large mods (1GB+): {} ({:.1}%) - Major storage consumers\n",
         very_large,
-        (very_large as f64 / total_mods as f64) * 100.0
+        (very_large as f64 / safe_total_mods) * 100.0
     ));
 
     // Storage consumption breakdown
@@ -195,27 +207,27 @@ fn generate_storage_insights(archive_sizes: &[u64]) -> String {
     output.push_str(&format!(
         "  Very small mods consume: {:.2} GB ({:.1}% of total storage)\n",
         very_small_storage as f64 / GB as f64,
-        (very_small_storage as f64 / total_storage as f64) * 100.0
+        (very_small_storage as f64 / safe_total_storage) * 100.0
     ));
     output.push_str(&format!(
         "  Small mods consume: {:.2} GB ({:.1}% of total storage)\n",
         small_storage as f64 / GB as f64,
-        (small_storage as f64 / total_storage as f64) * 100.0
+        (small_storage as f64 / safe_total_storage) * 100.0
     ));
     output.push_str(&format!(
         "  Medium mods consume: {:.2} GB ({:.1}% of total storage)\n",
         medium_storage as f64 / GB as f64,
-        (medium_storage as f64 / total_storage as f64) * 100.0
+        (medium_storage as f64 / safe_total_storage) * 100.0
     ));
     output.push_str(&format!(
         "  Large mods consume: {:.2} GB ({:.1}% of total storage)\n",
         large_storage as f64 / GB as f64,
-        (large_storage as f64 / total_storage as f64) * 100.0
+        (large_storage as f64 / safe_total_storage) * 100.0
     ));
     output.push_str(&format!(
         "  Very large mods consume: {:.2} GB ({:.1}% of total storage)",
         very_large_storage as f64 / GB as f64,
-        (very_large_storage as f64 / total_storage as f64) * 100.0
+        (very_large_storage as f64 / safe_total_storage) * 100.0
     ));
 
     output

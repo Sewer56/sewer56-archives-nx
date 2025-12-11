@@ -186,7 +186,7 @@ fn create_file_count_buckets(data: &[u32]) -> Vec<BucketEntry> {
         (151u32, 200u32, "151-200"),
         (201u32, 300u32, "201-300"),
         (301u32, 500u32, "301-500"),
-        (501u32, u32::MAX, "500+"),
+        (501u32, u32::MAX, "501+"),
     ];
 
     for (min, max, label) in ranges {
@@ -224,7 +224,7 @@ mod tests {
         assert_eq!(buckets[8].count, 1);
         assert_eq!(buckets[9].range, "301-500");
         assert_eq!(buckets[9].count, 1);
-        assert_eq!(buckets[10].range, "500+");
+        assert_eq!(buckets[10].range, "501+");
         assert_eq!(buckets[10].count, 1);
     }
 }

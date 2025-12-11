@@ -255,7 +255,7 @@ This tool requires multiple compression utilities. Missing tools will be skipped
 | `7z`    | `apt install p7zip-full` / `brew install p7zip` |
 | `xz`    | Usually pre-installed on Linux/macOS            |
 | `bzip3` | Build from source or package manager            |
-| `kanzi` | https://github.com/flanglet/kanzi-go            |
+| `kanzi` | <https://github.com/flanglet/kanzi-go>          |
 | `pigz`  | `apt install pigz` / `brew install pigz`        |
 
 **Tweaking:**

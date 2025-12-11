@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 description = "Statistical analysis and visualization tool for mod archive statistics"
 repository = "https://github.com/Sewer56/sewer56-archives-nx"
-license-file = "LICENSE"
-include = ["**/*"]
+license = "GPL-3.0-or-later"
+include = ["Cargo.toml", "src/**"]
 
 [[bin]]
 name = "analyze-mod-stats"

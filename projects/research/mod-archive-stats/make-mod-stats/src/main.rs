@@ -54,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let print_manager = PrintManager::new();
 
     println!(
-        "🔄 Processing {} packages in parallel with 8 threads",
+        "🔄 Processing {} packages in parallel with 16 threads",
         packages.packages.len()
     );
 
@@ -82,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let completion_counter = completion_counter.clone();
 
         let task = tokio::spawn(async move {
-            // Acquire semaphore permit to limit concurrency to 8
+            // Acquire semaphore permit to limit concurrency to 16
             let _permit = semaphore.acquire().await.unwrap();
 
             let mut process_errors = Vec::new();

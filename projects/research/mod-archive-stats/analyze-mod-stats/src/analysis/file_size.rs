@@ -246,11 +246,21 @@ fn analyze_compression_by_size_buckets(
         "Overall compression ratio: {:.4}\n",
         overall_compression_ratio
     ));
-    output.push_str(&format!(
-        "Total space saved: {} bytes ({:.1}%)\n",
-        total_orig_size - total_comp_size,
-        (1.0 - overall_compression_ratio) * 100.0
-    ));
+    if total_comp_size <= total_orig_size {
+        let saved = total_orig_size - total_comp_size;
+        let saved_pct = (1.0 - overall_compression_ratio) * 100.0;
+        output.push_str(&format!(
+            "Total space saved: {} bytes ({:.1}%)\n",
+            saved, saved_pct
+        ));
+    } else {
+        let increase = total_comp_size - total_orig_size;
+        let increase_pct = (overall_compression_ratio - 1.0) * 100.0;
+        output.push_str(&format!(
+            "Total increase: {} bytes ({:.1}%)\n",
+            increase, increase_pct
+        ));
+    }
 
     output
 }
