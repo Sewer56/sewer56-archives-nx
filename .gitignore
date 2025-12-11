@@ -6,3 +6,9 @@ cobertura.xml
 
 # Direnv
 .direnv/
+
+# LLM Prompts
+PROMPT.md
+PROMPT-*.md
+PROMPT.MD
+PROMPT-*.MD

@@ -1,4 +1,4 @@
-name: Test, Upload Coverage and Release Rust
+name: Rust
 
 on:
   push:
@@ -52,7 +52,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Run Tests and Upload Coverage
         uses: Reloaded-Project/devops-rust-test-and-coverage@v1
@@ -60,6 +60,7 @@ jobs:
         # Native runner currently only available in enterprise.
         if: matrix.target != 'aarch64-pc-windows-msvc'
         with:
+          rust-project-path: ./src
           upload-coverage: true
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
           target: ${{ matrix.target }}
@@ -74,7 +75,8 @@ jobs:
       #
       # Note to reader. If adding this to a new repo, please clear cache.
       - name: Run cargo-semver-checks
-        if: (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.toolchain == 'stable'
+        if: (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.toolchain == 'stable' && matrix.use-cross == false
+        working-directory: src
         shell: bash
         run: |
           SEARCH_RESULT=$(cargo search "^{{project-name}}$" --limit 1)
@@ -87,6 +89,24 @@ jobs:
             echo "No previous version found on crates.io. Skipping semver checks."
           fi
 
+      - name: Check documentation is valid
+        if: (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.toolchain == 'stable' && matrix.use-cross == false
+        working-directory: src
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: cargo doc --workspace --all-features --document-private-items --target ${{ matrix.target }}
+
+      - name: Run linter
+        if: (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.toolchain == 'stable' && matrix.use-cross == false
+        working-directory: src
+        run: cargo clippy --workspace --all-features --target ${{ matrix.target }} -- -D warnings
+
+      - name: Run formatter check
+        uses: actions-rust-lang/rustfmt@v1
+        if: (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.toolchain == 'stable'
+        with:
+          manifest-path: src/Cargo.toml
+
   test-on-wine:
     runs-on: ubuntu-latest
     strategy:
@@ -94,29 +114,28 @@ jobs:
         target: [x86_64-pc-windows-gnu, i686-pc-windows-gnu]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Run Tests and Coverage on WINE
         uses: Reloaded-Project/devops-rust-test-and-coverage@v1
         with:
-          rust-toolchain: nightly
+          rust-project-path: ./src
           target: ${{ matrix.target }}
-          install-rust-toolchain: true
-          setup-rust-cache: true
           upload-coverage: true
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
           use-cross: true
+          additional-test-args: --release
 
   # Research tools are in a separate workspace with additional system dependencies
   build-research-tools:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Run Tests for Research Tools
         uses: Reloaded-Project/devops-rust-test-and-coverage@v1
         with:
-          rust-project-path: "projects/research"
+          rust-project-path: "src/research"
           rust-toolchain: stable
           upload-coverage: false
           use-binstall: false
@@ -135,9 +154,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Publish Rust Crate and Artifacts
-        uses: Reloaded-Project/devops-publish-action@v1
+        uses: Reloaded-Project/devops-publish-action@v3
         with:
-          crates-io-token: ${{ secrets.CRATES_IO_TOKEN }}
-          nuget-api-key: ${{ secrets.NUGET_KEY }}
-          rust-project-paths: |
-            .
+          rust-crates-io-token: ${{ secrets.CRATES_IO_TOKEN }}
+          csharp-nuget-api-key: ${{ secrets.NUGET_KEY }}
+          rust-cargo-project-paths: |
+            src/sewer56-archives-nx
+          compression-tool: 7z
+          artifact-groups-file: .github/artifact-groups.yml
+          changelog-enabled: 'true'
+          changelog-template: .github/changelog.hbs
+          changelog-is-release: ${{ startsWith(github.ref, 'refs/tags/') }}
+          changelog-release-tag: ${{ github.ref_name }}
+          changelog-override-starting-version: 'true'
+          changelog-hide-credit: 'true'
