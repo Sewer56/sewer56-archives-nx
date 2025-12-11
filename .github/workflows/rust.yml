@@ -200,10 +200,10 @@ jobs:
         working-directory: src
         shell: bash
         run: |
-          SEARCH_RESULT=$(cargo search "^{{project-name}}$" --limit 1)
+          SEARCH_RESULT=$(cargo search "^sewer56-archives-nx$" --limit 1)
           rustup target add ${{ matrix.target }}
 
-          if echo "$SEARCH_RESULT" | grep -q "^{{project-name}} "; then
+          if echo "$SEARCH_RESULT" | grep -q "^sewer56-archives-nx "; then
             cargo install cargo-semver-checks
             cargo semver-checks --target ${{ matrix.target }} --only-explicit-features --features "${{ matrix.features }}"
           else
