@@ -327,26 +327,22 @@ Building the Rust tools requires additional system dependencies:
 ```bash
 # For fontconfig (required by plotters)
 sudo apt-get install libfontconfig1-dev
-
-# For libclang (required by bindgen)
-sudo apt-get install libclang-dev
 ```
 
 **Linux (Fedora/RHEL):**
 
 ```bash
-sudo dnf install fontconfig-devel clang-devel
+sudo dnf install fontconfig-devel
 ```
 
 **macOS:**
 
 ```bash
-brew install fontconfig llvm
+brew install fontconfig
 ```
 
 **Windows:**
 
-- Install LLVM from https://releases.llvm.org/ or via `winget install LLVM.LLVM`
 - Fontconfig is typically not required (plotters uses GDI)
 
 ---

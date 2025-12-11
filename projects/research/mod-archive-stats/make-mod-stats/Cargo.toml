@@ -34,7 +34,7 @@ zstd = "0.13"
 tempfile = "3.8"
 
 # sewer56-archives-nx integration
-sewer56-archives-nx = { path = "../../../sewer56-archives-nx" }
+sewer56-archives-nx = { path = "../../../sewer56-archives-nx", default-features = false }
 
 # Hashing
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
