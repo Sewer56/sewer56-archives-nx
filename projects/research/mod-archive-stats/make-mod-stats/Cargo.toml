@@ -44,6 +44,3 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # Human-readable sizes
 bytesize = "2.1"
-
-[dev-dependencies]
-tokio = { version = "1.0", features = ["full"] }

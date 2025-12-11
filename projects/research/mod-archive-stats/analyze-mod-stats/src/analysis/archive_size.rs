@@ -5,7 +5,9 @@
 
 use super::constants::{GB, MB};
 use crate::common::buckets::{format_bucket_table, BucketEntry};
+use crate::common::plots::create_archive_size_plot;
 use crate::common::{AnalysisResults, PlotError};
+use std::fs;
 use std::path::Path;
 
 /// Errors that can occur during archive size analysis
@@ -106,7 +108,6 @@ pub fn generate_archive_size_analysis(data: &AnalysisResults, output_dir: &Path)
         summary
     );
 
-    use std::fs;
     fs::write(&output_file, output)?;
 
     Ok(())
@@ -247,8 +248,6 @@ fn generate_storage_insights(archive_sizes: &[u64]) -> String {
 /// * `Ok(())` - If the plot was successfully generated
 /// * `Err(ArchiveSizeError)` - If plot generation failed
 pub fn generate_archive_size_plots(data: &AnalysisResults, output_dir: &Path) -> Result<()> {
-    use crate::common::plots::create_archive_size_plot;
-
     // Extract archive sizes from each mod
     let archive_sizes: Vec<u64> = data
         .mods

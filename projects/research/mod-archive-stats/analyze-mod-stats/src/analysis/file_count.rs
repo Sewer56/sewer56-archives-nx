@@ -4,6 +4,7 @@
 
 use crate::common::buckets::{format_bucket_table, BucketEntry};
 use crate::common::{AnalysisResults, PlotError};
+use std::fs;
 use std::path::Path;
 
 /// Errors that can occur during file count analysis
@@ -127,7 +128,6 @@ pub fn generate_file_count_analysis(data: &AnalysisResults, output_dir: &Path) -
         summary
     );
 
-    use std::fs;
     fs::write(&output_file, output)?;
 
     Ok(())
@@ -167,7 +167,7 @@ pub fn generate_file_count_plots(data: &AnalysisResults, output_dir: &Path) -> R
 
 /// Fixed bucket ranges for file count analysis
 ///
-/// Bucket ranges: 1, 2-5, 6-10, 11-25, 26-50, 51-100, 101-150, 151-200, 201-300, 301-500, 500+
+/// Bucket ranges: 1, 2-5, 6-10, 11-25, 26-50, 51-100, 101-150, 151-200, 201-300, 301-500, 501+
 ///
 /// These ranges provide granular insights around the critical 200-file threshold, which relates
 /// to the ~4096-byte metadata storage constraint (~194 files fit within this limit).
