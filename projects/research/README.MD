@@ -434,17 +434,9 @@ Overall Improvement Percentage: 0.30%
 
 ### `mod-archive-stats/`
 
-Analyzes compression and file organization patterns across Reloaded-II mod archives (~2500 mods). Useful for understanding real-world mod distribution patterns.
+Analyzes compression and file organization patterns across Reloaded-II mod archives (~2,200 unique mods at time of writing). Contains two tools:
 
-**Sample Usage:**
-
-```bash
-cd mod-archive-stats/make-mod-stats
-cargo run --release
-```
-
-**Requirements:**
-
-- 7-Zip CLI in PATH (`7z`)
+- **make-mod-stats** - Data collection tool that downloads and analyzes mod archives
+- **analyze-mod-stats** - Analysis and visualization tool that generates statistics and plots
 
 For full documentation, see [mod-archive-stats/README.MD](mod-archive-stats/README.MD).
