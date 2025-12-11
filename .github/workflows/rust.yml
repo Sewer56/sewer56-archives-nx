@@ -94,12 +94,12 @@ jobs:
         working-directory: src
         env:
           RUSTDOCFLAGS: "-D warnings"
-        run: cargo doc --workspace --all-features --document-private-items --target ${{ matrix.target }}
+        run: cargo doc --workspace ${{ matrix.features && format('--features {0}', matrix.features) || '' }} --document-private-items --target ${{ matrix.target }}
 
       - name: Run linter
         if: (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')) && matrix.toolchain == 'stable' && matrix.use-cross == false
         working-directory: src
-        run: cargo clippy --workspace --all-features --target ${{ matrix.target }} -- -D warnings
+        run: cargo clippy --workspace ${{ matrix.features && format('--features {0}', matrix.features) || '' }} --target ${{ matrix.target }} -- -D warnings
 
       - name: Run formatter check
         uses: actions-rust-lang/rustfmt@v1
