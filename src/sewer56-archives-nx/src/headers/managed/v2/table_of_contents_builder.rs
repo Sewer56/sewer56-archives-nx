@@ -153,7 +153,7 @@ pub fn init_toc_creation<
 /// # Remarks
 ///
 /// Before calling this, first call [init_toc_creation], to construct a StringPool, and related information.
-/// With this you can call [calculate_table_size] to determine the table size; reserve the space; and then
+/// This returns a [BuilderInfo] which contains the `table_size` field; use it to reserve the space; and then
 /// pack the data; creating the [TableOfContentsBuilderState] to call this function with.
 ///
 /// # Errors

@@ -67,7 +67,7 @@ builder.add_file_from_byte_slice(
 
 ### Extracting from an Archive
 
-```rust,ignore
+```text
 // Archive extraction functionality is coming soon
 // See the documentation for the latest API
 ```

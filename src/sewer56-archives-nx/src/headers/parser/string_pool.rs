@@ -555,8 +555,8 @@ fn return_empty_pool<ShortAlloc: Allocator + Clone, LongAlloc: Allocator + Clone
     })
 }
 
-/// Calculates the total size of the pool for both the
-/// [`StringPoolFormat::V0`] and [`StringPoolFormat::V1`] (deprecated) formats.
+/// Calculates the total size of the pool for the
+/// [`StringPoolFormat::V0`] format.
 fn calc_raw_data_size<T: HasRelativePath>(items: &mut [T]) -> usize {
     let total_path_size: usize = items
         .iter()
