@@ -80,9 +80,9 @@ jobs:
         shell: bash
         run: |
           SEARCH_RESULT=$(cargo search "^{{project-name}}$" --limit 1)
+          rustup target add ${{ matrix.target }}
 
           if echo "$SEARCH_RESULT" | grep -q "^{{project-name}} "; then
-            rustup target add ${{ matrix.target }}
             cargo install cargo-semver-checks
             cargo semver-checks --target ${{ matrix.target }} --only-explicit-features --features "lz4,detect_num_cores,hardened"
           else
