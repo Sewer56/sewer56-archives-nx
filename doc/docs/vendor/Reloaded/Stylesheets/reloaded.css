@@ -1,0 +1,13 @@
+/* Reloaded Theme Styles - Vendored v1.0.0 */
+/* This file contains the custom Reloaded theme styles */
+
+/* Color Scheme: reloaded3-slate */
+[data-md-color-scheme="reloaded3-slate"] {
+  --md-primary-fg-color: #2196f3;
+  --md-primary-fg-color--light: #42a5f5;
+  --md-primary-fg-color--dark: #1976d2;
+  --md-primary-bg-color: #fff;
+  --md-accent-fg-color: #ff5252;
+  --md-accent-fg-color--transparent: rgba(255, 82, 82, 0.1);
+  --md-accent-bg-color: #fff;
+}

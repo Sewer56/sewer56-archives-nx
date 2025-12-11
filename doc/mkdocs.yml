@@ -1,0 +1,77 @@
+site_name: Nx Archive Library (Rust)
+site_url: https://github.com/Sewer56/sewer56-archives-nx
+
+repo_name: Sewer56/sewer56-archives-nx
+repo_url: https://github.com/Sewer56/sewer56-archives-nx
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Sewer56
+    # - icon: fontawesome/brands/twitter
+    #  link: https://twitter.com/thesewer56?lang=en-GB
+
+extra_css:
+  - vendor/Reloaded/Stylesheets/reloaded.css
+
+markdown_extensions:
+  - admonition
+  - tables
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tasklist
+  - def_list
+  - meta
+  - md_in_html
+  - attr_list
+  - footnotes
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+theme:
+  name: material
+  palette:
+    scheme: reloaded3-slate
+  features:
+    - navigation.instant
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+      minify_js: true
+      minify_css: true
+      htmlmin_opts:
+        remove_comments: true
+      cache_safe: true
+  - exclude-unused-files:
+      file_types_to_check: [ "psd", "7z", "kra" ]
+      file_types_override_mode: append
+      enabled: true
+
+nav:
+  - Home: index.md
+  - Contributing: contributing.md
+  - License: https://reloaded-project.github.io/Reloaded.MkDocsMaterial.Themes.R2/Pages/license.html
+  - How to Document: https://reloaded-project.github.io/Reloaded.MkDocsMaterial.Themes.R2/Pages/contributing.html
+  - Format Specification:
+      - Overview: Specification/Overview.md
+      - Header: Specification/File-Header.md
+      - Table of Contents (TOC): Specification/Table-Of-Contents.md
+      - Optional Sections:
+          - Dictionaries: Specification/Dictionaries.md
+          - User Data: Specification/User-Data.md
+      - Algorithm Implementation: Specification/Implementation-Details.md
+  - Research:
+      - Decode Speed: Research/DecodeSpeed.md
+      - Dictionary Compression: Research/DictionaryCompression.md
+      - Hash Algorithms: Research/HashAlgorithms.md
+      - Miscellaneous: Research/Miscellaneous.md

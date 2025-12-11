@@ -1,0 +1,15 @@
+{
+    "editor.formatOnSave": true,
+    "files.exclude": {
+        "venv/": true,
+        "__pycache__/": true
+    },
+    "files.associations": {
+        "mkdocs.yml": "yaml",
+        "requirements.txt": "plaintext"
+    },
+    "[markdown]": {
+        "editor.wordWrap": "on",
+        "editor.rulers": [80]
+    }
+}
