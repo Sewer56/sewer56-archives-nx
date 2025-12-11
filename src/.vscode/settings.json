@@ -7,7 +7,4 @@
   ],
   "coverage-gutters.coverageReportFileName": "tarpaulin-report.html",
   "yaml.format.printWidth": 999999,
-  "discord.enabled": true,
-  "nixEnvSelector.suggestion": false,
-  "nixEnvSelector.nixFile": "${workspaceFolder}/flake.nix"
 }
