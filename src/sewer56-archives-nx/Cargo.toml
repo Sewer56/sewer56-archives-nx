@@ -72,7 +72,7 @@ criterion = "0.8.2"
 rstest = "0.26.0"
 fake = { version = "4.4.0" }
 itertools = "0.14.0"
-tempfile = "3.24.0"
+tempfile = "3.25.0"
 
 
 # Benchmark Stuff
