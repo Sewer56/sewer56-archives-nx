@@ -2,7 +2,7 @@
 
 8 bytes:
 
-- `u8[4]` Magic (`"NXUS"`)
+- `u8[4]` Magic (`"R3A\0"`)
 - `u7` [Version/Variant](#versionvariant)
 - `u5` [Chunk Size](#chunk-size)
 - `u16` [Header Page Count](#header-page-count)
@@ -27,7 +27,7 @@ The numbers correspond to the following file format versions:
 0: `1.0.0` - `1.1.0`
 1: `2.0.0`
 
-!!! tip "Libraries reading the `Nx` format should check this field to ensure compatibility."
+!!! tip "Libraries reading the `R3A` format should check this field to ensure compatibility."
 
     If the version field is higher than the library's version, it should return
     an error indicating that the file is incompatible and the library should
@@ -64,7 +64,7 @@ i.e.
 ### Block Size
 
 The size of an individual [block](./Overview.md#terminology) is not standardized
-across an `Nx` archive. Blocks can have variable sizes, provided they are
+across an `R3A` archive. Blocks can have variable sizes, provided they are
 smaller than the [chunk size](#chunk-size).
 
 Currently, the size of SOLID blocks is limited to (`16MiB - 1`) as it is tied to
@@ -101,13 +101,13 @@ return 4096 * tocPageCount;
 
 ### How the Header is Used
 
-Nx archives are usually consumed in the following manner:
+R3A archives are usually consumed in the following manner:
 
 1. Fetch Header
 2. Parse Header
 3. Do stuff based on what's in the header
 
-The abstractions in Nx allow for the archives to be sourced from anywhere,
+The abstractions in R3A allow for the archives to be sourced from anywhere,
 so fetching the header could really, for example be downloading the header
 from a web server. (e.g. using HTTP's `Content-Range` header)
 
@@ -120,7 +120,7 @@ then decide if you want to fetch the rest of the archive.
 
 !!! example "An example"
 
-    If you were to use Nx to deliver mod updates, you could compare the hashes
+    If you were to use R3A to deliver mod updates, you could compare the hashes
     of your existing files and download only the files that changed.
 
 !!! question "[Why is max size 256MB](#header-page-count)?"

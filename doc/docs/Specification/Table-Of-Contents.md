@@ -271,7 +271,7 @@ Size: `3 bits` (0-7)
 
 !!! note "As we do not store the length of the decompressed data, this must be determined from the compressed block."
 
-!!! warning "Nx uses non-standard zstandard compressor settings"
+!!! warning "R3A uses non-standard zstandard compressor settings"
 
     For more details, see [Stripping ZStandard Frame Headers]
 
@@ -306,7 +306,7 @@ See UTF-8 encoding table:
 
 When parsing the archive; we decode the StringPool into an array of strings.
 
-!!! note "Nx archives should only use '/' as the path delimiter."
+!!! note "R3A archives should only use '/' as the path delimiter."
 
 !!! tip "The number of items in the pool is equivalent to the number of files in the Table of Contents"
 

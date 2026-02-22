@@ -3,7 +3,7 @@ use bytesize::ByteSize;
 use core::cmp::min;
 use hashbrown::{HashMap, HashTable};
 use rayon::prelude::*;
-use sewer56_archives_nx::{
+use sewer56_archives_r3a::{
     api::{
         enums::{CompressionPreference, SolidPreference},
         packing::packer_file::PackerFile,

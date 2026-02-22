@@ -1,5 +1,5 @@
 {
-  description = "Development environment for sewer56-archives-nx";
+  description = "Development environment for sewer56-archives-r3a";
 
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
@@ -100,7 +100,7 @@
         # 4. Run the tools, e.g. `cargo run --release -p analyze-mod-stats`
         fhs =
           (pkgs.buildFHSEnv {
-            name = "sewer56-archives-nx-fhs";
+            name = "sewer56-archives-r3a-fhs";
             targetPkgs = pkgs:
               with pkgs; [
                 fontconfig

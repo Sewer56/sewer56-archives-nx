@@ -2,7 +2,7 @@
 
 !!! info
 
-    This page contains guidance for people implementing their own libraries for working with `.nx` files.
+    This page contains guidance for people implementing their own libraries for working with `.r3a` files.
     It is not a step by step guide, just some guidelines.
 
 !!! note
@@ -74,20 +74,20 @@ To do this, we will perform the following steps:
 
 - Prefer ZStd for large files.
 
-## Repacking & Merging Nx Archives
+## Repacking & Merging R3A Archives
 
 !!! info "Repacking/Merging Archives should be a fairly inexpensive operation."
 
 Namely, it's possible to do the following:
 
-- Copy compressed blocks directly/chunks between Nx archives.
+- Copy compressed blocks directly/chunks between R3A archives.
     - Decompression buffer size is determined from the file entries, thus blocks can be copied verbatim.
     - It's possible to mix [SOLID block sizes](./File-Header.md#block-size).
         - Provided that SOLID blocks are smaller than the [Chunk Size](./File-Header.md#chunk-size) of the new archive.
         - Verify this by checking if [Chunk Size](./File-Header.md#chunk-size) of all input archive matches.
 - Efficiently use existing SOLID blocks as inputs.
     - Use files inside compressed blocks from File A as input to File B.
-    - With clever usage, (Example: [FromExistingNxBlock][from-existing-nx-block]) you can decompress just-in-time.
+    - With clever usage, (Example: [FromExistingR3ABlock][from-existing-r3a-block]) you can decompress just-in-time.
 
 The runtime complexity/overheads of repacking are generally very low, so the whole
 operation should be nearly as fast as just copying the data verbatim.
@@ -112,4 +112,4 @@ blocks are processed first before starting to compress new blocks.
 In that vain, consider placing all the blocks which do a raw copy at the end,
 since they are the fastest to process.
 
-[from-existing-nx-block]: https://github.com/Nexus-Mods/NexusMods.Archives.Nx/blob/ce09b2099f28293ca30a3c634160f1c539ef297c/NexusMods.Archives.Nx/FileProviders/FromExistingNxBlock.cs
+[from-existing-r3a-block]: https://github.com/Nexus-Mods/NexusMods.Archives.Nx/blob/ce09b2099f28293ca30a3c634160f1c539ef297c/NexusMods.Archives.Nx/FileProviders/FromExistingNxBlock.cs

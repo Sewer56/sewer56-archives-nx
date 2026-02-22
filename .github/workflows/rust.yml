@@ -198,10 +198,10 @@ jobs:
         working-directory: src
         shell: bash
         run: |
-          SEARCH_RESULT=$(cargo search "^sewer56-archives-nx$" --limit 1)
+          SEARCH_RESULT=$(cargo search "^sewer56-archives-r3a$" --limit 1)
           rustup target add ${{ matrix.target }}
 
-          if echo "$SEARCH_RESULT" | grep -q "^sewer56-archives-nx "; then
+          if echo "$SEARCH_RESULT" | grep -q "^sewer56-archives-r3a "; then
             cargo binstall cargo-semver-checks
             cargo semver-checks --target ${{ matrix.target }} --only-explicit-features --features "${{ matrix.features }}"
           else
@@ -284,7 +284,7 @@ jobs:
           rust-crates-io-token: ${{ secrets.CRATES_IO_TOKEN }}
           csharp-nuget-api-key: ${{ secrets.NUGET_KEY }}
           rust-cargo-project-paths: |
-            src/sewer56-archives-nx
+            src/sewer56-archives-r3a
           compression-tool: 7z
           artifact-groups-file: .github/artifact-groups.yml
           changelog-enabled: "true"

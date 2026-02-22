@@ -1264,7 +1264,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "sewer56-archives-nx",
+ "sewer56-archives-r3a",
  "tempfile",
  "tokio",
  "xxhash-rust",
@@ -1365,14 +1365,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "nx-dictionary-tester"
+name = "r3a-dictionary-tester"
 version = "0.1.0"
 dependencies = [
  "argh",
  "bytesize",
  "hashbrown",
  "rayon",
- "sewer56-archives-nx",
+ "sewer56-archives-r3a",
 ]
 
 [[package]]
@@ -2007,7 +2007,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sewer56-archives-nx"
+name = "sewer56-archives-r3a"
 version = "0.1.0"
 dependencies = [
  "ahash",

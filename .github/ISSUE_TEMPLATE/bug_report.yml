@@ -77,8 +77,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: sewer56-archives-nx version
-      description: The version of sewer56-archives-nx you're using
+      label: sewer56-archives-r3a version
+      description: The version of sewer56-archives-r3a you're using
       placeholder: e.g. 0.1.0
     validations:
       required: true

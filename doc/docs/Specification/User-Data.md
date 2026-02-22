@@ -11,7 +11,7 @@
 Example use cases:
 
 - Storing a binary baked-in hashtable to quickly find files by name.
-- Storing update information for a mod package if Nx is used to power a package manager.
+- Storing update information for a mod package if R3A is used to power a package manager.
 - Storing file metadata (read/write timestamps, file permissions, etc.)
 
 ## User Data

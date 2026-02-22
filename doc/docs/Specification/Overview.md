@@ -88,18 +88,6 @@ All packed fields are `little-endian`; and written out when total number of bits
 
 - Certain applications like [Nexus Mods App] can avoid re-hashing files.
 
-## Previewing the Format
-
-!!! info
-
-    For people wishing to study the format, or debug it, a [010-Editor](https://www.sweetscape.com/010editor/) template
-    is available for usage [010 Template](./010Template.bt).
-
-Hit `Templates -> Open Template` and then the big play button.
-Then you'll be able to browse the format in 'Variables' window.
-
-Alternatively, contributions are welcome if anyone wants to make a [Kaitai Struct](https://kaitai.io) variation 💜.
-
 ## Section Alignment
 
 !!! info "Each section is aligned to the following values in bytes"
@@ -127,7 +115,7 @@ User Data:
 
 ## Compressor Settings
 
-!!! warning "Nx uses non-standard zstandard compressor settings"
+!!! warning "R3A uses non-standard zstandard compressor settings"
 
     For more details, see [Stripping ZStandard Frame Headers]
 
@@ -159,12 +147,12 @@ for each version and read this specification.***
 Example use cases:
 
 - Storing a binary baked-in hashtable to quickly find files by name.
-- Storing update information for a mod package if Nx is used to power a package manager.
+- Storing update information for a mod package if R3A is used to power a package manager.
 - Storing file metadata (read/write timestamps, file permissions, etc.)
 
 #### Support for Dictionary Compression
 
-See [Dictionaries]. The Nx format now supports the usage of zstd dictionaries to compress
+See [Dictionaries]. The R3A format now supports the usage of zstd dictionaries to compress
 data within the archive. Some extra info can be found in [Research: Dictionaries] and [Research: Decode Speed].
 
 You can now opt in to train data on small files included within the archive, and use
@@ -187,7 +175,7 @@ format is migrating to [XXH3] as standard.
 
 #### Stripping Zstandard Frame Headers
 
-Nx format now skips the Zstandard frame headers, namely zstd compressed sections are now compressed with the
+R3A format now skips the Zstandard frame headers, namely zstd compressed sections are now compressed with the
 following settings:
 
 ```
@@ -207,7 +195,7 @@ In cases where a decompressed size is needed, such as in decompression,
 
 !!! info "This release adds various packing presets to the reference API implementation."
 
-The presets control the behaviour of how the blocks in the `.nx` archive are arranged.
+The presets control the behaviour of how the blocks in the `.r3a` archive are arranged.
 They currently include:
 
 - Local Archiving (SSD): Maximized Compression ratio with LZMA.
@@ -215,8 +203,8 @@ They currently include:
 - Web Uploads (Generic): Maximized Compression ratio with.
   - BZip3 for specific file extensions (e.g. DDS)
   - LZMA for other data
-- Web Uploads (No SOLID): BZip3 and LZMA, no ZStandard. For websites which wish to optimize their storage of Nx archives.
-  - Split up Nx archives into blocks.
+- Web Uploads (No SOLID): BZip3 and LZMA, no ZStandard. For websites which wish to optimize their storage of R3A archives.
+  - Split up R3A archives into blocks.
   - Store them deduplicated on CDN.
   - Reassemble archives upon user downloading a file.
   - That allows mod updates to not double up storage server side.
@@ -329,7 +317,7 @@ in the format itself. This field is `u7`. The previous field, was moved to the a
 
 The `Header Page Count` field is extended to 16 bits, allowing for a max size of
 256MiB. This allows for storage of [arbitrary user data][User Data Header]
-as part of the Nx header. A reserved, but not yet implemented section for
+as part of the R3A header. A reserved, but not yet implemented section for
 [User Data][User Data Header] was also added to the header.
 
 The [Table of Contents][ToC Header] has also received its own proper
@@ -346,13 +334,13 @@ The [Table of Contents][ToC Header] has also received its own proper
 [StringPool]: ./Table-Of-Contents.md#string-pool
 [File Header]: ./File-Header.md
 [User Data Header]: ./User-Data.md
-[VPrefix Pool Benchmark Numbers]: https://github.com/Sewer56/sewer56-archives-nx/issues/3#issuecomment-2347143581
+[VPrefix Pool Benchmark Numbers]: https://github.com/Sewer56/sewer56-archives-r3a/issues/3#issuecomment-2347143581
 [Dictionaries]: ./Dictionaries.md
 [Research: Dictionaries]: ../Research/DictionaryCompression.md
 [Research: Decode Speed]: ../Research/DecodeSpeed.md
 [Stripping ZStandard Frame Headers]: #stripping-zstandard-frame-headers
 [Dictionary Header]: ./Dictionaries.md
-[issue-20]: https://github.com/Sewer56/sewer56-archives-nx/issues/20
+[issue-20]: https://github.com/Sewer56/sewer56-archives-r3a/issues/20
 [Steam Hardware Survey]: https://store.steampowered.com/hwsurvey/cpus/
 [Steam Download Stats]: https://store.steampowered.com/stats/content/
 [BZip3]: https://github.com/kspalaiologos/bzip3

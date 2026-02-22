@@ -19,7 +19,7 @@ A collection of tools for researching compression algorithms, dictionary effecti
 
 ## Getting Started
 
-This directory is a **separate Cargo workspace** from the main `sewer56-archives-nx` library to avoid imposing additional system dependencies on library users.
+This directory is a **separate Cargo workspace** from the main `sewer56-archives-r3a` library to avoid imposing additional system dependencies on library users.
 
 **Build Rust tools:**
 
@@ -349,7 +349,7 @@ brew install fontconfig
 
 ### `dictionary-tester/`
 
-High-performance analyzer for dictionary compression effectiveness using the Nx archive format's native compression utilities.
+High-performance analyzer for dictionary compression effectiveness using the R3A archive format's native compression utilities.
 
 **Sample Usage:**
 

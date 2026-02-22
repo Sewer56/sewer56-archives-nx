@@ -4,16 +4,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'sewer56_archives_nx'",
+            "name": "Debug unit tests in library 'sewer56_archives_r3a'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=sewer56-archives-nx"
+                    "--package=sewer56-archives-r3a"
                 ],
                 "filter": {
-                    "name": "sewer56_archives_nx",
+                    "name": "sewer56_archives_r3a",
                     "kind": "lib"
                 }
             },
@@ -29,7 +29,7 @@
                     "test",
                     "--no-run",
                     "--bench=my_benchmark",
-                    "--package=sewer56-archives-nx"
+                    "--package=sewer56-archives-r3a"
                 ],
                 "filter": {
                     "name": "my_benchmark",
@@ -42,15 +42,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'nx-dictionary-tester'",
+            "name": "Debug executable 'r3a-dictionary-tester'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=nx-dictionary-tester",
-                    "--package=nx-dictionary-tester"
+                    "--bin=r3a-dictionary-tester",
+                    "--package=r3a-dictionary-tester"
                 ],
                 "filter": {
-                    "name": "nx-dictionary-tester",
+                    "name": "r3a-dictionary-tester",
                     "kind": "bin"
                 }
             },
@@ -60,16 +60,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'nx-dictionary-tester'",
+            "name": "Debug unit tests in executable 'r3a-dictionary-tester'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=nx-dictionary-tester",
-                    "--package=nx-dictionary-tester"
+                    "--bin=r3a-dictionary-tester",
+                    "--package=r3a-dictionary-tester"
                 ],
                 "filter": {
-                    "name": "nx-dictionary-tester",
+                    "name": "r3a-dictionary-tester",
                     "kind": "bin"
                 }
             },

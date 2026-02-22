@@ -4,7 +4,7 @@
     {
       "label": "Auto Test on Save",
       "type": "shell",
-      "command": "cargo install cargo-watch --quiet && cargo watch -x \"test\" -w sewer56-archives-nx/src",
+      "command": "cargo install cargo-watch --quiet && cargo watch -x \"test\" -w sewer56-archives-r3a/src",
       "group": "test",
       "presentation": {
         "reveal": "always"
@@ -14,7 +14,7 @@
     {
       "label": "Auto Miri Test on Save",
       "type": "shell",
-      "command": "cargo install cargo-watch --quiet && cargo watch -x \"miri test\" -w sewer56-archives-nx/src",
+      "command": "cargo install cargo-watch --quiet && cargo watch -x \"miri test\" -w sewer56-archives-r3a/src",
       "group": "test",
       "presentation": {
         "reveal": "always"
@@ -24,7 +24,7 @@
     {
       "label": "Auto Test on Save (32bit Big Endian)",
       "type": "shell",
-      "command": "cargo install cargo-watch cross --quiet && cargo watch -w sewer56-archives-nx/src -- cross test --target powerpc-unknown-linux-gnu",
+      "command": "cargo install cargo-watch cross --quiet && cargo watch -w sewer56-archives-r3a/src -- cross test --target powerpc-unknown-linux-gnu",
       "group": "test",
       "presentation": {
         "reveal": "always"
@@ -39,7 +39,7 @@
     {
       "label": "Auto Test on Save (64bit Big Endian)",
       "type": "shell",
-      "command": "cargo install cargo-watch cross --quiet && cargo watch -w sewer56-archives-nx/src -- cross test --target powerpc64-unknown-linux-gnu",
+      "command": "cargo install cargo-watch cross --quiet && cargo watch -w sewer56-archives-r3a/src -- cross test --target powerpc64-unknown-linux-gnu",
       "group": "test",
       "presentation": {
         "reveal": "always"
@@ -54,7 +54,7 @@
     {
       "label": "Auto Coverage on Save",
       "type": "shell",
-      "command": "cargo install cargo-watch --quiet && cargo install cargo-tarpaulin --quiet && cargo watch -x \"tarpaulin --skip-clean --out Xml --out Html --engine llvm --target-dir target/coverage-build\" -w sewer56-archives-nx/src",
+      "command": "cargo install cargo-watch --quiet && cargo install cargo-tarpaulin --quiet && cargo watch -x \"tarpaulin --skip-clean --out Xml --out Html --engine llvm --target-dir target/coverage-build\" -w sewer56-archives-r3a/src",
       "group": "test",
       "presentation": {
         "reveal": "always"

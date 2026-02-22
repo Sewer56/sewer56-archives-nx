@@ -1,4 +1,4 @@
-!!! info "Nx supports dictionary compression, allowing you to improve compression ratios on small files."
+!!! info "R3A supports dictionary compression, allowing you to improve compression ratios on small files."
 
 !!! note "Optimization Note"
 
@@ -90,12 +90,12 @@ not using dictionaries, this means we will get fairly efficient memory usage.
 ## Future Work
 
 In the future there will be efforts to add `'standard'` dictionaries; that is, dictionaries which are
-standardized across all Nx archives.
+standardized across all R3A archives.
 
 Plan is as follows:
 
 - Allow user to specify a custom dictionary for a given extension/file group via API.
-- That dictionary is embedded inside the Nx archive as normal.
+- That dictionary is embedded inside the R3A archive as normal.
 - On load, dictionaries are hashed and deduplicated in memory in order to save RAM and improve caching efficiency.
 
 This way, 'standardized' dictionaries can be used, without having any sort of centralized

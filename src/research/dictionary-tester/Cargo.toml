@@ -1,14 +1,14 @@
 [package]
-name = "nx-dictionary-tester"
+name = "r3a-dictionary-tester"
 version = "0.1.0"
 edition = "2021"
 description = "High Performance Archive Format for Mod Assets"
-repository = "https://github.com/Sewer56/sewer56-archives-nx"
+repository = "https://github.com/Sewer56/sewer56-archives-r3a"
 license-file = "LICENSE"
 include = ["**/*"]
 
 [[bin]]
-name = "nx-dictionary-tester"
+name = "r3a-dictionary-tester"
 
 # This crate now builds on stable Rust
 
@@ -16,7 +16,7 @@ name = "nx-dictionary-tester"
 default = []
 
 [dependencies]
-sewer56-archives-nx = { path = "../../../src/sewer56-archives-nx", default-features = false }
+sewer56-archives-r3a = { path = "../../../src/sewer56-archives-r3a", default-features = false }
 argh = "0.1.13"
 bytesize = "2.1.0"
 hashbrown = { version = "0.16.0" }

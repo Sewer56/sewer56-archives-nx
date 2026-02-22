@@ -4,21 +4,21 @@ hide:
 ---
 
 <div align="center">
-	<h1>The .nx Archive Format (Rust Edition)</h1>
+	<h1>The .r3a Archive Format</h1>
 	<img src="./Images/Reloaded-Icon.avif" width="150" align="center" />
 	<br/> <br/>
     High Performance File Format
     <br/>
     For <i>Loading</i> and <i>Sharing</i> Mods.<br/><br/>
-    <a href="https://codecov.io/gh/Sewer56/sewer56-archives-nx" >
-      <img src="https://codecov.io/gh/Sewer56/sewer56-archives-nx/graph/badge.svg?token=4POOLjdU7U"/>
+    <a href="https://codecov.io/gh/Sewer56/sewer56-archives-r3a" >
+      <img src="https://codecov.io/gh/Sewer56/sewer56-archives-r3a/graph/badge.svg?token=4POOLjdU7U"/>
     </a>
-    <img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/Sewer56/sewer56-archives-nx/rust.yml">
+    <img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/Sewer56/sewer56-archives-r3a/rust.yml">
 </div>
 
 ## About
 
-The Nexus (`.nx`) format is a semi-SOLID archive format, using *modern* compression technologies such as
+The Reloaded 3 Archive (`.r3a`) format is a semi-SOLID archive format, using *modern* compression technologies such as
 [ZStandard] and [LZ4] under the hood.
 
 ```mermaid
@@ -38,13 +38,13 @@ flowchart TD
 ```
 
 Between size optimized SOLID archives like `.7z` w/ `LZMA` and non-SOLID archives like `.zip` w/ `Deflate`,
-the `.nx` format bridges the gap; reaping most of the benefits from both worlds.
+the `.r3a` format bridges the gap; reaping most of the benefits from both worlds.
 
-Nx aims to be a simple format, appropriate for both local storage of mods and for downloading from the web.
+R3A aims to be a simple format, appropriate for both local storage of mods and for downloading from the web.
 
 ## Characteristics
 
-!!! info "What can you expect from Nx?"
+!!! info "What can you expect from R3A?"
 
 - High Performance (constrained by RAM speeds, bottlenecks any NVMe)
 - File Sizes between `.zip` and `.7z`.
@@ -60,9 +60,9 @@ Nx aims to be a simple format, appropriate for both local storage of mods and fo
     - Tests cover all known possible invalid memory acceeses.
     - Can disable client side via feature if you trust the data for parsing speedups.
 
-## Ways to use Nx
+## Ways to use R3A
 
-!!! info "These are available as 'presets' in the Nx API"
+!!! info "These are available as 'presets' in the R3A API"
 
 ### For ***Archiving*** Mods
 
@@ -88,32 +88,27 @@ This gets you multithreaded decompression for files of any size, and minimal lat
 For hosting mod downloads:
 
 - Use non-SOLID blocks
-- Nx blocks can be deduplicated server side, avoiding duplicate data between mod versions in CDN.
+- R3A blocks can be deduplicated server side, avoiding duplicate data between mod versions in CDN.
 - No dictionary compression (unless standardised).
 
-With Nx, users can perform partial file downloads, only downloading the actual files which have
+With R3A, users can perform partial file downloads, only downloading the actual files which have
 changed between the current version of the archive and the last version of the archive.
 
-## Where is Nx used?
-
-!!! nexus "Original C# version, in the [Nexus Mods App]"
-
-    Nx was originally designed by me for the [Nexus Mods App]; to allow
-    recompressing of legacy uploaded mods for faster deployment and re-deployment.
+## Where is R3A used?
 
 !!! info "In [Reloaded3] for mod packaging"
 
-    For distributing mods on mod websites, either as Nx directly, or Nx wrapped in a `.zip` container.
+    For distributing mods on mod websites, either as R3A directly, or R3A wrapped in a `.zip` container.
 
 ## Why Rust?
 
-!!! info "I originally designed and created Nx for the [Nexus Mods App]"
+!!! info "I originally designed and created the predecessor of R3A as 'Nx' for the [Nexus Mods App]"
 
 The transition to Rust here is mainly for *technical reasons* involving my own required use cases.
 
 - .NET cannot be safely used for hooking Operating System APIs.
     - This is due to [GC Transitions].
-    - I need this for building Nx Accelerated ***Virtual File Systems***.
+    - I need this for building R3A Accelerated ***Virtual File Systems***.
 
 - The [Reloaded3 Project][r3-code-guidelines] requires more portability than what .NET targets.
     - R3 aims to support esoteric platforms like embedded devices and consoles wherever possible.
@@ -127,7 +122,6 @@ If you have technical questions, direct them to library & docs author [@Sewer56]
 via one of these methods:
 
 - [Open an Issue][open-issue]
-- [Nexus Mods App Discord][nma-discord]
 
 Happy Hacking ❤️
 
@@ -139,7 +133,7 @@ Happy Hacking ❤️
 [NativeAOT]: https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/?tabs=net7%2Cwindows
 [Virtual File Systems]: https://reloaded-project.github.io/Reloaded-III/Mods/Essentials/Virtual-FileSystem/About.html
 [Sewer56]: https://github.com/Sewer56
-[nma-discord]: https://discord.gg/ccSndYpypC
-[open-issue]: https://github.com/Sewer56/sewer56-archives-nx/issues/new
+
+[open-issue]: https://github.com/Sewer56/sewer56-archives-r3a/issues/new
 [Reloaded3]: https://reloaded-project.github.io/Reloaded-III/
 [miri]: https://github.com/rust-lang/miri

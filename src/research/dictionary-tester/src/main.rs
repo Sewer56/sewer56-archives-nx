@@ -6,7 +6,7 @@ use analyze::analyze_directory;
 use argh::FromArgs;
 use std::path::PathBuf;
 
-/// Analyzer for dictionary compression in Nx format
+/// Analyzer for dictionary compression in R3A format
 #[derive(FromArgs, Debug)]
 pub struct Args {
     /// input directory to analyze

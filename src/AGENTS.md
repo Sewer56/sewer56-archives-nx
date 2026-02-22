@@ -1,8 +1,8 @@
-# Rules for sewer56-archives-nx
+# Rules for sewer56-archives-r3a
 
 High-performance archive format for games with SIMD optimizations and `no_std` support.
 
-## Structure (`sewer56-archives-nx/`)
+## Structure (`sewer56-archives-r3a/`)
 
 - `src/api/` - Public API interfaces and traits
 - `src/headers/` - Archive format headers and parsers
@@ -37,6 +37,6 @@ cargo test --all-features -q
 cargo clippy --workspace --fix --allow-dirty --all-features
 cargo clippy --workspace --all-features -q -- -D warnings
 cargo doc --workspace --all-features --no-deps -q
-cross test --package sewer56-archives-nx --target powerpc64-unknown-linux-gnu
+cross test --package sewer56-archives-r3a --target powerpc64-unknown-linux-gnu
 cargo fmt --all
 ```

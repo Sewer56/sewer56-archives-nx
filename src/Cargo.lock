@@ -1159,7 +1159,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sewer56-archives-nx"
+name = "sewer56-archives-r3a"
 version = "0.1.0"
 dependencies = [
  "ahash",

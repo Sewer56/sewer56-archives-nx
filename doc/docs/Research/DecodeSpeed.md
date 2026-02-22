@@ -482,7 +482,7 @@ NVMe PCI-e 5.0:
 
 ### Target Decompression Speed
 
-!!! info "Since Nx is tuned for gaming, we're going to focus on the main sources of file size there"
+!!! info "Since R3A is tuned for gaming, we're going to focus on the main sources of file size there"
 
 To calculate the speed we need to decompress at, the formula is simple:
 

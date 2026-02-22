@@ -212,7 +212,7 @@ Decodes @ 1015.8 MB/s without dict.
 ### 1M Blocks, 256K Dict Size
 
 ```bash
-/home/sewer/Project/sewer56-archives-nx/tools/benchmark-single-file-dict.py  /home/sewer/Downloads/202x/textures/architecture/solitude --block-size 1024 --dict-size 262144 -e dds
+/home/sewer/Project/sewer56-archives-r3a/tools/benchmark-single-file-dict.py  /home/sewer/Downloads/202x/textures/architecture/solitude --block-size 1024 --dict-size 262144 -e dds
 ```
 
 ??? info "Per file stats"
@@ -803,7 +803,7 @@ Unlike big files, smaller files are not hurt by use of a dictionary.
 128KB blocks, 64KB file size limit
 
 ```
-/home/sewer/Project/sewer56-archives-nx/tools/benchmark-dict-over-extension.py /home/sewer/Downloads/3dnpc -e pex --block-size 131072
+/home/sewer/Project/sewer56-archives-r3a/tools/benchmark-dict-over-extension.py /home/sewer/Downloads/3dnpc -e pex --block-size 131072
 Looking for .pex files under 64.00 KiB...
 Target block size: 128.00 KiB
 Found 6904 files
@@ -837,7 +837,7 @@ This one was too interesting not to post.
 128KB blocks, 64KB file size limit
 
 ```
-/home/sewer/Project/sewer56-archives-nx/tools/benchmark-dict-over-extension.py /home/sewer/Downloads/3dnpc/sound/voice/3dnpc.esp/zorafairchildvoice -e fuz --block-size 131072
+/home/sewer/Project/sewer56-archives-r3a/tools/benchmark-dict-over-extension.py /home/sewer/Downloads/3dnpc/sound/voice/3dnpc.esp/zorafairchildvoice -e fuz --block-size 131072
 
 === Compression Summary ===
 Total original size: 42.21 MiB

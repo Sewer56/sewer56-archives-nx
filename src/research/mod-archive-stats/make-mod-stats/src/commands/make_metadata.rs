@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sewer56_archives_nx::headers::types::xxh3sum::XXH3sum;
+use sewer56_archives_r3a::headers::types::xxh3sum::XXH3sum;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -152,7 +152,7 @@ pub fn save_results(
 #[cfg(all(test, feature = "research-tests"))]
 mod tests {
     use super::*;
-    use sewer56_archives_nx::headers::types::xxh3sum::XXH3sum;
+use sewer56_archives_r3a::headers::types::xxh3sum::XXH3sum;
     use std::fs;
     use tempfile::TempDir;
 

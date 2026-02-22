@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["sewer56-archives-nx"]
+members = ["sewer56-archives-r3a"]
 
 # Profile Build
 [profile.profile]
