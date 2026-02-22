@@ -5,7 +5,7 @@ hide:
 
 <div align="center">
 	<h1>The .nx Archive Format (Rust Edition)</h1>
-	<img src="./Reloaded/Images/Reloaded-Icon.png" width="150" align="center" />
+	<img src="./Images/Reloaded-Icon.avif" width="150" align="center" />
 	<br/> <br/>
     High Performance File Format
     <br/>
